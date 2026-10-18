@@ -59,7 +59,7 @@ class ChallanController extends Controller
         $tenant = $this->getCurrentTenant();
 
         $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
+            'branch_id' => 'nullable|exists:branches,id',
             'target_branch_id' => 'nullable|exists:branches,id',
             'challan_date' => 'required|date',
             'type' => 'required|in:inward,outward',
@@ -94,9 +94,14 @@ class ChallanController extends Controller
 
             $user = Auth::guard('web')->user();
 
+            $mainBranchId = ! empty($validated['branch_id'])
+                ? $validated['branch_id']
+                : (Branch::where('tenant_id', $tenant->id)->where(fn($q) => $q->where('is_head', true)->orWhere('is_primary', true))->value('id')
+                    ?? Branch::where('tenant_id', $tenant->id)->value('id'));
+
             $challan = Challan::create([
                 'tenant_id' => $tenant->id,
-                'branch_id' => $validated['branch_id'],
+                'branch_id' => $mainBranchId,
                 'target_branch_id' => $validated['target_branch_id'] ?? null,
                 'challan_no' => $challanNo,
                 'challan_date' => $validated['challan_date'],
@@ -129,7 +134,7 @@ class ChallanController extends Controller
                 if (! empty($it['item_id']) && $validated['status'] === 'completed') {
                     $item = Item::where('tenant_id', $tenant->id)->find($it['item_id']);
                     if ($item) {
-                        $sourceBranchId = $validated['branch_id'];
+                        $sourceBranchId = $mainBranchId;
                         $targetBranchId = $validated['target_branch_id'] ?? null;
 
                         if ($validated['type'] === 'inward') {

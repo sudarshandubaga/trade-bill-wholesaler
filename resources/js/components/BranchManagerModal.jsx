@@ -24,7 +24,7 @@ export default function BranchManagerModal({
   activeBranch,
   onBranchUpdated,
   onSelectBranch,
-  addToast = () => {}
+  addToast = () => { }
 }) {
   const branchList = Array.isArray(branches) ? branches : (branches?.branches || branches?.data || []);
 
@@ -158,7 +158,7 @@ export default function BranchManagerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-xs p-4 animate-in fade-in">
       <div className="bg-white border border-slate-200/90 rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-xl overflow-hidden flex flex-col text-slate-800">
-        
+
         {/* Header */}
         <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white">
           <div className="flex items-center gap-3">
@@ -170,7 +170,7 @@ export default function BranchManagerModal({
                 Store, Branch & Warehouse Management
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Maintain multi-location retail stores, counters, and central distribution warehouses
+                Maintain multi-location  stores, counters, and central distribution warehouses
               </p>
             </div>
           </div>
@@ -207,11 +207,10 @@ export default function BranchManagerModal({
                   return (
                     <div
                       key={b.id}
-                      className={`relative p-5 rounded-2xl border transition-all ${
-                        isActive
+                      className={`relative p-5 rounded-2xl border transition-all ${isActive
                           ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-300 shadow-xs'
                           : 'bg-slate-50/80 border-slate-200 hover:border-slate-300 hover:bg-slate-100/60'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-2.5">

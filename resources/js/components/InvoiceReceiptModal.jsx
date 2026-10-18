@@ -1,11 +1,25 @@
 import React from 'react';
 import { Printer, X, FileText } from 'lucide-react';
 
-export default function InvoiceReceiptModal({ sale, tenant, onClose }) {
+export default function InvoiceReceiptModal({ sale, tenant, customers = [], onClose }) {
   if (!sale) return null;
 
   const currency = tenant?.currency || '₹';
-  const customer = sale.customer;
+
+  // Resolve customer info
+  const resolvedCustomer = (typeof sale.customer === 'object' && sale.customer !== null)
+    ? sale.customer
+    : (Array.isArray(customers) ? customers.find(c => c.id === sale.customer_id) : null);
+
+  const customerName = typeof sale.customer === 'string'
+    ? sale.customer
+    : (resolvedCustomer?.name || sale.customer_name || (sale.customer_id ? `Customer #${sale.customer_id}` : 'Walk-in Customer'));
+
+  const customerPhone = resolvedCustomer?.mobile_no || sale.customer_phone || null;
+  const customerGstin = resolvedCustomer?.gstin || sale.customer_gstin || null;
+  const customerAddress = [resolvedCustomer?.address, resolvedCustomer?.city, resolvedCustomer?.state].filter(Boolean).join(', ');
+  const customerVehicle = resolvedCustomer?.vehicle_no || sale.customer_vehicle_no || sale.vehicle_no || null;
+
   const items = Array.isArray(sale.items) ? sale.items : (sale.items?.data || []);
 
   const handlePrint = () => {
@@ -36,6 +50,8 @@ export default function InvoiceReceiptModal({ sale, tenant, onClose }) {
         .join('\n');
 
       const storeName = tenant?.name || sale.branch?.name || 'Wholesale Store';
+      const customerSuffix = customerName && customerName !== 'Walk-in Customer' ? ` - ${customerName}` : '';
+      const docTitle = `${storeName} - ${sale.invoice_no}${customerSuffix}`;
 
       const frameDoc = printFrame.contentWindow.document;
       frameDoc.open();
@@ -44,7 +60,7 @@ export default function InvoiceReceiptModal({ sale, tenant, onClose }) {
         <html lang="en">
           <head>
             <meta charset="utf-8">
-            <title>${storeName} - ${sale.invoice_no}</title>
+            <title>${docTitle}</title>
             ${styleTags}
             <style>
               @page {
@@ -152,12 +168,15 @@ export default function InvoiceReceiptModal({ sale, tenant, onClose }) {
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-slate-900 text-sm tracking-tight">
                   Bill #{sale.invoice_no}
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
                   • {storeName}
+                </span>
+                <span className="text-xs text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                  Customer: {customerName}
                 </span>
               </div>
               <span className="text-[11px] text-slate-400">Compact A4 Invoice Print</span>
@@ -187,16 +206,58 @@ export default function InvoiceReceiptModal({ sale, tenant, onClose }) {
           id="printable-receipt"
           className="p-4 sm:p-6 text-black bg-white max-w-full font-sans print:p-0 print:m-0"
         >
-          {/* Header: Store Name & Bill Meta (Single Line to Save Space) */}
-          <div className="flex items-baseline justify-between border-b-2 border-black pb-1 mb-1.5 print:pb-0.5 print:mb-1">
+          {/* Header: Store Name & Bill Meta */}
+          <div className="flex items-baseline justify-between border-b-2 border-black pb-1 mb-1 print:pb-0.5 print:mb-1">
             <div>
               <h1 className="text-base sm:text-lg font-black uppercase tracking-tight text-black">
                 {storeName}
               </h1>
+              {sale.branch?.name && sale.branch.name !== storeName && (
+                <div className="text-[9px] text-slate-600 font-medium leading-none mt-0.5">
+                  Branch: {sale.branch.name}
+                </div>
+              )}
             </div>
             <div className="text-[10px] font-mono font-medium text-black flex items-center gap-3">
               <span><strong>Bill #:</strong> {sale.invoice_no}</span>
               <span><strong>Date:</strong> {invoiceDate.toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          {/* Customer / Billed To Section */}
+          <div className="flex items-start justify-between border-b border-black/30 pb-1 mb-1.5 text-[9.5px] print:pb-0.5 print:mb-1">
+            <div className="flex-1 min-w-0 pr-3">
+              <div className="flex items-baseline flex-wrap gap-x-2 gap-y-0.5">
+                <span className="font-bold text-slate-700 uppercase text-[9px] tracking-wider">
+                  Customer / M/s:
+                </span>
+                <span className="font-black text-black text-[11px] uppercase tracking-wide">
+                  {customerName}
+                </span>
+                {customerPhone && (
+                  <span className="text-slate-700 font-mono text-[9px]">
+                    • <strong>Ph:</strong> {customerPhone}
+                  </span>
+                )}
+                {customerVehicle && (
+                  <span className="text-slate-700 font-mono text-[9px]">
+                    • <strong>Vehicle:</strong> {customerVehicle}
+                  </span>
+                )}
+                {customerGstin && (
+                  <span className="text-slate-700 font-mono text-[9px]">
+                    • <strong>GSTIN:</strong> {customerGstin}
+                  </span>
+                )}
+              </div>
+              {customerAddress && (
+                <div className="text-[8.5px] text-slate-600 truncate mt-0.5">
+                  <strong>Address:</strong> {customerAddress}
+                </div>
+              )}
+            </div>
+            <div className="text-right whitespace-nowrap text-[9px] font-mono text-slate-700 shrink-0">
+              <span><strong>Mode:</strong> <span className="uppercase font-bold text-black">{sale.payment_method || 'Cash'}</span></span>
             </div>
           </div>
 
@@ -279,6 +340,22 @@ export default function InvoiceReceiptModal({ sale, tenant, onClose }) {
                 </tr>
               </tfoot>
             </table>
+          </div>
+
+          {/* Notes & Footer Info */}
+          <div className="mt-2 pt-1 border-t border-slate-200 flex items-end justify-between text-[8.5px] text-slate-500">
+            <div>
+              {sale.notes ? (
+                <span><strong>Notes:</strong> {sale.notes}</span>
+              ) : (
+                <span>Thank you for your business!</span>
+              )}
+            </div>
+            <div className="text-right">
+              <span className="border-t border-dotted border-black/50 pt-1 px-4 font-medium text-black">
+                Authorized Signatory
+              </span>
+            </div>
           </div>
         </div>
 

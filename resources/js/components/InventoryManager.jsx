@@ -20,10 +20,11 @@ import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 
 export default function InventoryManager({
-  fixedType = null, // 'stock_in' | 'stock_out' | 'stock_transfer' | null
+  fixedType = null, // 'stock_in' | 'stock_transfer' | null
   movements = [],
   challans = [],
   branches = [],
+  suppliers = [],
   items = [],
   tenant,
   onStockUpdated = () => {},
@@ -35,7 +36,6 @@ export default function InventoryManager({
   // Normalize initial active filter
   const initialFilter = useMemo(() => {
     if (fixedType === 'stock_in') return 'inward';
-    if (fixedType === 'stock_out') return 'outward_direct';
     if (fixedType === 'stock_transfer') return 'transfer';
     return 'all';
   }, [fixedType]);
@@ -52,10 +52,11 @@ export default function InventoryManager({
 
   // Form State
   const [formData, setFormData] = useState({
-    movement_kind: fixedType || 'stock_in', // 'stock_in' | 'stock_out' | 'stock_transfer'
+    movement_kind: fixedType || 'stock_in', // 'stock_in' | 'stock_transfer'
     type: 'inward', // API: 'inward' or 'outward'
     branch_id: '',
     target_branch_id: '',
+    supplier_id: '',
     party_name: '',
     movement_date: new Date().toISOString().split('T')[0],
     vehicle_no: '',
@@ -79,6 +80,17 @@ export default function InventoryManager({
     return [];
   }, [branches]);
 
+  const supplierList = useMemo(() => {
+    if (Array.isArray(suppliers)) return suppliers;
+    if (Array.isArray(suppliers?.suppliers)) return suppliers.suppliers;
+    if (Array.isArray(suppliers?.data)) return suppliers.data;
+    return [];
+  }, [suppliers]);
+
+  const mainBranch = useMemo(() => {
+    return branchList.find((b) => b.is_head || b.is_primary) || branchList[0] || null;
+  }, [branchList]);
+
   const itemList = useMemo(() => {
     if (Array.isArray(items)) return items;
     if (Array.isArray(items?.items)) return items.items;
@@ -100,12 +112,10 @@ export default function InventoryManager({
       }
 
       if (fixedType === 'stock_in' && mKind !== 'stock_in') return false;
-      if (fixedType === 'stock_out' && mKind !== 'stock_out') return false;
       if (fixedType === 'stock_transfer' && mKind !== 'stock_transfer') return false;
 
       if (!fixedType && activeType !== 'all') {
         if (activeType === 'inward' && mKind !== 'stock_in') return false;
-        if (activeType === 'outward_direct' && mKind !== 'stock_out') return false;
         if (activeType === 'transfer' && mKind !== 'stock_transfer') return false;
       }
 
@@ -128,8 +138,9 @@ export default function InventoryManager({
     setFormData({
       movement_kind: kind,
       type: isInward ? 'inward' : 'outward',
-      branch_id: branchList[0]?.id || '',
+      branch_id: isInward ? (mainBranch?.id || branchList[0]?.id || '') : (branchList[0]?.id || ''),
       target_branch_id: isTransfer ? (branchList[1]?.id || '') : '',
+      supplier_id: '',
       party_name: '',
       movement_date: new Date().toISOString().split('T')[0],
       vehicle_no: '',
@@ -193,14 +204,15 @@ export default function InventoryManager({
 
     try {
       setIsSaving(true);
+      const isStockIn = formData.movement_kind === 'stock_in';
       const payload = {
-        branch_id: formData.branch_id,
+        branch_id: isStockIn ? (mainBranch?.id || formData.branch_id) : formData.branch_id,
         target_branch_id: formData.movement_kind === 'stock_transfer' ? formData.target_branch_id : null,
         challan_date: formData.movement_date,
         type: formData.type,
         purpose: formData.movement_kind,
         party_name: formData.party_name || null,
-        vehicle_no: formData.vehicle_no || null,
+        vehicle_no: isStockIn ? null : (formData.vehicle_no || null),
         status: formData.status,
         notes: formData.notes || null,
         items: formData.items
@@ -209,10 +221,8 @@ export default function InventoryManager({
       await axios.post('/api/challans', payload);
       const actionName =
         formData.movement_kind === 'stock_in'
-          ? 'Stock In entry saved & inventory increased'
-          : formData.movement_kind === 'stock_transfer'
-          ? 'Stock transferred between branches successfully'
-          : 'Stock Out entry saved & inventory adjusted';
+          ? 'Stock In entry saved & inventory added to main branch'
+          : 'Stock transferred between branches successfully';
 
       addToast(actionName, 'success');
       setIsModalOpen(false);
@@ -238,17 +248,6 @@ export default function InventoryManager({
         targetKind: 'stock_in'
       };
     }
-    if (fixedType === 'stock_out') {
-      return {
-        title: 'Stock Out (Outward Inventory Entry)',
-        subtitle: 'Record outward stock deductions, dispatches, damages, wastage & write-offs',
-        icon: <ArrowUpRight className="w-6 h-6 stroke-[2.2]" />,
-        iconClass: 'bg-rose-500/10 border-rose-500/30 text-rose-600',
-        addBtnText: '+ New Stock Out Entry',
-        addBtnClass: 'bg-rose-600 hover:bg-rose-700 text-white',
-        targetKind: 'stock_out'
-      };
-    }
     if (fixedType === 'stock_transfer') {
       return {
         title: 'Stock Transfer (Inter-Branch / Inter-Warehouse)',
@@ -262,7 +261,7 @@ export default function InventoryManager({
     }
     return {
       title: 'Inventory & Stock Movements Desk',
-      subtitle: 'Manage inward stock receipts, outward stock issues, and inter-branch warehouse transfers',
+      subtitle: 'Manage inward stock receipts and inter-branch warehouse transfers',
       icon: <Boxes className="w-6 h-6 stroke-[2.2]" />,
       iconClass: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
       addBtnText: '+ Record Stock Movement',
@@ -312,13 +311,6 @@ export default function InventoryManager({
                 <span>+ Stock In</span>
               </button>
               <button
-                onClick={() => handleOpenAdd('stock_out')}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
-              >
-                <ArrowUpRight className="w-4 h-4" />
-                <span>+ Stock Out</span>
-              </button>
-              <button
                 onClick={() => handleOpenAdd('stock_transfer')}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
               >
@@ -354,17 +346,6 @@ export default function InventoryManager({
             >
               <ArrowDownLeft className="w-3.5 h-3.5" />
               <span>Stock In</span>
-            </button>
-            <button
-              onClick={() => setActiveType('outward_direct')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'outward_direct'
-                  ? 'bg-rose-600 text-white font-black shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>Stock Out</span>
             </button>
             <button
               onClick={() => setActiveType('transfer')}
@@ -517,9 +498,7 @@ export default function InventoryManager({
                 <span>
                   {formData.movement_kind === 'stock_in'
                     ? 'Record Stock In (Inward Inventory Addition)'
-                    : formData.movement_kind === 'stock_transfer'
-                    ? 'Record Stock Transfer (Inter-Branch Move)'
-                    : 'Record Stock Out (Outward Inventory Deduction)'}
+                    : 'Record Stock Transfer (Inter-Branch Move)'}
                 </span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
@@ -528,86 +507,115 @@ export default function InventoryManager({
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    {formData.movement_kind === 'stock_transfer' ? 'Source Warehouse / Branch *' : 'Operating Branch / Store *'}
-                  </label>
-                  <SearchableSelect
-                    options={branchList.map((b) => ({
-                      value: b.id,
-                      label: b.name,
-                      sublabel: b.address || '',
-                      badge: b.type || ''
-                    }))}
-                    value={formData.branch_id}
-                    onChange={(val) => setFormData({ ...formData, branch_id: val })}
-                    placeholder="-- Select Operating Branch --"
-                    searchPlaceholder="Search branch or warehouse..."
-                    theme="light"
-                  />
-                </div>
-
-                {formData.movement_kind === 'stock_transfer' ? (
+              {formData.movement_kind === 'stock_in' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Destination Warehouse / Branch *
+                      Select Supplier *
                     </label>
                     <SearchableSelect
-                      options={branchList
-                        .filter((b) => String(b.id) !== String(formData.branch_id))
-                        .map((b) => ({
+                      options={supplierList.map((s) => ({
+                        value: s.id,
+                        label: s.name,
+                        sublabel: [s.mobile_no || s.phone, s.city].filter(Boolean).join(' • '),
+                        badge: s.gstin ? `GST: ${s.gstin}` : '',
+                        raw: s
+                      }))}
+                      value={formData.supplier_id}
+                      onChange={(val, opt) => {
+                        setFormData({
+                          ...formData,
+                          supplier_id: val,
+                          party_name: opt ? opt.label : ''
+                        });
+                      }}
+                      placeholder="-- Search & Select Supplier --"
+                      searchPlaceholder="Search supplier name, mobile, city..."
+                      allowClear
+                      theme="light"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Stock-in Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.movement_date}
+                      onChange={(e) => setFormData({ ...formData, movement_date: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Source Warehouse / Branch *
+                      </label>
+                      <SearchableSelect
+                        options={branchList.map((b) => ({
                           value: b.id,
                           label: b.name,
                           sublabel: b.address || '',
                           badge: b.type || ''
                         }))}
-                      value={formData.target_branch_id}
-                      onChange={(val) => setFormData({ ...formData, target_branch_id: val })}
-                      placeholder="-- Select Destination Branch --"
-                      searchPlaceholder="Search destination branch..."
-                      theme="light"
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Vendor / Party / Receiver (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Central Mill or Delivery Counter"
-                      value={formData.party_name}
-                      onChange={(e) => setFormData({ ...formData, party_name: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white"
-                    />
-                  </div>
-                )}
-              </div>
+                        value={formData.branch_id}
+                        onChange={(val) => setFormData({ ...formData, branch_id: val })}
+                        placeholder="-- Select Source Branch --"
+                        searchPlaceholder="Search branch or warehouse..."
+                        theme="light"
+                      />
+                    </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Movement Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.movement_date}
-                    onChange={(e) => setFormData({ ...formData, movement_date: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Destination Warehouse / Branch *
+                      </label>
+                      <SearchableSelect
+                        options={branchList
+                          .filter((b) => String(b.id) !== String(formData.branch_id))
+                          .map((b) => ({
+                            value: b.id,
+                            label: b.name,
+                            sublabel: b.address || '',
+                            badge: b.type || ''
+                          }))}
+                        value={formData.target_branch_id}
+                        onChange={(val) => setFormData({ ...formData, target_branch_id: val })}
+                        placeholder="-- Select Destination Branch --"
+                        searchPlaceholder="Search destination branch..."
+                        theme="light"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle / Transit Ref (Optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. MH-04-AB-1234 or Hand Delivery"
-                    value={formData.vehicle_no}
-                    onChange={(e) => setFormData({ ...formData, vehicle_no: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Movement Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.movement_date}
+                        onChange={(e) => setFormData({ ...formData, movement_date: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle / Transit Ref (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. MH-04-AB-1234 or Hand Delivery"
+                        value={formData.vehicle_no}
+                        onChange={(e) => setFormData({ ...formData, vehicle_no: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Items Section */}
               <div className="space-y-3 pt-2">

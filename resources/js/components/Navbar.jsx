@@ -114,7 +114,7 @@ export default function Navbar({
   const can = (perm) => hasPermission(currentUser, perm);
   const canAccessMaster = can(['customers', 'suppliers', 'categories', 'items']);
   const canAccessVoucher = can(['vouchers', 'payment_reminders', 'credit_debit_note', 'stock_dump']);
-  const canAccessInventory = can(['items', 'challan', 'stock_in', 'stock_out', 'stock_transfer', 'inventory']);
+  const canAccessInventory = can(['items', 'challan', 'stock_in', 'stock_transfer', 'inventory']);
   const canAccessReports = can(['reports', 'sale_reports', 'daybook']);
 
   // Active check helpers
@@ -129,7 +129,7 @@ export default function Navbar({
     'debit_notes',
     'adjustments'
   ].includes(currentTab);
-  const isInventoryActive = ['stock_in', 'stock_out', 'stock_transfer', 'inventory', 'challans'].includes(currentTab);
+  const isInventoryActive = ['stock_in', 'stock_transfer', 'inventory', 'challans'].includes(currentTab);
   const isReportsActive = currentTab === 'reports' || ['sales_history', 'cashbook', 'daybook', 'ledger'].includes(currentTab);
 
   const getBranchIcon = (type) => {
@@ -182,7 +182,7 @@ export default function Navbar({
                 </div>
                 <div className="text-[10px] text-slate-400 truncate max-w-[110px] sm:max-w-xs flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                  <span className="font-medium text-slate-300 truncate">{tenant?.name || 'Retail SuperStore'}</span>
+                  <span className="font-medium text-slate-300 truncate">{tenant?.name || 'SuperStore'}</span>
                 </div>
               </div>
             </div>
@@ -249,8 +249,8 @@ export default function Navbar({
                               setBranchDropdownOpen(false);
                             }}
                             className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all cursor-pointer ${isCurrent
-                                ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold'
-                                : 'hover:bg-slate-800/80 text-slate-300 hover:text-white'
+                              ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold'
+                              : 'hover:bg-slate-800/80 text-slate-300 hover:text-white'
                               }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -310,8 +310,8 @@ export default function Navbar({
                   setActiveMenu(null);
                 }}
                 className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${currentTab === 'pos'
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black shadow-md shadow-amber-500/25 ring-1 ring-amber-300/50'
-                    : 'text-amber-400 hover:text-amber-300 hover:bg-slate-800/70'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black shadow-md shadow-amber-500/25 ring-1 ring-amber-300/50'
+                  : 'text-amber-400 hover:text-amber-300 hover:bg-slate-800/70'
                   }`}
               >
                 <Receipt className={`w-3.5 h-3.5 ${currentTab === 'pos' ? 'text-slate-950 stroke-[2.5]' : ''}`} />
@@ -326,6 +326,22 @@ export default function Navbar({
               </button>
             )}
 
+            {/* 6. Dashboard */}
+            <button
+              id="menu-dashboard-btn"
+              onClick={() => {
+                setCurrentTab('dashboard');
+                setActiveMenu(null);
+              }}
+              className={`relative flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${currentTab === 'dashboard'
+                ? 'bg-slate-800 text-white shadow-sm border border-slate-700/80 ring-1 ring-slate-600'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
+              <span>Dashboard</span>
+            </button>
+
             {/* 2. Master Dropdown (Account & Items) */}
             {canAccessMaster && (
               <div className="relative">
@@ -333,10 +349,10 @@ export default function Navbar({
                   id="menu-master-btn"
                   onClick={() => setActiveMenu(activeMenu === 'master' ? null : 'master')}
                   className={`relative flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${isMasterActive
-                      ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700/80 ring-1 ring-amber-500/30'
-                      : activeMenu === 'master'
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700/80 ring-1 ring-amber-500/30'
+                    : activeMenu === 'master'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
                 >
                   <Layers className={`w-3.5 h-3.5 ${isMasterActive ? 'text-amber-400' : 'text-slate-400'}`} />
@@ -446,10 +462,10 @@ export default function Navbar({
                   id="menu-voucher-btn"
                   onClick={() => setActiveMenu(activeMenu === 'voucher' ? null : 'voucher')}
                   className={`relative flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${isVoucherActive
-                      ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700/80 ring-1 ring-amber-500/30'
-                      : activeMenu === 'voucher'
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700/80 ring-1 ring-amber-500/30'
+                    : activeMenu === 'voucher'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
                 >
                   <FileText className={`w-3.5 h-3.5 ${isVoucherActive ? 'text-amber-400' : 'text-slate-400'}`} />
@@ -560,10 +576,10 @@ export default function Navbar({
                   id="menu-inventory-btn"
                   onClick={() => setActiveMenu(activeMenu === 'inventory' ? null : 'inventory')}
                   className={`relative flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${isInventoryActive
-                      ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700/80 ring-1 ring-amber-500/30'
-                      : activeMenu === 'inventory'
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700/80 ring-1 ring-amber-500/30'
+                    : activeMenu === 'inventory'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
                 >
                   <Boxes className={`w-3.5 h-3.5 ${isInventoryActive ? 'text-amber-400' : 'text-slate-400'}`} />
@@ -590,20 +606,6 @@ export default function Navbar({
                         <div>
                           <div className="font-bold">Stock In</div>
                           <div className="text-[10px] text-slate-400">Inward stock receiving & item inventory entry</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setCurrentTab('stock_out');
-                          setActiveMenu(null);
-                        }}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'stock_out' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                          }`}
-                      >
-                        <ArrowUpRight className="w-4 h-4 text-amber-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Stock Out</div>
-                          <div className="text-[10px] text-slate-400">Outward stock dispatch & inventory issue</div>
                         </div>
                       </button>
                       <button
@@ -648,10 +650,10 @@ export default function Navbar({
                   id="menu-reports-btn"
                   onClick={() => setActiveMenu(activeMenu === 'reports' ? null : 'reports')}
                   className={`relative flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${isReportsActive
-                      ? 'bg-slate-800 text-emerald-300 shadow-sm border border-slate-700/80 ring-1 ring-emerald-500/30'
-                      : activeMenu === 'reports'
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-slate-800 text-emerald-300 shadow-sm border border-slate-700/80 ring-1 ring-emerald-500/30'
+                    : activeMenu === 'reports'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
                 >
                   <BarChart3 className={`w-3.5 h-3.5 ${isReportsActive ? 'text-emerald-400' : 'text-slate-400'}`} />
@@ -756,21 +758,7 @@ export default function Navbar({
               </div>
             )}
 
-            {/* 6. Dashboard */}
-            <button
-              id="menu-dashboard-btn"
-              onClick={() => {
-                setCurrentTab('dashboard');
-                setActiveMenu(null);
-              }}
-              className={`relative flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${currentTab === 'dashboard'
-                  ? 'bg-slate-800 text-white shadow-sm border border-slate-700/80 ring-1 ring-slate-600'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
-              <span>Dashboard</span>
-            </button>
+
 
           </nav>
 
@@ -964,8 +952,8 @@ export default function Navbar({
                   setMobileMenuOpen(null);
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentTab === 'pos'
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black'
-                    : 'text-amber-400 hover:bg-slate-900'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black'
+                  : 'text-amber-400 hover:bg-slate-900'
                   }`}
               >
                 <Receipt className="w-3.5 h-3.5" />
@@ -1137,12 +1125,6 @@ export default function Navbar({
                 className="p-2 rounded-xl bg-slate-900 text-xs text-left text-emerald-300 font-semibold hover:bg-slate-800"
               >
                 Stock In
-              </button>
-              <button
-                onClick={() => { setCurrentTab('stock_out'); setMobileMenuOpen(null); }}
-                className="p-2 rounded-xl bg-slate-900 text-xs text-left text-amber-300 font-semibold hover:bg-slate-800"
-              >
-                Stock Out
               </button>
               <button
                 onClick={() => { setCurrentTab('stock_transfer'); setMobileMenuOpen(null); }}

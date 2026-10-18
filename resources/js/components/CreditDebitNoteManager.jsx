@@ -27,8 +27,8 @@ export default function CreditDebitNoteManager({
   items = [],
   tenant,
   fixedType = null, // 'credit_note' | 'debit_note' | null
-  onNoteUpdated = () => {},
-  addToast = () => {}
+  onNoteUpdated = () => { },
+  addToast = () => { }
 }) {
   const currency = tenant?.currency || '₹';
   const initialType = fixedType || 'all';
@@ -347,11 +347,11 @@ export default function CreditDebitNoteManager({
     ? 'Record goods returned by wholesale customers, restock inventory & adjust party credit balance'
     : (fixedType === 'debit_note'
       ? 'Record goods returned to wholesale suppliers, deduct stock inventory & debit vendor payable balance'
-      : 'Handle sales returns from retail customers and purchase returns to wholesale suppliers');
+      : 'Handle sales returns from customers and purchase returns to wholesale suppliers');
 
   return (
     <div className="space-y-6">
-      
+
       {/* Top Banner (Light Theme) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200/90 p-5 rounded-3xl shadow-xs">
         <div className="flex items-center gap-3">
@@ -398,31 +398,28 @@ export default function CreditDebitNoteManager({
           <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-full sm:w-auto shadow-2xs">
             <button
               onClick={() => setActiveType('all')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'all'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs border border-amber-400'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'all'
+                ? 'bg-amber-500 text-slate-950 font-black shadow-xs border border-amber-400'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               All Notes
             </button>
             <button
               onClick={() => setActiveType('credit_note')}
-              className={`flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'credit_note'
-                  ? 'bg-purple-600 text-white font-black shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'credit_note'
+                ? 'bg-purple-600 text-white font-black shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               <span>Credit Notes (Customer)</span>
             </button>
             <button
               onClick={() => setActiveType('debit_note')}
-              className={`flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'debit_note'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'debit_note'
+                ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               <span>Debit Notes (Supplier)</span>
             </button>
@@ -563,9 +560,8 @@ export default function CreditDebitNoteManager({
                         reason: t === 'credit_note' ? 'Customer sales return' : 'Purchase return to supplier'
                       });
                     }}
-                    className={`w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white ${
-                      fixedType ? 'opacity-80 cursor-not-allowed bg-slate-100' : ''
-                    }`}
+                    className={`w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white ${fixedType ? 'opacity-80 cursor-not-allowed bg-slate-100' : ''
+                      }`}
                   >
                     <option value="credit_note">Credit Note (Sales Return)</option>
                     <option value="debit_note">Debit Note (Purchase Return)</option>

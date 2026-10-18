@@ -495,7 +495,7 @@ export default function MainApp() {
         </div>
         <div className="flex items-center gap-2.5 font-bold text-sm text-slate-200">
           <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
-          <span>Verifying {domainInfo?.name || 'TradeBill Retail Mart'} Station Access...</span>
+          <span>Verifying {domainInfo?.name || 'TradeBill Wholesaler'} Station Access...</span>
         </div>
       </div>
     );
@@ -544,9 +544,8 @@ export default function MainApp() {
     hsn: { title: 'Items: HSN / SAC Codes', subtitle: 'GST tax classifications & standard rates', icon: Hash },
     categories: { title: 'Items: Category Departments', subtitle: 'departments, product categories & merchandise groups', icon: Layers },
     stock_in: { title: 'Inventory: Stock In (Inward)', subtitle: 'Receive stock inward into branch or warehouse with line-item rates & batch notes', icon: Boxes },
-    stock_out: { title: 'Inventory: Stock Out (Outward)', subtitle: 'Record outward stock issue, dispatch or inventory write-offs', icon: Boxes },
     stock_transfer: { title: 'Inventory: Stock Transfer', subtitle: 'Inter-branch and inter-warehouse stock transfer with dispatch notes', icon: ArrowRightLeft },
-    inventory: { title: 'Inventory Operations Desk', subtitle: 'Stock Inward, Outward and Inter-branch transfer operations', icon: Boxes },
+    inventory: { title: 'Inventory Operations Desk', subtitle: 'Stock Inward and Inter-branch transfer operations', icon: Boxes },
     challans: { title: 'Inventory: Stock Movements', subtitle: 'Inward, outward & inter-warehouse transfer slips', icon: Boxes },
     vouchers: { title: 'Voucher Desk', subtitle: 'Cash & bank voucher transactions for customers & suppliers', icon: Coins },
     receipt_vouchers: { title: 'Voucher: Receipt Vouchers (Money In)', subtitle: 'Customer cash collections, inward receipts & party settlements', icon: ArrowDownLeft },
@@ -797,23 +796,13 @@ export default function MainApp() {
               />
             )}
 
-            {/* 7. Inventory: Stock In, Stock Out, Stock Transfer, Movements */}
+            {/* 7. Inventory: Stock In, Stock Transfer, Movements */}
             {currentTab === 'stock_in' && (
               <InventoryManager
                 fixedType="stock_in"
                 challans={challans}
                 branches={branches}
-                items={items}
-                tenant={tenant}
-                onChallanUpdated={fetchData}
-                addToast={addToast}
-              />
-            )}
-            {currentTab === 'stock_out' && (
-              <InventoryManager
-                fixedType="stock_out"
-                challans={challans}
-                branches={branches}
+                suppliers={suppliers}
                 items={items}
                 tenant={tenant}
                 onChallanUpdated={fetchData}
@@ -825,6 +814,7 @@ export default function MainApp() {
                 fixedType="stock_transfer"
                 challans={challans}
                 branches={branches}
+                suppliers={suppliers}
                 items={items}
                 tenant={tenant}
                 onChallanUpdated={fetchData}
@@ -835,6 +825,7 @@ export default function MainApp() {
               <InventoryManager
                 challans={challans}
                 branches={branches}
+                suppliers={suppliers}
                 items={items}
                 tenant={tenant}
                 onChallanUpdated={fetchData}
@@ -964,6 +955,7 @@ export default function MainApp() {
       <InvoiceReceiptModal
         sale={activeInvoice}
         tenant={tenant}
+        customers={customers}
         onClose={() => setActiveInvoice(null)}
       />
 

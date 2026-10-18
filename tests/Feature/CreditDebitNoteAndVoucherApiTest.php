@@ -289,5 +289,61 @@ class CreditDebitNoteAndVoucherApiTest extends TestCase
         $voucher2 = Voucher::where('tenant_id', $this->tenant->id)->latest('id')->first();
         $this->assertEquals($headBranch->id, $voucher2->branch_id);
         $this->assertEquals('supplier', $voucher2->party_type);
+
+        // 3. Voucher without payment_mode defaults to cash
+        $noModePayload = [
+            'type' => 'receipt',
+            'party_id' => $this->customer->id,
+            'party_name' => $this->customer->name,
+            'voucher_date' => now()->toDateString(),
+            'amount' => 300.00,
+        ];
+        $res3 = $this->postJson('/api/vouchers', $noModePayload);
+        $res3->assertStatus(201);
+        $voucher3 = Voucher::where('tenant_id', $this->tenant->id)->latest('id')->first();
+        $this->assertEquals('cash', $voucher3->payment_mode);
+    }
+
+    public function test_stock_in_without_branch_defaults_to_main_branch(): void
+    {
+        $this->actingAs($this->tenant, 'web');
+
+        $mainBranch = Branch::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Primary Head Warehouse',
+            'code' => 'PHW-01',
+            'is_active' => true,
+            'is_head' => true,
+            'is_primary' => true,
+        ]);
+
+        $initialStock = (float) $this->item->stock_quantity;
+
+        $payload = [
+            'challan_date' => now()->toDateString(),
+            'type' => 'inward',
+            'purpose' => 'stock_in',
+            'party_name' => $this->supplier->name,
+            'status' => 'completed',
+            'items' => [
+                [
+                    'item_id' => $this->item->id,
+                    'item_name' => $this->item->name,
+                    'quantity' => 15,
+                    'rate' => 1800.00,
+                ],
+            ],
+        ];
+
+        $res = $this->postJson('/api/challans', $payload);
+        $res->assertStatus(201);
+
+        $challan = \App\Models\Challan::where('tenant_id', $this->tenant->id)->latest('id')->first();
+        $this->assertNotNull($challan);
+        $this->assertEquals($mainBranch->id, $challan->branch_id);
+        $this->assertEquals($this->supplier->name, $challan->party_name);
+
+        $this->item->refresh();
+        $this->assertEquals($initialStock + 15, (float) $this->item->stock_quantity);
     }
 }

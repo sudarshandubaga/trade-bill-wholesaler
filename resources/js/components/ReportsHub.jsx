@@ -32,7 +32,7 @@ export default function ReportsHub({
   suppliers = [],
   items = [],
   tenant,
-  addToast = () => {},
+  addToast = () => { },
   onViewInvoice
 }) {
   const currency = tenant?.currency || '₹';
@@ -154,7 +154,7 @@ export default function ReportsHub({
 
   return (
     <div className="space-y-6">
-      
+
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200/90 p-5 rounded-3xl shadow-xs">
         <div className="flex items-center gap-3">
@@ -193,11 +193,10 @@ export default function ReportsHub({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === tab.id
+              ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
           >
             {tab.label}
           </button>
@@ -568,7 +567,7 @@ export default function ReportsHub({
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="text-xs text-slate-500 font-semibold">
-              Live inventory valuation across all retail stores and warehouses
+              Live inventory valuation across all stores and warehouses
             </div>
             <button
               onClick={() => setIsDumpModalOpen(true)}
@@ -594,7 +593,7 @@ export default function ReportsHub({
                 </div>
               </div>
               <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase">Valuation at Retail MRP</span>
+                <span className="text-[11px] font-semibold text-slate-500 uppercase">Valuation at MRP</span>
                 <div className="text-xl font-black text-amber-600 font-mono mt-1">
                   {currency} {Number(stockData.summary.total_valuation_sale).toLocaleString()}
                 </div>
@@ -617,7 +616,7 @@ export default function ReportsHub({
                   <th className="px-5 py-3">Category</th>
                   <th className="px-5 py-3 text-center">Available Stock</th>
                   <th className="px-5 py-3 text-right">Cost Value</th>
-                  <th className="px-5 py-3 text-right">Retail Value</th>
+                  <th className="px-5 py-3 text-right">Value</th>
                   <th className="px-5 py-3 text-center">Branch Allocation</th>
                 </tr>
               </thead>
@@ -681,17 +680,17 @@ export default function ReportsHub({
               <SearchableSelect
                 options={ledgerPartyType === 'customer'
                   ? customerList.map((c) => ({
-                      value: c.id,
-                      label: c.name,
-                      sublabel: c.mobile_no ? `Mob: ${c.mobile_no}` : '',
-                      badge: c.current_balance !== undefined ? `Bal: ₹${c.current_balance}` : ''
-                    }))
+                    value: c.id,
+                    label: c.name,
+                    sublabel: c.mobile_no ? `Mob: ${c.mobile_no}` : '',
+                    badge: c.current_balance !== undefined ? `Bal: ₹${c.current_balance}` : ''
+                  }))
                   : supplierList.map((s) => ({
-                      value: s.id,
-                      label: s.name,
-                      sublabel: s.company_name || s.phone || '',
-                      badge: s.current_balance !== undefined ? `Payable: ₹${s.current_balance}` : ''
-                    }))
+                    value: s.id,
+                    label: s.name,
+                    sublabel: s.company_name || s.phone || '',
+                    badge: s.current_balance !== undefined ? `Payable: ₹${s.current_balance}` : ''
+                  }))
                 }
                 value={ledgerPartyId}
                 onChange={(val) => setLedgerPartyId(val)}
@@ -863,6 +862,7 @@ export default function ReportsHub({
       <InvoiceReceiptModal
         sale={selectedInvoice}
         tenant={tenant}
+        customers={customers}
         onClose={() => setSelectedInvoice(null)}
       />
     </div>

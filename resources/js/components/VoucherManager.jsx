@@ -404,18 +404,16 @@ export default function VoucherManager({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    {formData.type === 'receipt' ? 'Returned / Received Into Branch' : 'Disbursed / Paid From Branch'}
-                  </label>
-                  <div className="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 truncate">
-                      <Building className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span className="truncate">{headBranch?.name || 'Main Branch'}</span>
-                    </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 border border-amber-300 shrink-0 font-bold">
-                      HEAD BRANCH
-                    </span>
-                  </div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Amount ({currency}) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-amber-700 font-mono font-black text-sm focus:bg-white focus:border-amber-500"
+                  />
                 </div>
               </div>
 
@@ -459,46 +457,6 @@ export default function VoucherManager({
                   />
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Mode *</label>
-                  <select
-                    value={formData.payment_mode}
-                    onChange={(e) => setFormData({ ...formData, payment_mode: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white"
-                  >
-                    <option value="cash">💵 Cash In Hand</option>
-                    <option value="bank">🏛️ Bank Account Transfer</option>
-                    <option value="upi">📱 UPI / QR Scan</option>
-                    <option value="cheque">📄 Cheque</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Amount ({currency}) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="0.00"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-amber-700 font-mono font-black text-sm focus:bg-white focus:border-amber-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Reference / UTR / Cheque #</label>
-                <input
-                  type="text"
-                  placeholder="e.g. UTR-9821739218 or Cheque 004812"
-                  value={formData.reference_no}
-                  onChange={(e) => setFormData({ ...formData, reference_no: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white"
-                />
-              </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Narration / Remarks</label>
