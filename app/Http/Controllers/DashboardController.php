@@ -23,7 +23,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Dashboard statistics for the active motor service tenant.
+     * Dashboard statistics for the active tenant.
      */
     public function stats(Request $request): JsonResponse
     {

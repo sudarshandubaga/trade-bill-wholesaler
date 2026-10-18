@@ -100,7 +100,7 @@ export default function TenantsManager({
 
   return (
     <div className="space-y-6">
-      
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -109,7 +109,7 @@ export default function TenantsManager({
             <span>SaaS Tenants & Yearly Subscriptions</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage multi-tenant motor service garage accounts, domain mappings, and annual subscription renewals.
+            Manage multi-tenant garage accounts, domain mappings, and annual subscription renewals.
           </p>
         </div>
 
@@ -118,7 +118,7 @@ export default function TenantsManager({
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs transition-all shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Register New Motor Service Tenant</span>
+          <span>Register New Tenant</span>
         </button>
       </div>
 
@@ -132,11 +132,10 @@ export default function TenantsManager({
           return (
             <div
               key={t.id}
-              className={`rounded-2xl border p-5 flex flex-col justify-between transition-all shadow-xs ${
-                isActive
+              className={`rounded-2xl border p-5 flex flex-col justify-between transition-all shadow-xs ${isActive
                   ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-300'
                   : 'bg-white hover:bg-slate-50/60 border-slate-200/90'
-              }`}
+                }`}
             >
               <div>
                 {/* Header with status badge */}
@@ -166,13 +165,12 @@ export default function TenantsManager({
                 </div>
 
                 {/* Subscription Info Card */}
-                <div className={`p-3 rounded-xl border text-xs mb-4 space-y-1.5 ${
-                  isExpired
+                <div className={`p-3 rounded-xl border text-xs mb-4 space-y-1.5 ${isExpired
                     ? 'bg-rose-50 border-rose-200 text-rose-800'
                     : daysRemaining <= 30
-                    ? 'bg-amber-50 border-amber-200 text-amber-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-700'
-                }`}>
+                      ? 'bg-amber-50 border-amber-200 text-amber-800'
+                      : 'bg-slate-50 border-slate-200 text-slate-700'
+                  }`}>
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-slate-500">Plan:</span>
                     <span className="font-bold text-slate-900">{t.subscription_plan || 'Annual Garage Pro'}</span>

@@ -42,11 +42,11 @@ class ResolveTenantByDomain
         $tenant = $this->tenantManager->resolveTenant($request);
 
         // If domain is not matched to any tenant in DB (and not public auth endpoints)
-        if (! $tenant && ! $request->is('api/login') && ! $request->is('api/me') && ! $request->is('api/forgot-password') && ! $request->is('api/reset-password')) {
+        if (!$tenant && !$request->is('api/login') && !$request->is('api/me') && !$request->is('api/forgot-password') && !$request->is('api/reset-password')) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'error' => 'Garage Not Found',
-                    'message' => 'No motor service tenant found for domain: ' . $request->getHost(),
+                    'message' => 'No tenant found for domain: ' . $request->getHost(),
                 ], 404);
             }
 

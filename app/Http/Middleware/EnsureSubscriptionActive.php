@@ -48,9 +48,22 @@ class EnsureSubscriptionActive
 
         // Check subscription expiration
         if ($tenant->is_expired) {
+            // For browser / HTML navigation, render dedicated subscription expired screen
+            if (! $request->expectsJson() && ! $request->is('api/*')) {
+                return response()->view('subscription_expired', [
+                    'tenant' => $tenant,
+                    'domain' => $tenant->domain_name,
+                    'expires_at' => $tenant->expires_at,
+                    'days_remaining' => $tenant->days_remaining,
+                    'days_overdue' => abs($tenant->days_remaining ?? 0),
+                    'registeredTenants' => Tenant::where('is_active', true)->where('id', '!=', $tenant->id)->select('name', 'domain_name')->get(),
+                ], 403);
+            }
+
+            // For React SPA API requests, return 403 JSON
             return response()->json([
                 'error' => 'Subscription Expired',
-                'message' => 'Your yearly garage subscription has expired. All operations are locked. Please contact platform administration to renew your annual subscription.',
+                'message' => 'Your yearly wholesale ERP subscription has expired. All operations are locked. Please contact platform administration to renew your annual subscription.',
                 'is_expired' => true,
                 'domain' => $tenant->domain_name,
                 'expires_at' => $tenant->expires_at?->toIso8601String(),

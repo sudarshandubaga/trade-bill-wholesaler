@@ -143,6 +143,8 @@ export default function MainApp() {
           setCategories([]);
           setSuppliers([]);
           setBranches([]);
+        } else if (error.response && error.response.status === 403 && error.response.data?.is_expired) {
+          setTenant((prev) => (prev ? { ...prev, is_expired: true } : { is_expired: true }));
         }
         return Promise.reject(error);
       }
@@ -519,7 +521,7 @@ export default function MainApp() {
   // Subscription Lockout
   if (tenant?.is_expired) {
     return (
-      <div className="min-h-screen bg-slate-950 font-sans">
+      <div className="min-h-screen bg-slate-50 font-sans">
         <SubscriptionLockScreen
           tenant={tenant}
           onRefresh={fetchData}

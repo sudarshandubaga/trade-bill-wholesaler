@@ -51,33 +51,33 @@ export default function SubscriptionLockScreen({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-rose-500 selection:text-white relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100/70 to-rose-50/40 text-slate-800 flex flex-col justify-between selection:bg-rose-500 selection:text-white relative overflow-hidden">
       
       {/* Background Ambient Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rose-600/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-amber-600/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rose-200/40 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-amber-200/35 rounded-full blur-3xl pointer-events-none"></div>
 
       {/* Header Bar */}
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl px-6 py-4 flex items-center justify-between z-10">
+      <header className="border-b border-slate-200/80 bg-white/85 backdrop-blur-xl px-6 py-4 flex items-center justify-between z-10 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-lg shadow-rose-500/10">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-md shadow-rose-500/20 ring-2 ring-rose-100">
             <Lock className="w-5 h-5 stroke-[2.5]" />
           </div>
           <div>
-            <h1 className="font-black text-base tracking-tight text-white flex items-center gap-2">
-              <span>{tenant?.name || 'Motor Service Garage'}</span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] uppercase font-bold tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono">
+            <h1 className="font-black text-base tracking-tight text-slate-900 flex items-center gap-2">
+              <span>{tenant?.name || 'TradeBill Wholesaler'}</span>
+              <span className="px-2 py-0.5 rounded-md text-[10px] uppercase font-bold tracking-wider bg-rose-50 text-rose-700 border border-rose-200 font-mono">
                 LOCKED
               </span>
             </h1>
-            <p className="text-xs text-slate-400 font-mono">Station Domain: {tenant?.domain_name}</p>
+            <p className="text-xs text-slate-500 font-mono">Store Domain: {tenant?.domain_name}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 shadow-sm transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4 text-rose-500" />
             <span>Sign Out</span>
@@ -87,7 +87,7 @@ export default function SubscriptionLockScreen({
 
       {/* Main Lockout Notice Banner & Details */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 z-10">
-        <div className="max-w-2xl w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 text-slate-800">
+        <div className="max-w-2xl w-full bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 space-y-6 text-slate-800">
           
           {/* Lock Icon & Status Badge */}
           <div className="flex flex-col items-center text-center space-y-3">
@@ -107,10 +107,10 @@ export default function SubscriptionLockScreen({
                 <span>Yearly Subscription Expired</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                Software Functionality Locked
+                Wholesale ERP Operations Locked
               </h2>
               <p className="text-sm text-slate-600 max-w-lg mx-auto mt-2 leading-relaxed">
-                All garage operations including <strong className="text-slate-900">POS Billing Register</strong>, <strong className="text-slate-900">Service & Parts Master</strong>, <strong className="text-slate-900">Customer Directory</strong>, and <strong className="text-slate-900">Accounting Reports</strong> are locked because your yearly subscription has lapsed.
+                All wholesale operations including <strong className="text-slate-900">Wholesale Billing & POS Register</strong>, <strong className="text-slate-900">Stock-in & Challans</strong>, <strong className="text-slate-900">Customer & Supplier Ledgers</strong>, and <strong className="text-slate-900">Financial Reports</strong> are locked because your yearly subscription has lapsed.
               </p>
             </div>
           </div>
@@ -120,14 +120,14 @@ export default function SubscriptionLockScreen({
             <div>
               <span className="text-slate-500 block font-medium">Subscription Plan</span>
               <span className="text-sm font-bold text-slate-900 mt-0.5 block">
-                {tenant?.subscription_plan || 'Annual Garage Pro'}
+                {tenant?.subscription_plan || 'Wholesale Enterprise Plan'}
               </span>
             </div>
 
             <div>
               <span className="text-slate-500 block font-medium">Annual License Fee</span>
               <span className="text-sm font-mono font-black text-amber-700 mt-0.5 block">
-                {currency}{Number(tenant?.subscription_price || 499).toFixed(2)} / Year
+                {currency}{Number(tenant?.subscription_price || 999).toFixed(2)} / Year
               </span>
             </div>
 
@@ -153,17 +153,17 @@ export default function SubscriptionLockScreen({
               <span>Platform Administration Renewal Required</span>
             </div>
             <p className="text-slate-700 leading-relaxed text-[12px]">
-              Annual licenses cannot be self-activated by garage operators. Please contact platform administration to confirm your yearly payment and activate your garage station license.
+              Annual licenses are managed and confirmed by platform billing administration. Please contact support to verify your renewal payment and restore full multi-branch wholesale access immediately.
             </p>
 
             <div className="pt-2 border-t border-rose-200 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2 text-slate-800">
                 <Phone className="w-3.5 h-3.5 text-rose-600" />
-                <span className="font-mono font-bold">+1 (800) 555-MOTO</span>
+                <span className="font-mono font-bold">+91 (963) 615-0842</span>
               </div>
               <div className="flex items-center gap-2 text-slate-800">
                 <Mail className="w-3.5 h-3.5 text-rose-600" />
-                <span className="font-mono">billing@motoservicepro.com</span>
+                <span className="font-mono">contact@xpertcoders.in</span>
               </div>
             </div>
           </div>
@@ -172,9 +172,9 @@ export default function SubscriptionLockScreen({
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
             <button
               onClick={onRefresh}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer border border-slate-200"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition-colors cursor-pointer border border-slate-700 shadow-md"
             >
-              <RefreshCw className="w-4 h-4 text-amber-600" />
+              <RefreshCw className="w-4 h-4 text-amber-400" />
               <span>Check License Status</span>
             </button>
 
@@ -182,9 +182,9 @@ export default function SubscriptionLockScreen({
             <button
               onClick={handleActivateLicense}
               disabled={isRenewing}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-slate-950 hover:bg-black text-white font-black text-xs shadow-xl shadow-slate-950/20 ring-1 ring-slate-800 transition-all cursor-pointer disabled:opacity-50"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 text-emerald-400" />
               <span>{isRenewing ? 'Renewing License...' : 'Activate License (+1 Year)'}</span>
             </button>
           </div>
@@ -193,8 +193,8 @@ export default function SubscriptionLockScreen({
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/80 px-6 py-3 text-center text-xs text-slate-500 z-10">
-        <span>MotoService Pro &bull; Multi-Tenant Automotive ERP Engine</span>
+      <footer className="border-t border-slate-200 bg-white/80 px-6 py-3 text-center text-xs text-slate-500 z-10">
+        <span>TradeBill Wholesaler &bull; Enterprise Multi-Branch B2B ERP Engine</span>
       </footer>
 
     </div>

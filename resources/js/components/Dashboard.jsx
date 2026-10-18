@@ -22,9 +22,9 @@ import {
 export default function Dashboard({
   stats,
   tenant,
-  onNavigate = () => {},
-  onOpenSubscriptionModal = () => {},
-  onViewInvoice = () => {}
+  onNavigate = () => { },
+  onOpenSubscriptionModal = () => { },
+  onViewInvoice = () => { }
 }) {
   const currency = tenant?.currency || '₹';
   const sub = stats?.subscription;
@@ -36,11 +36,11 @@ export default function Dashboard({
 
   return (
     <div className="space-y-6">
-      
+
       {/* Executive Command Hero Banner (Dark Theme) */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800/90 text-white p-6 sm:p-8 shadow-2xl">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          
+
           <div className="space-y-2.5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-amber-300 text-xs font-semibold backdrop-blur-xs">
               <Car className="w-3.5 h-3.5 text-amber-400" />
@@ -93,22 +93,20 @@ export default function Dashboard({
       </div>
 
       {/* Subscription Status Card */}
-      <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-        isExpired
+      <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${isExpired
           ? 'bg-rose-50/80 border-rose-200 shadow-xs'
           : daysRemaining <= 30
-          ? 'bg-amber-50/80 border-amber-200 shadow-xs'
-          : 'bg-white border-slate-200/90 shadow-xs'
-      }`}>
+            ? 'bg-amber-50/80 border-amber-200 shadow-xs'
+            : 'bg-white border-slate-200/90 shadow-xs'
+        }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className={`p-2.5 rounded-2xl shrink-0 ${
-              isExpired
+            <div className={`p-2.5 rounded-2xl shrink-0 ${isExpired
                 ? 'bg-rose-100 text-rose-600'
                 : daysRemaining <= 30
-                ? 'bg-amber-100 text-amber-600'
-                : 'bg-emerald-100 text-emerald-700'
-            }`}>
+                  ? 'bg-amber-100 text-amber-600'
+                  : 'bg-emerald-100 text-emerald-700'
+              }`}>
               {isExpired ? (
                 <AlertTriangle className="w-5 h-5" />
               ) : (
@@ -120,13 +118,12 @@ export default function Dashboard({
                 <h3 className="font-extrabold text-slate-900 text-sm">
                   {sub?.plan || 'Annual Garage Pro'}
                 </h3>
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                  isExpired
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isExpired
                     ? 'bg-rose-100 text-rose-700 border border-rose-200'
                     : daysRemaining <= 30
-                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                }`}>
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}>
                   {sub?.status || 'Active'}
                 </span>
               </div>
@@ -155,7 +152,7 @@ export default function Dashboard({
 
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
+
         {/* Total Revenue */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
           <div className="flex items-center justify-between text-slate-500">
@@ -233,13 +230,13 @@ export default function Dashboard({
 
       {/* Recent Invoices Table & Workshop Details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        
+
         {/* Recent Invoices (Takes 3 out of 4 columns on large screens) */}
         <div className="lg:col-span-2 xl:col-span-3 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-extrabold text-slate-900">Recent Service Invoices</h2>
-              <p className="text-xs text-slate-500">Latest completed motor service & repair tickets</p>
+              <p className="text-xs text-slate-500">Latest completed & repair tickets</p>
             </div>
             <button
               onClick={() => onNavigate('sales')}

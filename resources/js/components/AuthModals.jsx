@@ -123,7 +123,7 @@ export default function AuthModals({
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="font-extrabold text-slate-900 text-lg tracking-tight">Garage Admin Login</h3>
-                <p className="text-xs text-slate-500">Sign in to your motor service counter</p>
+                <p className="text-xs text-slate-500">Sign in to your counter</p>
               </div>
               <button onClick={onCloseAll} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
                 <X className="w-5 h-5" />

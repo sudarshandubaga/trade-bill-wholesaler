@@ -137,7 +137,7 @@ export default function LoginScreen({
             {domainInfo?.name || 'MotoService Pro'}
           </h1>
           <p className="text-xs text-slate-500 mt-1 font-medium flex items-center justify-center gap-1.5">
-            <span>Motor Service POS & Garage Management</span>
+            <span>POS & Garage Management</span>
           </p>
         </div>
 
