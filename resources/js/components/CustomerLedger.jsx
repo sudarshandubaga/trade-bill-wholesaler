@@ -17,7 +17,8 @@ import {
   Banknote,
   Clock,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  MessageCircle
 } from 'lucide-react';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
 
@@ -103,6 +104,30 @@ export default function CustomerLedger({
     return customerSales.reduce((acc, curr) => acc + Number(curr.discount_amount || 0), 0);
   }, [customerSales]);
 
+  const handleSendWhatsAppReminder = () => {
+    if (!selectedCustomer) return;
+
+    const rawPhone = selectedCustomer.mobile_no || selectedCustomer.phone;
+    if (!rawPhone) {
+      alert('No mobile number available for this customer.');
+      return;
+    }
+
+    let cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const dueAmount = Number(selectedCustomer.current_balance !== undefined ? selectedCustomer.current_balance : totalBilled);
+    const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
+    const partyName = selectedCustomer.name || 'Customer';
+
+    const message = `Dear ${partyName},\n\nThis is a gentle payment reminder from *${storeName}*.\nYour current outstanding balance due is *₹${dueAmount > 0 ? dueAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}*.\n\nKindly arrange the payment at your earliest convenience.\n\nThank you!\n*${storeName}*`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div id="printable-customer-ledger-panel" className="space-y-6">
       
@@ -128,6 +153,16 @@ export default function CustomerLedger({
             >
               <Receipt className="w-4 h-4" />
               <span>Bill This Client</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSendWhatsAppReminder}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-xs transition-all cursor-pointer no-print"
+              title="Send WhatsApp payment reminder for due payment"
+            >
+              <MessageCircle className="w-4 h-4 text-white" />
+              <span>WhatsApp Due Reminder</span>
             </button>
 
             <button

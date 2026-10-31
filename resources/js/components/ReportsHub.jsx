@@ -19,7 +19,8 @@ import {
   Warehouse,
   Plus,
   Trash2,
-  X
+  X,
+  MessageCircle
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
@@ -160,6 +161,38 @@ export default function ReportsHub({
     }
   };
 
+  const handleSendWhatsAppReminder = () => {
+    const selectedParty = ledgerData?.party || (ledgerPartyType === 'customer'
+      ? customerList.find((c) => String(c.id) === String(ledgerPartyId))
+      : supplierList.find((s) => String(s.id) === String(ledgerPartyId)));
+
+    if (!selectedParty) {
+      addToast('Please select a customer first', 'error');
+      return;
+    }
+
+    const rawPhone = selectedParty.mobile_no || selectedParty.phone;
+    if (!rawPhone) {
+      addToast('No mobile number available for this customer.', 'error');
+      return;
+    }
+
+    let cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const dueAmount = Number(ledgerData?.closing_balance !== undefined ? ledgerData.closing_balance : (selectedParty.current_balance || 0));
+    const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
+    const partyName = selectedParty.name || 'Customer';
+
+    const message = `Dear ${partyName},\n\nThis is a gentle payment reminder from *${storeName}*.\nYour current outstanding balance due is *₹${dueAmount > 0 ? dueAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}*.\n\nKindly arrange the payment at your earliest convenience.\n\nThank you!\n*${storeName}*`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    addToast(`WhatsApp payment reminder opened for ${partyName}!`, 'success');
+  };
+
   return (
     <div className="space-y-6">
 
@@ -179,18 +212,34 @@ export default function ReportsHub({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            printElement('reports-printable-panel', {
-              title: `${activeTab.replace('_', ' ').toUpperCase()} STATEMENT`
-            });
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs cursor-pointer transition-all self-start md:self-auto"
-        >
-          <Printer className="w-4 h-4 text-slate-950" />
-          <span>Print Current Statement</span>
-        </button>
+        <div className="flex items-center gap-2 self-start md:self-auto no-print">
+          {activeTab === 'ledger' && ledgerPartyType === 'customer' && (
+            <button
+              type="button"
+              onClick={handleSendWhatsAppReminder}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-xs cursor-pointer transition-all no-print"
+              title="Send WhatsApp payment reminder for outstanding balance"
+            >
+              <MessageCircle className="w-4 h-4 text-white" />
+              <span>WhatsApp Due Reminder</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              const selectedParty = ledgerData?.party || customerList.find((c) => String(c.id) === String(ledgerPartyId));
+              const partyTitle = selectedParty?.name ? `STATEMENT - ${selectedParty.name.toUpperCase()}` : `${activeTab.replace('_', ' ').toUpperCase()} STATEMENT`;
+              printElement('reports-printable-panel', {
+                title: activeTab === 'ledger' ? partyTitle : `${activeTab.replace('_', ' ').toUpperCase()} STATEMENT`
+              });
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs cursor-pointer transition-all"
+          >
+            <Printer className="w-4 h-4 text-slate-950" />
+            <span>Print Current Statement</span>
+          </button>
+        </div>
       </div>
 
       {/* Reports Nav Pills */}
@@ -761,11 +810,22 @@ export default function ReportsHub({
               </div>
 
               {ledgerData && (
-                <div className="ml-auto flex items-center gap-6 font-mono text-xs">
+                <div className="ml-auto flex items-center gap-4 font-mono text-xs">
                   <div className="text-slate-600">Opening Balance: <span className="font-bold text-slate-900">{currency} {ledgerOpeningBal.toFixed(2)}</span></div>
                   <div className="text-amber-700 font-black text-sm">
                     Closing Balance: {currency} {ledgerClosingBal.toFixed(2)}
                   </div>
+                  {ledgerPartyType === 'customer' && (
+                    <button
+                      type="button"
+                      onClick={handleSendWhatsAppReminder}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-sans text-xs font-black shadow-xs cursor-pointer transition-all no-print"
+                      title="Send WhatsApp payment reminder to customer"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-white" />
+                      <span>WhatsApp Due</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
