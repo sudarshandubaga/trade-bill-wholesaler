@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   FileCode2,
   Plus,
@@ -11,6 +11,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import axios from 'axios';
+import SearchableSelect from './SearchableSelect';
 
 export default function HsnManager({
   hsnCodes = [],
@@ -28,6 +29,16 @@ export default function HsnManager({
     gst_percent: 18,
     type: 'goods'
   });
+  const hsnInputRef = useRef(null);
+  const gstTriggerRef = useRef(null);
+  const typeTriggerRef = useRef(null);
+  const descInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setTimeout(() => hsnInputRef.current?.focus(), 80);
+    }
+  }, [isModalOpen]);
 
   const hsnList = Array.isArray(hsnCodes) ? hsnCodes : (hsnCodes?.codes || hsnCodes?.data || []);
 
@@ -121,10 +132,13 @@ export default function HsnManager({
           </div>
           <button
             onClick={handleOpenAdd}
+            data-add-new-btn="true"
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs cursor-pointer transition-all"
+            title="Shortcut: Alt+N or F2"
           >
             <Plus className="w-4 h-4" />
             <span>Add HSN / SAC</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-600/30 text-slate-900 rounded border border-amber-600/40">Alt+N</kbd>
           </button>
         </div>
       </div>
@@ -203,11 +217,20 @@ export default function HsnManager({
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">HSN / SAC Code *</label>
                 <input
+                  ref={hsnInputRef}
+                  autoFocus
                   type="text"
                   required
                   placeholder="e.g. 8471, 6203, 1905"
                   value={formData.hsn_code}
                   onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      gstTriggerRef.current?.focus();
+                      gstTriggerRef.current?.click();
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
@@ -215,39 +238,59 @@ export default function HsnManager({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Applicable GST % *</label>
-                  <select
+                  <SearchableSelect
+                    triggerRef={gstTriggerRef}
+                    options={[
+                      { value: 0, label: '0% (Exempt)' },
+                      { value: 5, label: '5%' },
+                      { value: 12, label: '12%' },
+                      { value: 18, label: '18%' },
+                      { value: 28, label: '28%' }
+                    ]}
                     value={formData.gst_percent}
-                    onChange={(e) => setFormData({ ...formData, gst_percent: parseFloat(e.target.value) })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white focus:border-amber-400 outline-none"
-                  >
-                    <option value={0}>0% (Exempt)</option>
-                    <option value={5}>5%</option>
-                    <option value={12}>12%</option>
-                    <option value={18}>18%</option>
-                    <option value={28}>28%</option>
-                  </select>
+                    onChange={(val) => setFormData(prev => ({ ...prev, gst_percent: parseFloat(val) }))}
+                    onSelectNext={() => {
+                      typeTriggerRef.current?.focus();
+                      typeTriggerRef.current?.click();
+                    }}
+                    placeholder="Select GST %"
+                    className="w-full"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                  <select
+                  <SearchableSelect
+                    triggerRef={typeTriggerRef}
+                    options={[
+                      { value: 'goods', label: 'Goods (HSN)' },
+                      { value: 'service', label: 'Service (SAC)' }
+                    ]}
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
-                  >
-                    <option value="goods">Goods (HSN)</option>
-                    <option value="service">Service (SAC)</option>
-                  </select>
+                    onChange={(val) => setFormData(prev => ({ ...prev, type: val }))}
+                    onSelectNext={() => {
+                      descInputRef.current?.focus();
+                    }}
+                    placeholder="Select Type"
+                    className="w-full"
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Description / Goods Category</label>
-                <textarea
-                  rows={2}
+                <input
+                  ref={descInputRef}
+                  type="text"
                   placeholder="Apparel, electronic machinery, food products..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>

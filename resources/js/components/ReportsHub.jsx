@@ -24,14 +24,20 @@ import {
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
+import CreditDebitNoteManager from './CreditDebitNoteManager';
+import InventoryManager from './InventoryManager';
 
 export default function ReportsHub({
-  initialSubTab = 'sale', // 'sale', 'daybook', 'cashbook', 'bank', 'stock', 'ledger'
+  initialSubTab = 'sale', // 'sale', 'daybook', 'cashbook', 'bank', 'stock', 'ledger', 'credit_notes', 'debit_notes', 'stock_in', 'stock_transfer'
   branches = [],
   customers = [],
   suppliers = [],
   items = [],
   tenant,
+  creditDebitNotes = [],
+  challans = [],
+  onDataUpdated = () => {},
+  onNavigateTab = () => {},
   addToast = () => { },
   onViewInvoice
 }) {
@@ -41,6 +47,7 @@ export default function ReportsHub({
     if (tab === 'purchases' || tab === 'purchase') return 'sale';
     if (tab === 'sales') return 'sale';
     if (tab === 'bank_entry') return 'bank';
+    if (tab === 'stock_reports') return 'stock';
     return tab || 'sale';
   };
 
@@ -187,7 +194,11 @@ export default function ReportsHub({
           { id: 'daybook', label: 'Daybook' },
           { id: 'cashbook', label: 'Cashbook' },
           { id: 'bank', label: 'Bank Entry' },
-          { id: 'stock', label: 'Stock Reports' },
+          { id: 'stock', label: 'Stock Valuation' },
+          { id: 'credit_notes', label: 'Credit Notes Register' },
+          { id: 'debit_notes', label: 'Debit Notes Register' },
+          { id: 'stock_in', label: 'Stock In Register' },
+          { id: 'stock_transfer', label: 'Stock Transfer Register' },
           { id: 'ledger', label: 'Party Ledger' }
         ].map((tab) => (
           <button
@@ -658,19 +669,21 @@ export default function ReportsHub({
       {activeTab === 'ledger' && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
-            <div>
+            <div className="w-64">
               <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Ledger Type</label>
-              <select
+              <SearchableSelect
+                options={[
+                  { value: 'customer', label: 'Customer Ledger (Receivable)' },
+                  { value: 'supplier', label: 'Supplier Ledger (Payable)' }
+                ]}
                 value={ledgerPartyType}
-                onChange={(e) => {
-                  setLedgerPartyType(e.target.value);
-                  setLedgerPartyId(e.target.value === 'customer' ? customers[0]?.id : suppliers[0]?.id);
+                onChange={(val) => {
+                  setLedgerPartyType(val);
+                  setLedgerPartyId(val === 'customer' ? customers[0]?.id : suppliers[0]?.id);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold focus:bg-white focus:border-amber-400 outline-none"
-              >
-                <option value="customer">Customer Ledger (Receivable)</option>
-                <option value="supplier">Supplier Ledger (Payable)</option>
-              </select>
+                placeholder="Select Ledger Type"
+                theme="light"
+              />
             </div>
 
             <div className="w-72">
@@ -785,6 +798,7 @@ export default function ReportsHub({
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Quantity to Deduct *</label>
                   <input
+                    autoFocus
                     type="number"
                     min="1"
                     required
@@ -795,17 +809,19 @@ export default function ReportsHub({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Deduction Reason</label>
-                  <select
+                  <SearchableSelect
+                    options={[
+                      { value: 'dump', label: 'Dump / Discarded' },
+                      { value: 'damaged', label: 'Damaged Goods' },
+                      { value: 'expired', label: 'Expired Date' },
+                      { value: 'wastage', label: 'Transit Wastage' },
+                      { value: 'manual_adjustment', label: 'Physical Count Audit' }
+                    ]}
                     value={dumpFormData.type}
-                    onChange={(e) => setDumpFormData({ ...dumpFormData, type: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:bg-white focus:border-amber-400 outline-none"
-                  >
-                    <option value="dump">Dump / Discarded</option>
-                    <option value="damaged">Damaged Goods</option>
-                    <option value="expired">Expired Date</option>
-                    <option value="wastage">Transit Wastage</option>
-                    <option value="manual_adjustment">Physical Count Audit</option>
-                  </select>
+                    onChange={(val) => setDumpFormData(prev => ({ ...prev, type: val }))}
+                    placeholder="Select Reason"
+                    theme="light"
+                  />
                 </div>
               </div>
 
@@ -828,8 +844,8 @@ export default function ReportsHub({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Specific Incident Reason *</label>
-                <textarea
-                  rows={2}
+                <input
+                  type="text"
                   required
                   placeholder="e.g. Water damage during rain, packaging torn in shipment..."
                   value={dumpFormData.reason}
@@ -856,6 +872,68 @@ export default function ReportsHub({
             </form>
           </div>
         </div>
+      )}
+
+      {/* 8. CREDIT NOTES REGISTER REPORT */}
+      {activeTab === 'credit_notes' && (
+        <CreditDebitNoteManager
+          fixedType="credit_note"
+          notes={creditDebitNotes}
+          customers={customers}
+          suppliers={suppliers}
+          branches={branches}
+          items={items}
+          tenant={tenant}
+          onNoteUpdated={onDataUpdated}
+          onOpenAdd={() => onNavigateTab('credit_note_entry')}
+          addToast={addToast}
+        />
+      )}
+
+      {/* 9. DEBIT NOTES REGISTER REPORT */}
+      {activeTab === 'debit_notes' && (
+        <CreditDebitNoteManager
+          fixedType="debit_note"
+          notes={creditDebitNotes}
+          customers={customers}
+          suppliers={suppliers}
+          branches={branches}
+          items={items}
+          tenant={tenant}
+          onNoteUpdated={onDataUpdated}
+          onOpenAdd={() => onNavigateTab('debit_note_entry')}
+          addToast={addToast}
+        />
+      )}
+
+      {/* 10. STOCK IN REGISTER REPORT */}
+      {activeTab === 'stock_in' && (
+        <InventoryManager
+          fixedType="stock_in"
+          challans={challans}
+          branches={branches}
+          suppliers={suppliers}
+          items={items}
+          tenant={tenant}
+          onChallanUpdated={onDataUpdated}
+          onOpenAdd={() => onNavigateTab('stock_in_entry')}
+          addToast={addToast}
+        />
+      )}
+
+      {/* 11. STOCK TRANSFER REGISTER REPORT */}
+      {activeTab === 'stock_transfer' && (
+        <InventoryManager
+          fixedType="stock_transfer"
+          challans={challans}
+          branches={branches}
+          suppliers={suppliers}
+          items={items}
+          tenant={tenant}
+          onChallanUpdated={onDataUpdated}
+          onOpenAdd={() => onNavigateTab('stock_transfer_entry')}
+          addToast={addToast}
+        />
       )}
 
       {/* Printable Invoice Modal Fallback */}

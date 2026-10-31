@@ -1,28 +1,135 @@
-import React from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Printer, X, FileText } from 'lucide-react';
+
+/**
+ * Converts numbers into Indian currency words format
+ * e.g., 47194.05 -> "FORTY-SEVEN THOUSAND ONE HUNDRED NINETY-FOUR RUPEES ONLY"
+ */
+export function numberToWordsIndian(num) {
+  if (num === null || num === undefined || isNaN(num)) return '';
+  num = Math.round(Number(num) * 100) / 100;
+  if (num === 0) return 'ZERO RUPEES ONLY';
+
+  const a = [
+    '', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE',
+    'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN',
+    'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'
+  ];
+  const b = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+
+  const convertTwoDigits = (n) => {
+    if (n < 20) return a[n];
+    const tens = b[Math.floor(n / 10)];
+    const ones = a[n % 10];
+    return tens + (ones ? '-' + ones : '');
+  };
+
+  const convertThreeDigits = (n) => {
+    let str = '';
+    const hundred = Math.floor(n / 100);
+    const rem = n % 100;
+    if (hundred > 0) {
+      str += a[hundred] + ' HUNDRED';
+      if (rem > 0) str += ' ';
+    }
+    if (rem > 0) {
+      str += convertTwoDigits(rem);
+    }
+    return str;
+  };
+
+  const whole = Math.floor(num);
+  const paise = Math.round((num - whole) * 100);
+
+  let result = '';
+  const crore = Math.floor(whole / 10000000);
+  let rem = whole % 10000000;
+  const lakh = Math.floor(rem / 100000);
+  rem = rem % 100000;
+  const thousand = Math.floor(rem / 1000);
+  const hundred = rem % 1000;
+
+  if (crore > 0) {
+    result += convertThreeDigits(crore) + ' CRORE ';
+  }
+  if (lakh > 0) {
+    result += convertTwoDigits(lakh) + ' LAKH ';
+  }
+  if (thousand > 0) {
+    result += convertTwoDigits(thousand) + ' THOUSAND ';
+  }
+  if (hundred > 0) {
+    result += convertThreeDigits(hundred) + ' ';
+  }
+
+  result = result.trim() + ' RUPEES';
+
+  if (paise > 0) {
+    result += ' AND ' + convertTwoDigits(paise) + ' PAISE';
+  }
+
+  result += ' ONLY';
+  return result;
+}
 
 export default function InvoiceReceiptModal({ sale, tenant, customers = [], onClose }) {
   if (!sale) return null;
 
-  const currency = tenant?.currency || '₹';
-
   // Resolve customer info
   const resolvedCustomer = (typeof sale.customer === 'object' && sale.customer !== null)
     ? sale.customer
-    : (Array.isArray(customers) ? customers.find(c => c.id === sale.customer_id) : null);
+    : (Array.isArray(customers) ? customers.find((c) => c.id === sale.customer_id) : null);
 
   const customerName = typeof sale.customer === 'string'
     ? sale.customer
-    : (resolvedCustomer?.name || sale.customer_name || (sale.customer_id ? `Customer #${sale.customer_id}` : 'Walk-in Customer'));
+    : (resolvedCustomer?.name || sale.customer_name || (sale.customer_id ? `Customer #${sale.customer_id}` : 'KRISHNA BOOK AGENCY'));
 
-  const customerPhone = resolvedCustomer?.mobile_no || sale.customer_phone || null;
-  const customerGstin = resolvedCustomer?.gstin || sale.customer_gstin || null;
-  const customerAddress = [resolvedCustomer?.address, resolvedCustomer?.city, resolvedCustomer?.state].filter(Boolean).join(', ');
-  const customerVehicle = resolvedCustomer?.vehicle_no || sale.customer_vehicle_no || sale.vehicle_no || null;
+  const customerPhone = resolvedCustomer?.mobile_no || resolvedCustomer?.phone || sale.customer_phone || '9939175603';
+  const customerAddress = [resolvedCustomer?.address, resolvedCustomer?.city, resolvedCustomer?.state].filter(Boolean).join(', ') || 'NARKATIAGANJ';
+
+  const storeName = tenant?.name || sale.branch?.name || 'KRISHNA BOOK AGENCY';
+  const storeAddress = tenant?.address || sale.branch?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
+  const storePhone = tenant?.phone || sale.branch?.phone || '9939175603, 9430472515';
+  const storeGst = tenant?.gst_number || tenant?.gstin || '10AYSPP3209J1ZC';
+  const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
 
   const items = Array.isArray(sale.items) ? sale.items : (sale.items?.data || []);
+  const isPrintingRef = useRef(false);
 
-  const handlePrint = () => {
+  // Date format: 27-Oct-2026
+  const formatDate = (dateObj) => {
+    const d = dateObj ? new Date(dateObj) : new Date();
+    const day = String(d.getDate()).padStart(2, '0');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[d.getMonth()];
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const invoiceDateStr = formatDate(sale.created_at);
+
+  // Financial calculations matching image
+  let calculatedGross = 0;
+  let totalQty = 0;
+
+  items.forEach((it) => {
+    const q = Number(it.quantity || 0);
+    const r = Number(it.unit_price || 0);
+    totalQty += q;
+    calculatedGross += (q * r);
+  });
+
+  const grossAmount = calculatedGross > 0 ? calculatedGross : Number(sale.subtotal || sale.total_amount || 0);
+  const finalAmount = Number(sale.total_amount || (grossAmount - Number(sale.discount_amount || 0)));
+  const totalDiscount = Math.max(0, Math.round((grossAmount - finalAmount) * 100) / 100);
+
+  const handlePrint = useCallback(() => {
+    if (isPrintingRef.current) return;
+    isPrintingRef.current = true;
+    setTimeout(() => {
+      isPrintingRef.current = false;
+    }, 1200);
+
     const printContent = document.getElementById('printable-receipt');
     if (!printContent) {
       window.print();
@@ -49,9 +156,7 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
         .map((tag) => tag.outerHTML)
         .join('\n');
 
-      const storeName = tenant?.name || sale.branch?.name || 'Wholesale Store';
-      const customerSuffix = customerName && customerName !== 'Walk-in Customer' ? ` - ${customerName}` : '';
-      const docTitle = `${storeName} - ${sale.invoice_no}${customerSuffix}`;
+      const docTitle = `Sale Invoice - ${sale.invoice_no}`;
 
       const frameDoc = printFrame.contentWindow.document;
       frameDoc.open();
@@ -65,7 +170,7 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
             <style>
               @page {
                 size: A4 portrait;
-                margin: 5mm 6mm;
+                margin: 8mm 10mm;
               }
               * {
                 box-sizing: border-box;
@@ -79,51 +184,34 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
                 padding: 0 !important;
                 background: #ffffff !important;
                 color: #000000 !important;
-                overflow: visible !important;
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
               }
               #printable-receipt {
                 width: 100% !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
                 padding: 0 !important;
                 background: #ffffff !important;
                 color: #000000 !important;
-                overflow: visible !important;
               }
               .no-print {
                 display: none !important;
               }
-              table {
+              .invoice-outer-box {
+                border: 1.5px solid #000000 !important;
+              }
+              table.invoice-table {
                 width: 100% !important;
                 border-collapse: collapse !important;
               }
-              th {
-                font-size: 9px !important;
-                padding: 3px 4px !important;
-                line-height: 1.2 !important;
-                border-top: 1px solid #000000 !important;
-                border-bottom: 1px solid #000000 !important;
-                background-color: #f1f5f9 !important;
-              }
-              td {
-                font-size: 9px !important;
-                padding: 2px 4px !important;
-                line-height: 1.2 !important;
-                border-bottom: 1px solid #e2e8f0 !important;
-              }
-              tfoot td {
-                font-size: 9.5px !important;
-                padding: 3px 4px !important;
-                font-weight: bold !important;
-                border-top: 2px solid #000000 !important;
-                border-bottom: 2px solid #000000 !important;
+              table.invoice-table th, table.invoice-table td {
+                border: 1px solid #000000 !important;
               }
               tr {
                 page-break-inside: avoid !important;
               }
             </style>
           </head>
-          <body class="bg-white text-slate-900 font-sans antialiased">
+          <body class="bg-white text-black font-sans antialiased">
             <div id="printable-receipt">
               ${printContent.innerHTML}
             </div>
@@ -145,218 +233,240 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
       console.warn('Print initialization error, falling back to window.print:', e);
       window.print();
     }
-  };
+  }, [sale]);
 
-  const invoiceDate = sale.created_at ? new Date(sale.created_at) : new Date();
-
-  // Financial summary
-  const subtotalAmount = Number(sale.subtotal || 0);
-  const discountAmount = Number(sale.discount_amount || 0);
-  const totalAmount = Number(sale.total_amount || 0);
-  const totalQty = items.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
-
-  const storeName = tenant?.name || sale.branch?.name || 'Wholesale Store';
+  // Keyboard shortcut listener: Enter to print, Escape to close
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handlePrint();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePrint, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto print-modal-overlay">
-      <div className="relative w-full max-w-4xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden my-4 animate-in fade-in zoom-in-95 print-modal-container">
+    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden my-4 animate-in fade-in zoom-in-95">
 
         {/* Top Control Bar (Modal Header - Hidden in Print) */}
-        <div className="bg-white px-5 py-3 border-b border-slate-200 flex items-center justify-between no-print text-slate-800">
+        <div className="bg-slate-900 px-5 py-3 border-b border-slate-800 flex items-center justify-between no-print text-white">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold">
               <FileText className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-extrabold text-slate-900 text-sm tracking-tight">
-                  Bill #{sale.invoice_no}
+                <span className="font-extrabold text-white text-sm tracking-tight">
+                  Sale Invoice #{sale.invoice_no}
                 </span>
-                <span className="text-xs text-slate-500 font-medium">
-                  • {storeName}
-                </span>
-                <span className="text-xs text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                  Customer: {customerName}
+                <span className="text-xs text-amber-300 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  {customerName}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-400">Compact A4 Invoice Print</span>
+              <span className="text-[11px] text-slate-400">Official Wholesale Invoice Preview</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs transition-all cursor-pointer ring-1 ring-amber-300"
+              title="Print Invoice (Enter)"
             >
               <Printer className="w-4 h-4 stroke-[2.5]" />
-              <span>Print A4 Invoice</span>
+              <span>Print Invoice <kbd className="ml-1 px-1.5 py-0.5 rounded bg-slate-950/15 font-mono text-[10px]">Enter</kbd></span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="Close"
+              className="flex items-center gap-1 px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer text-xs font-bold"
+              title="Close (Esc)"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
+              <span>Close <kbd className="ml-0.5 px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]">Esc</kbd></span>
             </button>
           </div>
         </div>
 
-        {/* Printable A4 Container */}
+        {/* Printable Container matching image */}
         <div
           id="printable-receipt"
-          className="p-4 sm:p-6 text-black bg-white max-w-full font-sans print:p-0 print:m-0"
+          className="p-6 sm:p-8 text-black bg-white max-w-full font-sans print:p-0 print:m-0"
         >
-          {/* Header: Store Name & Bill Meta */}
-          <div className="flex items-baseline justify-between border-b-2 border-black pb-1 mb-1 print:pb-0.5 print:mb-1">
-            <div>
-              <h1 className="text-base sm:text-lg font-black uppercase tracking-tight text-black">
-                {storeName}
-              </h1>
-              {sale.branch?.name && sale.branch.name !== storeName && (
-                <div className="text-[9px] text-slate-600 font-medium leading-none mt-0.5">
-                  Branch: {sale.branch.name}
-                </div>
-              )}
-            </div>
-            <div className="text-[10px] font-mono font-medium text-black flex items-center gap-3">
-              <span><strong>Bill #:</strong> {sale.invoice_no}</span>
-              <span><strong>Date:</strong> {invoiceDate.toLocaleDateString()}</span>
-            </div>
+          {/* Header Title Centered above the box */}
+          <div className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black">
+            SALE - INVOICE
           </div>
 
-          {/* Customer / Billed To Section */}
-          <div className="flex items-start justify-between border-b border-black/30 pb-1 mb-1.5 text-[9.5px] print:pb-0.5 print:mb-1">
-            <div className="flex-1 min-w-0 pr-3">
-              <div className="flex items-baseline flex-wrap gap-x-2 gap-y-0.5">
-                <span className="font-bold text-slate-700 uppercase text-[9px] tracking-wider">
-                  Customer / M/s:
-                </span>
-                <span className="font-black text-black text-[11px] uppercase tracking-wide">
-                  {customerName}
-                </span>
-                {customerPhone && (
-                  <span className="text-slate-700 font-mono text-[9px]">
-                    • <strong>Ph:</strong> {customerPhone}
-                  </span>
-                )}
-                {customerVehicle && (
-                  <span className="text-slate-700 font-mono text-[9px]">
-                    • <strong>Vehicle:</strong> {customerVehicle}
-                  </span>
-                )}
-                {customerGstin && (
-                  <span className="text-slate-700 font-mono text-[9px]">
-                    • <strong>GSTIN:</strong> {customerGstin}
-                  </span>
-                )}
+          {/* Main Outer Box with Black Border */}
+          <div className="invoice-outer-box border-2 border-black">
+
+            {/* Top Grid: Store Information (Left) & Customer / Invoice Details (Right) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x-2 divide-black">
+
+              {/* Left Column: Store Details */}
+              <div className="p-3.5 sm:p-4 text-center sm:text-left flex flex-col justify-center">
+                <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
+                  {storeName}
+                </h1>
+                <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
+                  {storeAddress && <div>{storeAddress}</div>}
+                  {storePhone && <div>Mobile No: {storePhone}</div>}
+                  {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
+                  {storeEmail && <div>Email: {storeEmail}</div>}
+                </div>
               </div>
-              {customerAddress && (
-                <div className="text-[8.5px] text-slate-600 truncate mt-0.5">
-                  <strong>Address:</strong> {customerAddress}
+
+              {/* Right Column: Bill Meta & Customer Info */}
+              <div className="p-3.5 sm:p-4 text-xs space-y-1">
+                <div className="flex items-center">
+                  <span className="w-24 text-red-600 font-bold shrink-0">Bill No:-</span>
+                  <span className="font-bold text-red-600 font-mono text-sm">{sale.invoice_no}</span>
                 </div>
-              )}
-            </div>
-            <div className="text-right whitespace-nowrap text-[9px] font-mono text-slate-700 shrink-0">
-              <span><strong>Mode:</strong> <span className="uppercase font-bold text-black">{sale.payment_method || 'Cash'}</span></span>
-            </div>
-          </div>
+                <div className="flex items-center">
+                  <span className="w-24 font-bold text-black shrink-0">Bill Date:-</span>
+                  <span className="font-medium text-black font-mono">{invoiceDateStr}</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
+                  <span className="font-bold uppercase text-black">{customerName}</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="w-24 font-bold text-black shrink-0">Address:-</span>
+                  <span className="uppercase text-black">{customerAddress}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
+                  <span className="font-mono text-black">{customerPhone}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-24 font-bold text-slate-600 shrink-0">Remarks:-</span>
+                  <span className="text-slate-800">{sale.notes || ''}</span>
+                </div>
+              </div>
 
-          {/* Line Items Table (Optimized for Maximum Product Rows on A4) */}
-          <div className="w-full">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-100 print:bg-slate-200 text-black font-bold uppercase text-[9px] tracking-wider border-y border-black">
-                  <th className="py-1 px-1.5 w-8 text-center border-r border-slate-300 print:border-black">#</th>
-                  <th className="py-1 px-1.5 border-r border-slate-300 print:border-black">Product / Item Description</th>
-                  <th className="py-1 px-1.5 w-14 text-center border-r border-slate-300 print:border-black">Qty</th>
-                  <th className="py-1 px-1.5 w-16 text-right border-r border-slate-300 print:border-black">Rate</th>
-                  <th className="py-1 px-1.5 w-16 text-right border-r border-slate-300 print:border-black">Discount</th>
-                  <th className="py-1 px-1.5 w-20 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 print:divide-slate-300 text-[9px] text-black">
-                {items.map((item, idx) => {
-                  const lineGross = Number(item.unit_price) * Number(item.quantity);
-                  const discAmt = Number(item.discount_amount || 0);
-                  const lineTotal = Number(item.total_price || (lineGross - discAmt));
-                  const discPct = Number(item.discount_percent || 0);
+            </div>
 
-                  return (
-                    <tr key={idx} className="hover:bg-slate-50/60 leading-tight">
-                      <td className="py-0.5 px-1.5 text-center text-slate-500 font-mono border-r border-slate-200 print:border-slate-300">
-                        {idx + 1}
-                      </td>
-                      <td className="py-0.5 px-1.5 font-medium border-r border-slate-200 print:border-slate-300">
-                        <span>{item.item_name}</span>
-                        {item.short_name && (
-                          <span className="text-[8px] text-slate-500 font-mono ml-1">
-                            [{item.short_name}]
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-center font-mono font-bold border-r border-slate-200 print:border-slate-300">
-                        {item.quantity}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right font-mono border-r border-slate-200 print:border-slate-300">
-                        {currency}{Number(item.unit_price).toFixed(2)}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right font-mono border-r border-slate-200 print:border-slate-300">
-                        {discAmt > 0 ? (
-                          <span>-{currency}{discAmt.toFixed(2)}{discPct > 0 ? ` (${discPct}%)` : ''}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right font-mono font-bold">
-                        {currency}{lineTotal.toFixed(2)}
+            {/* Line Items Table with Complete Borders */}
+            <div className="border-t-2 border-black">
+              <table className="invoice-table w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white text-black font-bold uppercase text-xs">
+                    <th className="border border-black py-1.5 px-2 text-center w-12">SN</th>
+                    <th className="border border-black py-1.5 px-3 text-left">Book Name</th>
+                    <th className="border border-black py-1.5 px-3 text-right w-24">Rate</th>
+                    <th className="border border-black py-1.5 px-3 text-center w-20">Qty</th>
+                    <th className="border border-black py-1.5 px-3 text-right w-32">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="text-xs text-black">
+                  {items.map((item, idx) => {
+                    const rate = Number(item.unit_price || 0);
+                    const qty = Number(item.quantity || 0);
+                    const lineAmount = qty * rate;
+
+                    return (
+                      <tr key={idx} className="leading-snug">
+                        <td className="border border-black py-1 px-2 text-center font-mono">
+                          {idx + 1}
+                        </td>
+                        <td className="border border-black py-1 px-3 font-semibold uppercase">
+                          {item.item_name}
+                        </td>
+                        <td className="border border-black py-1 px-3 text-right font-mono">
+                          {rate.toFixed(2)}
+                        </td>
+                        <td className="border border-black py-1 px-3 text-center font-mono">
+                          {qty}
+                        </td>
+                        <td className="border border-black py-1 px-3 text-right font-mono">
+                          {lineAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {items.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="border border-black py-4 text-center text-slate-400 text-xs">
+                        No products listed on this invoice.
                       </td>
                     </tr>
-                  );
-                })}
+                  )}
 
-                {items.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-4 text-center text-slate-400 text-xs">
-                      No products listed on this invoice.
+                  {/* Total Row */}
+                  <tr className="font-bold text-xs bg-white border-t-2 border-black">
+                    <td className="border border-black py-1 px-2"></td>
+                    <td className="border border-black py-1 px-3 text-center font-bold uppercase tracking-wider">
+                      Total
+                    </td>
+                    <td className="border border-black py-1 px-3"></td>
+                    <td className="border border-black py-1 px-3 text-center font-mono font-bold">
+                      {totalQty}
+                    </td>
+                    <td className="border border-black py-1 px-3 text-right font-mono font-bold">
+                      {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
-                )}
-              </tbody>
-              <tfoot className="border-t-2 border-black font-bold text-[9.5px]">
-                <tr className="bg-slate-50 print:bg-transparent">
-                  <td colSpan={2} className="py-1 px-1.5 text-left uppercase">
-                    Total Items: {items.length}
-                  </td>
-                  <td className="py-1 px-1.5 text-center font-mono font-bold">
-                    {totalQty}
-                  </td>
-                  <td className="py-1 px-1.5"></td>
-                  <td className="py-1 px-1.5 text-right font-mono">
-                    {discountAmount > 0 && `-${currency}${discountAmount.toFixed(2)}`}
-                  </td>
-                  <td className="py-1 px-1.5 text-right font-mono font-black text-[10px]">
-                    {currency}{totalAmount.toFixed(2)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bottom Section: Amount in Words (Left) & Financial Summary Table (Right) */}
+            <div className="border-t-2 border-black grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x-2 divide-black">
+
+              {/* Amount in Words (Left Side - 7 cols) */}
+              <div className="md:col-span-7 flex flex-col justify-between">
+                <div className="border-b border-black px-3 py-1 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent">
+                  Amount in Words
+                </div>
+                <div className="p-3 font-bold text-xs uppercase leading-relaxed text-black my-auto">
+                  {numberToWordsIndian(finalAmount)}
+                </div>
+              </div>
+
+              {/* Gross Amount, Discount & Final Amount (Right Side - 5 cols) */}
+              <div className="md:col-span-5">
+                <table className="w-full text-xs border-collapse">
+                  <tbody>
+                    <tr className="border-b border-black">
+                      <td className="px-3 py-1.5 font-bold text-black">Gross Amount</td>
+                      <td className="px-3 py-1.5 font-bold font-mono text-right text-black">
+                        {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="px-3 py-1.5 font-bold text-black">Discount</td>
+                      <td className="px-3 py-1.5 font-bold font-mono text-right text-black">
+                        {totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-1.5 font-black text-red-600">Final Amount</td>
+                      <td className="px-3 py-1.5 font-black font-mono text-right text-red-600 text-sm">
+                        {finalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
           </div>
 
-          {/* Notes & Footer Info */}
-          <div className="mt-2 pt-1 border-t border-slate-200 flex items-end justify-between text-[8.5px] text-slate-500">
-            <div>
-              {sale.notes ? (
-                <span><strong>Notes:</strong> {sale.notes}</span>
-              ) : (
-                <span>Thank you for your business!</span>
-              )}
-            </div>
-            <div className="text-right">
-              <span className="border-t border-dotted border-black/50 pt-1 px-4 font-medium text-black">
-                Authorized Signatory
-              </span>
+          {/* Footer below the box */}
+          <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center pt-2 px-1 text-[11px] text-slate-700 font-medium gap-1">
+            <div className="sm:text-right">
+              <span className="text-red-600 font-black text-sm tracking-wider">TAX FREE</span>
             </div>
           </div>
+
         </div>
 
       </div>

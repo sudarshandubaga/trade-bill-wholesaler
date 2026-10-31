@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Building2,
   Warehouse,
@@ -16,6 +16,7 @@ import {
   Crown
 } from 'lucide-react';
 import axios from 'axios';
+import SearchableSelect from './SearchableSelect';
 
 export default function BranchManagerModal({
   isOpen,
@@ -31,6 +32,21 @@ export default function BranchManagerModal({
   const [isEditing, setIsEditing] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const nameInputRef = useRef(null);
+  const typeTriggerRef = useRef(null);
+  const codeInputRef = useRef(null);
+  const phoneInputRef = useRef(null);
+  const emailInputRef = useRef(null);
+  const addressInputRef = useRef(null);
+  const cityInputRef = useRef(null);
+  const stateInputRef = useRef(null);
+  const pincodeInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setTimeout(() => nameInputRef.current?.focus(), 80);
+    }
+  }, [isEditing]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -193,10 +209,13 @@ export default function BranchManagerModal({
                 </div>
                 <button
                   onClick={handleOpenAdd}
+                  data-add-new-btn="true"
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs cursor-pointer transition-all transform hover:scale-[1.02]"
+                  title="Shortcut: Alt+N or F2"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" />
                   <span>Add Branch / Store / Warehouse</span>
+                  <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-600/30 text-slate-950 rounded border border-amber-600/40">Alt+N</kbd>
                 </button>
               </div>
 
@@ -361,11 +380,20 @@ export default function BranchManagerModal({
                     Location / Store / Warehouse Name *
                   </label>
                   <input
+                    ref={nameInputRef}
+                    autoFocus
                     type="text"
                     required
                     placeholder="e.g. Phoenix Grand Mall (Store #1)"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        typeTriggerRef.current?.focus();
+                        typeTriggerRef.current?.click();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-medium focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -374,15 +402,21 @@ export default function BranchManagerModal({
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Location Type *
                   </label>
-                  <select
+                  <SearchableSelect
+                    triggerRef={typeTriggerRef}
+                    options={[
+                      { value: 'store', label: 'Store / Mall Outlet' },
+                      { value: 'warehouse', label: 'Central Warehouse' },
+                      { value: 'branch', label: 'Secondary Branch' }
+                    ]}
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-medium focus:bg-white focus:border-amber-400 outline-none"
-                  >
-                    <option value="store">🏬 Store / Mall Outlet</option>
-                    <option value="warehouse">🏭 Central Warehouse</option>
-                    <option value="branch">🏢 Secondary Branch</option>
-                  </select>
+                    onChange={(val) => setFormData(prev => ({ ...prev, type: val }))}
+                    onSelectNext={() => {
+                      codeInputRef.current?.focus();
+                    }}
+                    placeholder="Select Type"
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -392,10 +426,17 @@ export default function BranchManagerModal({
                     Branch Code
                   </label>
                   <input
+                    ref={codeInputRef}
                     type="text"
                     placeholder="e.g. STR-01 or WH-01"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        phoneInputRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono uppercase focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -404,10 +445,17 @@ export default function BranchManagerModal({
                     Contact Phone
                   </label>
                   <input
+                    ref={phoneInputRef}
                     type="text"
                     placeholder="+91 98765 43210"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        emailInputRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -416,10 +464,17 @@ export default function BranchManagerModal({
                     Email Address
                   </label>
                   <input
+                    ref={emailInputRef}
                     type="email"
                     placeholder="branch@store.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addressInputRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -430,11 +485,18 @@ export default function BranchManagerModal({
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Full Address
                   </label>
-                  <textarea
-                    rows={2}
+                  <input
+                    ref={addressInputRef}
+                    type="text"
                     placeholder="Shop number, floor, mall building, street..."
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        cityInputRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -443,30 +505,51 @@ export default function BranchManagerModal({
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">City</label>
                     <input
+                      ref={cityInputRef}
                       type="text"
                       placeholder="e.g. Mumbai"
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          stateInputRef.current?.focus();
+                        }
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">State</label>
                     <input
+                      ref={stateInputRef}
                       type="text"
                       placeholder="e.g. Maharashtra"
                       value={formData.state}
                       onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          pincodeInputRef.current?.focus();
+                        }
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Pincode</label>
                     <input
+                      ref={pincodeInputRef}
                       type="text"
                       placeholder="e.g. 400001"
                       value={formData.pincode}
                       onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSubmit(e);
+                        }
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                     />
                   </div>

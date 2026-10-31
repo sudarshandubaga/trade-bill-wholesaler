@@ -590,6 +590,7 @@ export default function PaymentReminders({ tenant, onDataUpdated, addToast }) {
                   Settlement Amount ({currencySymbol}) *
                 </label>
                 <input
+                  autoFocus
                   type="number"
                   step="0.01"
                   required

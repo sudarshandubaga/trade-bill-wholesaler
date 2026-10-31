@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users,
   ShieldCheck,
@@ -57,6 +57,21 @@ export default function UserManagerModal({
     description: '',
     permissions: []
   });
+
+  const userNameRef = useRef(null);
+  const roleTitleRef = useRef(null);
+
+  useEffect(() => {
+    if (isUserFormOpen) {
+      setTimeout(() => userNameRef.current?.focus(), 80);
+    }
+  }, [isUserFormOpen]);
+
+  useEffect(() => {
+    if (isRoleFormOpen) {
+      setTimeout(() => roleTitleRef.current?.focus(), 80);
+    }
+  }, [isRoleFormOpen]);
 
   const fetchUsersAndRoles = async () => {
     try {
@@ -291,10 +306,13 @@ export default function UserManagerModal({
                 </span>
                 <button
                   onClick={handleOpenAddUser}
+                  data-add-new-btn="true"
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs cursor-pointer transition-all"
+                  title="Shortcut: Alt+N or F2"
                 >
                   <UserPlus className="w-4 h-4 stroke-[2.5]" />
                   <span>Create User Account</span>
+                  <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-600/30 text-slate-950 rounded border border-amber-600/40">Alt+N</kbd>
                 </button>
               </div>
 
@@ -389,6 +407,8 @@ export default function UserManagerModal({
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
                   <input
+                    ref={userNameRef}
+                    autoFocus
                     type="text"
                     required
                     placeholder="e.g. Pooja Verma"
@@ -425,10 +445,20 @@ export default function UserManagerModal({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Role *</label>
-                  <select
+                  <SearchableSelect
+                    options={[
+                      { value: 'super_admin', label: '👑 Super Admin (All Permissions)' },
+                      { value: 'branch_manager', label: '🏢 Branch Manager' },
+                      { value: 'saleperson', label: '🛒 Saleperson (POS Billing)' },
+                      ...roles
+                        .filter((r) => !['super_admin', 'branch_manager', 'saleperson'].includes(r.slug))
+                        .map((r) => ({
+                          value: r.slug,
+                          label: `⚙️ ${r.name}`
+                        }))
+                    ]}
                     value={userFormData.role}
-                    onChange={(e) => {
-                      const newRole = e.target.value;
+                    onChange={(newRole) => {
                       let perms = [];
                       if (newRole === 'super_admin') {
                         perms = ['*'];
@@ -444,21 +474,11 @@ export default function UserManagerModal({
                         const matchRole = roles.find((r) => r.slug === newRole);
                         perms = matchRole?.permissions || ['pos', 'customers'];
                       }
-                      setUserFormData({ ...userFormData, role: newRole, permissions: perms });
+                      setUserFormData(prev => ({ ...prev, role: newRole, permissions: perms }));
                     }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
-                  >
-                    <option value="super_admin">👑 Super Admin (All Permissions)</option>
-                    <option value="branch_manager">🏢 Branch Manager</option>
-                    <option value="saleperson">🛒 Saleperson (POS Billing)</option>
-                    {roles
-                        .filter((r) => !['super_admin', 'branch_manager', 'saleperson'].includes(r.slug))
-                      .map((r) => (
-                        <option key={r.id} value={r.slug}>
-                          ⚙️ {r.name}
-                        </option>
-                      ))}
-                  </select>
+                    placeholder="Select Role"
+                    theme="light"
+                  />
                 </div>
 
                 <div>
@@ -677,6 +697,8 @@ export default function UserManagerModal({
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Role Title *</label>
                   <input
+                    ref={roleTitleRef}
+                    autoFocus
                     type="text"
                     required
                     placeholder="e.g. Inventory Manager"

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Users,
   Building,
@@ -65,6 +65,39 @@ export default function AccountManager({
   });
 
   const [isSaving, setIsSaving] = useState(false);
+
+  // Customer modal refs
+  const custNameRef = useRef(null);
+  const custMobileRef = useRef(null);
+  const custEmailRef = useRef(null);
+  const custCityRef = useRef(null);
+  const custStateRef = useRef(null);
+  const custBalanceRef = useRef(null);
+  const custAddressRef = useRef(null);
+
+  // Supplier modal refs
+  const suppNameRef = useRef(null);
+  const suppCompanyRef = useRef(null);
+  const suppPhoneRef = useRef(null);
+  const suppEmailRef = useRef(null);
+  const suppStateRef = useRef(null);
+  const suppCityRef = useRef(null);
+  const suppBalanceRef = useRef(null);
+  const suppAddressRef = useRef(null);
+
+  // Auto-focus when customer modal opens
+  useEffect(() => {
+    if (isCustomerModalOpen) {
+      setTimeout(() => custNameRef.current?.focus(), 100);
+    }
+  }, [isCustomerModalOpen]);
+
+  // Auto-focus when supplier modal opens
+  useEffect(() => {
+    if (isSupplierModalOpen) {
+      setTimeout(() => suppNameRef.current?.focus(), 100);
+    }
+  }, [isSupplierModalOpen]);
 
   // Filtered lists
   const customerList = useMemo(() => {
@@ -301,10 +334,13 @@ export default function AccountManager({
 
         <button
           onClick={activeSubTab === 'customer' ? handleOpenAddCustomer : handleOpenAddSupplier}
+          data-add-new-btn="true"
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs cursor-pointer transition-all"
+          title="Shortcut: Alt+N or F2"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>{activeSubTab === 'customer' ? 'Add New Customer' : 'Add New Supplier'}</span>
+          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-600/30 text-slate-950 rounded border border-amber-600/40">Alt+N</kbd>
         </button>
       </div>
 
@@ -533,8 +569,15 @@ export default function AccountManager({
                     type="text"
                     required
                     placeholder="e.g. Aarav Mehta"
+                    ref={custNameRef}
                     value={customerFormData.name}
                     onChange={(e) => setCustomerFormData({ ...customerFormData, name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        custMobileRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -543,8 +586,15 @@ export default function AccountManager({
                   <input
                     type="text"
                     placeholder="+91 98201 11223"
+                    ref={custMobileRef}
                     value={customerFormData.mobile_no}
                     onChange={(e) => setCustomerFormData({ ...customerFormData, mobile_no: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        custEmailRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -556,8 +606,15 @@ export default function AccountManager({
                   <input
                     type="email"
                     placeholder="customer@example.com"
+                    ref={custEmailRef}
                     value={customerFormData.email}
                     onChange={(e) => setCustomerFormData({ ...customerFormData, email: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        custCityRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -569,8 +626,15 @@ export default function AccountManager({
                   <input
                     type="text"
                     placeholder="Mumbai"
+                    ref={custCityRef}
                     value={customerFormData.city}
                     onChange={(e) => setCustomerFormData({ ...customerFormData, city: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        custStateRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -579,8 +643,15 @@ export default function AccountManager({
                   <input
                     type="text"
                     placeholder="Maharashtra"
+                    ref={custStateRef}
                     value={customerFormData.state}
                     onChange={(e) => setCustomerFormData({ ...customerFormData, state: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        custBalanceRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -590,8 +661,16 @@ export default function AccountManager({
                     type="number"
                     step="0.01"
                     placeholder="0.00"
+                    ref={custBalanceRef}
                     value={customerFormData.opening_balance}
                     onChange={(e) => setCustomerFormData({ ...customerFormData, opening_balance: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        custAddressRef.current?.focus();
+                        custAddressRef.current?.select?.();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -599,11 +678,18 @@ export default function AccountManager({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Street Address</label>
-                <textarea
-                  rows={2}
+                <input
+                  type="text"
                   placeholder="Apartment, building, locality..."
+                  ref={custAddressRef}
                   value={customerFormData.address}
                   onChange={(e) => setCustomerFormData({ ...customerFormData, address: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCustomer(e);
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
@@ -651,8 +737,15 @@ export default function AccountManager({
                     type="text"
                     required
                     placeholder="e.g. Apex Wholesale Traders"
+                    ref={suppNameRef}
                     value={supplierFormData.name}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        suppCompanyRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -661,8 +754,15 @@ export default function AccountManager({
                   <input
                     type="text"
                     placeholder="e.g. Apex Logistics Corp"
+                    ref={suppCompanyRef}
                     value={supplierFormData.company_name}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, company_name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        suppPhoneRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -674,8 +774,15 @@ export default function AccountManager({
                   <input
                     type="text"
                     placeholder="+91 98200 12345"
+                    ref={suppPhoneRef}
                     value={supplierFormData.mobile_no}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, mobile_no: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        suppEmailRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -684,8 +791,15 @@ export default function AccountManager({
                   <input
                     type="email"
                     placeholder="sales@apexwholesale.com"
+                    ref={suppEmailRef}
                     value={supplierFormData.email}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, email: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        suppStateRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -697,8 +811,15 @@ export default function AccountManager({
                   <input
                     type="text"
                     placeholder="Maharashtra"
+                    ref={suppStateRef}
                     value={supplierFormData.state}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, state: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        suppCityRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -707,8 +828,15 @@ export default function AccountManager({
                   <input
                     type="text"
                     placeholder="Mumbai"
+                    ref={suppCityRef}
                     value={supplierFormData.city}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, city: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        suppBalanceRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -721,8 +849,15 @@ export default function AccountManager({
                     type="number"
                     step="0.01"
                     placeholder="0.00"
+                    ref={suppBalanceRef}
                     value={supplierFormData.opening_balance}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, opening_balance: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        suppAddressRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -731,8 +866,15 @@ export default function AccountManager({
                   <input
                     type="text"
                     placeholder="Market yard, building, area..."
+                    ref={suppAddressRef}
                     value={supplierFormData.address}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, address: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveSupplier(e);
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>

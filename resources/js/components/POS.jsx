@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import SearchableSelect from './SearchableSelect';
 import {
   Plus,
-  Minus,
   Trash2,
   Receipt,
   UserPlus,
@@ -30,7 +28,8 @@ export default function POS({
   isProcessingSale,
   preselectedCustomerId,
   onClearPreselectedCustomer,
-  categories: categoriesList = []
+  categories: categoriesList = [],
+  isInvoiceModalOpen = false
 }) {
   const currency = tenant?.currency || '₹';
 
@@ -60,7 +59,33 @@ export default function POS({
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [highlightedCustomerIndex, setHighlightedCustomerIndex] = useState(0);
+
+  // Modal Visibility State
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [isPopupProductDropdownOpen, setIsPopupProductDropdownOpen] = useState(false);
+
   const clientDropdownRef = useRef(null);
+  const customerInputRef = useRef(null);
+  const customerDropdownListRef = useRef(null);
+  const customerItemRefs = useRef([]);
+  const completeSaleButtonRef = useRef(null);
+
+  // Focus customer selection input on mount or whenever bill resets / invoice modal closes
+  useEffect(() => {
+    if (!isInvoiceModalOpen && !selectedCustomerId && !isCustomerModalOpen) {
+      setIsAddProductModalOpen(false);
+      setIsPopupProductDropdownOpen(false);
+      setIsClientDropdownOpen(true);
+      setHighlightedCustomerIndex(0);
+      const timer = setTimeout(() => {
+        customerInputRef.current?.focus();
+        customerInputRef.current?.select();
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [isInvoiceModalOpen, selectedCustomerId, isCustomerModalOpen]);
 
   // Sync preselected customer from external tabs
   useEffect(() => {
@@ -81,7 +106,7 @@ export default function POS({
   }, []);
 
   // Quick Add Wholesale Customer modal state
-  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const quickCustomerInputRefs = useRef([]);
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     mobile_no: '',
@@ -91,6 +116,14 @@ export default function POS({
     opening_balance: 0,
   });
 
+  useEffect(() => {
+    if (isCustomerModalOpen) {
+      setTimeout(() => {
+        quickCustomerInputRefs.current[0]?.focus();
+      }, 50);
+    }
+  }, [isCustomerModalOpen]);
+
   // -------------------------------------------------------------
   // CART / BILL TABLE STATE
   // Cart item: { item, quantity, unit_price, discount_percent, discount_amount }
@@ -99,7 +132,7 @@ export default function POS({
   const [discountAmount, setDiscountAmount] = useState(0);
   const [bulkDiscountPercent, setBulkDiscountPercent] = useState('');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [paymentMethod, setPaymentMethod] = useState('Credit');
   const [paidAmount, setPaidAmount] = useState('');
 
   const tableContainerRef = useRef(null);
@@ -163,77 +196,6 @@ export default function POS({
 
     const subtotal = Math.max(0, Math.round((amount - discAmt) * 100) / 100);
     return { amount, discAmt, discPct, subtotal };
-  };
-
-  // -------------------------------------------------------------
-  // SIMPLE "ADD PRODUCT TO BILL" SECTION: ONLY CATEGORY & PRODUCT
-  // Product is added automatically when selected (qty = 1, disc = 0, rate = item.price)
-  // -------------------------------------------------------------
-  const [entryCategory, setEntryCategory] = useState('All');
-
-  // Products available in the selected category
-  const availableProducts = useMemo(() => {
-    return itemList.filter((it) => {
-      const matchCat = entryCategory === 'All' || it.category === entryCategory;
-      return it.is_active !== false && matchCat;
-    });
-  }, [itemList, entryCategory]);
-
-  // Automatically add product when selected from dropdown
-  const handleProductSelectAndAdd = (productId, rawItem) => {
-    if (!productId) return;
-    // Always lookup authentic item from itemList
-    let it = itemList.find((item) => String(item.id) === String(productId));
-    if (!it && rawItem) {
-      it = rawItem.raw ? rawItem.raw : rawItem;
-    }
-    if (!it) return;
-
-    const rate = Number(it.price ?? it.rate ?? it.unit_price ?? 0) || 0;
-    const qty = 1;
-
-    setCart((prev) => {
-      const existingIdx = prev.findIndex((i) => String(i.item?.id) === String(it.id));
-      if (existingIdx !== -1) {
-        const updated = [...prev];
-        const existing = updated[existingIdx];
-        const newQty = (Number(existing.quantity) || 0) + 1;
-        const newGross = newQty * (Number(existing.unit_price) || 0);
-
-        let newDiscAmt = existing.discount_amount;
-        if (existing.discount_percent !== '' && Number(existing.discount_percent) > 0) {
-          const pct = Math.min(100, Number(existing.discount_percent));
-          newDiscAmt = Math.round(((newGross * pct) / 100) * 100) / 100;
-        }
-
-        updated[existingIdx] = {
-          ...existing,
-          quantity: newQty,
-          discount_amount: newDiscAmt > 0 ? String(newDiscAmt) : ''
-        };
-        return updated;
-      }
-
-      let initialDiscPct = '';
-      let initialDiscAmt = '';
-      if (bulkDiscountPercent !== '' && Number(bulkDiscountPercent) > 0) {
-        initialDiscPct = bulkDiscountPercent;
-        const pct = Math.min(100, Number(bulkDiscountPercent));
-        const amt = Math.round(((rate * qty * pct) / 100) * 100) / 100;
-        initialDiscAmt = amt > 0 ? String(amt) : '';
-      }
-
-      return [
-        ...prev,
-        {
-          item: it,
-          quantity: qty,
-          unit_price: rate,
-          discount_percent: initialDiscPct,
-          discount_amount: initialDiscAmt
-        }
-      ];
-    });
   };
 
   // Table Row Modifiers with automatic two-way linked discounts
@@ -343,9 +305,21 @@ export default function POS({
     setCart([]);
     setDiscountAmount(0);
     setBulkDiscountPercent('');
+    setPopupDiscountPercent('');
     setNotes('');
     setPaidAmount('');
+    setSelectedCustomerId('');
+    setClientSearchQuery('');
+    setPaymentMethod('Credit');
+    setIsAddProductModalOpen(false);
+    setIsPopupProductDropdownOpen(false);
+    setIsClientDropdownOpen(true);
+    setHighlightedCustomerIndex(0);
     if (onClearPreselectedCustomer) onClearPreselectedCustomer();
+    setTimeout(() => {
+      customerInputRef.current?.focus();
+      customerInputRef.current?.select();
+    }, 50);
   };
 
   // Totals
@@ -371,6 +345,7 @@ export default function POS({
   }, [cart]);
 
   const selectedCustomer = useMemo(() => {
+    if (!selectedCustomerId) return null;
     return customerList.find((c) => c.id === Number(selectedCustomerId));
   }, [customerList, selectedCustomerId]);
 
@@ -384,6 +359,361 @@ export default function POS({
         (c.city && c.city.toLowerCase().includes(q))
     ).slice(0, 40);
   }, [customerList, clientSearchQuery]);
+
+  const selectableCustomerOptions = useMemo(() => {
+    return filteredDropdownCustomers.map((c) => ({
+      id: String(c.id),
+      name: c.name,
+      mobile_no: c.mobile_no,
+      city: c.city,
+      raw: c,
+      subtitle: `${c.mobile_no || 'No mobile'}${c.city ? ` • ${c.city}` : ''}`
+    }));
+  }, [filteredDropdownCustomers]);
+
+  const handleSelectCustomer = (opt) => {
+    if (!opt) return;
+    setSelectedCustomerId(String(opt.id || opt.raw?.id));
+    setClientSearchQuery('');
+    setIsClientDropdownOpen(false);
+    setHighlightedCustomerIndex(0);
+
+    // After selection of customer, open Add Product Popup!
+    setIsAddProductModalOpen(true);
+  };
+
+  const handleResetCustomer = () => {
+    setSelectedCustomerId('');
+    setClientSearchQuery('');
+    setIsAddProductModalOpen(false);
+    setIsPopupProductDropdownOpen(false);
+    setIsClientDropdownOpen(true);
+    setHighlightedCustomerIndex(0);
+    setTimeout(() => {
+      customerInputRef.current?.focus();
+      customerInputRef.current?.select();
+    }, 50);
+  };
+
+  const handleCustomerKeyDown = (e) => {
+    if (!isClientDropdownOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setIsClientDropdownOpen(true);
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const target = selectableCustomerOptions[highlightedCustomerIndex] || selectableCustomerOptions[0];
+        if (target) {
+          handleSelectCustomer(target);
+        } else {
+          setIsClientDropdownOpen(true);
+        }
+        return;
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedCustomerIndex((prev) => {
+        const next = prev < selectableCustomerOptions.length - 1 ? prev + 1 : 0;
+        customerItemRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+        return next;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedCustomerIndex((prev) => {
+        const next = prev > 0 ? prev - 1 : selectableCustomerOptions.length - 1;
+        customerItemRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+        return next;
+      });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const target = selectableCustomerOptions[highlightedCustomerIndex] || selectableCustomerOptions[0];
+      if (target) {
+        handleSelectCustomer(target);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsClientDropdownOpen(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // ADD PRODUCT POPUP MODAL STATE & LOGIC
+  // -------------------------------------------------------------
+  const [popupSelectedProduct, setPopupSelectedProduct] = useState(null);
+  const [popupProductSearchQuery, setPopupProductSearchQuery] = useState('');
+  const [popupHighlightedProductIndex, setPopupHighlightedProductIndex] = useState(0);
+  const [popupQty, setPopupQty] = useState('1');
+  const [popupDiscountPercent, setPopupDiscountPercent] = useState('');
+  const [popupFeedbackMsg, setPopupFeedbackMsg] = useState('');
+
+  const popupProductSearchInputRef = useRef(null);
+  const popupQtyInputRef = useRef(null);
+  const popupDiscountInputRef = useRef(null);
+  const popupDropdownRef = useRef(null);
+  const popupItemRefs = useRef([]);
+
+  // Auto focus product search input when Add Product popup opens
+  useEffect(() => {
+    if (isAddProductModalOpen) {
+      const timer = setTimeout(() => {
+        popupProductSearchInputRef.current?.focus();
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [isAddProductModalOpen]);
+
+  // Close popup product dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (popupDropdownRef.current && !popupDropdownRef.current.contains(event.target)) {
+        setIsPopupProductDropdownOpen(false);
+      }
+    }
+    if (isPopupProductDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isPopupProductDropdownOpen]);
+
+  const handleCloseAddProductModal = () => {
+    setIsPopupProductDropdownOpen(false);
+    setIsAddProductModalOpen(false);
+    setTimeout(() => {
+      completeSaleButtonRef.current?.focus();
+    }, 50);
+  };
+
+  // Keyboard shortcut: F2 to open Add Product popup, Esc to close product popup or reset customer,
+  // and Enter to complete sale / generate invoice when customer is selected & products exist & popup is closed
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // When invoice print modal is open, let that modal handle Enter / Escape
+      if (isInvoiceModalOpen) return;
+
+      if (e.key === 'F2') {
+        e.preventDefault();
+        setIsAddProductModalOpen(true);
+      } else if (e.key === 'Escape') {
+        if (isAddProductModalOpen) {
+          e.preventDefault();
+          handleCloseAddProductModal();
+          return;
+        }
+        if (selectedCustomerId && cart.length === 0) {
+          e.preventDefault();
+          handleResetCustomer();
+          return;
+        }
+      } else if (e.key === 'Enter') {
+        // If customer quick-add modal is open, let its form submit handle it
+        if (isCustomerModalOpen) return;
+
+        // If add product popup is open, popup fields handle Enter
+        if (isAddProductModalOpen) return;
+
+        // If client search dropdown is open, client dropdown handles Enter
+        if (isClientDropdownOpen) return;
+
+        // If no customer selected, customer search field handles Enter
+        if (!selectedCustomerId) return;
+
+        // If customer is selected but cart is empty, open Add Product popup
+        if (cart.length === 0) {
+          e.preventDefault();
+          setIsAddProductModalOpen(true);
+          return;
+        }
+
+        // Customer is selected and items exist in cart: Generate Wholesale Invoice!
+        if (!isProcessingSale) {
+          e.preventDefault();
+          handleCheckoutRef.current?.();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [
+    isInvoiceModalOpen,
+    isAddProductModalOpen,
+    selectedCustomerId,
+    cart.length,
+    isProcessingSale,
+    isCustomerModalOpen,
+    isClientDropdownOpen
+  ]);
+
+  // Products filtered for the popup search
+  const popupFilteredProducts = useMemo(() => {
+    const q = popupProductSearchQuery.toLowerCase().trim();
+    if (!q) {
+      return itemList.filter((it) => it.is_active !== false).slice(0, 40);
+    }
+    return itemList.filter((it) => {
+      if (it.is_active === false) return false;
+      const matchName = String(it.name || '').toLowerCase().includes(q);
+      const matchSku = String(it.short_name || it.sku || it.code || '').toLowerCase().includes(q);
+      const matchCat = String(it.category || '').toLowerCase().includes(q);
+      return matchName || matchSku || matchCat;
+    }).slice(0, 40);
+  }, [itemList, popupProductSearchQuery]);
+
+  const handlePopupSelectProduct = (product) => {
+    if (!product) return;
+    setPopupSelectedProduct(product);
+    setPopupProductSearchQuery(product.name || '');
+    setIsPopupProductDropdownOpen(false);
+    if (popupDiscountPercent === '' && bulkDiscountPercent !== '') {
+      setPopupDiscountPercent(bulkDiscountPercent);
+    }
+    // Auto-focus Qty input after selecting product
+    setTimeout(() => {
+      popupQtyInputRef.current?.focus();
+      popupQtyInputRef.current?.select();
+    }, 50);
+  };
+
+  const handlePopupProductKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCloseAddProductModal();
+      return;
+    }
+
+    if (!isPopupProductDropdownOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setIsPopupProductDropdownOpen(true);
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (popupFilteredProducts.length > 0) {
+          handlePopupSelectProduct(popupFilteredProducts[popupHighlightedProductIndex] || popupFilteredProducts[0]);
+        } else if (popupSelectedProduct) {
+          popupQtyInputRef.current?.focus();
+          popupQtyInputRef.current?.select();
+        } else {
+          setIsPopupProductDropdownOpen(true);
+        }
+        return;
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setPopupHighlightedProductIndex((prev) => {
+        const next = prev < popupFilteredProducts.length - 1 ? prev + 1 : 0;
+        popupItemRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+        return next;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setPopupHighlightedProductIndex((prev) => {
+        const next = prev > 0 ? prev - 1 : popupFilteredProducts.length - 1;
+        popupItemRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+        return next;
+      });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (popupFilteredProducts.length > 0 && popupFilteredProducts[popupHighlightedProductIndex]) {
+        handlePopupSelectProduct(popupFilteredProducts[popupHighlightedProductIndex]);
+      } else if (popupFilteredProducts.length > 0) {
+        handlePopupSelectProduct(popupFilteredProducts[0]);
+      }
+    }
+  };
+
+  const handleAddProductFromPopup = (e) => {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    if (!popupSelectedProduct) {
+      setIsPopupProductDropdownOpen(true);
+      popupProductSearchInputRef.current?.focus();
+      return;
+    }
+
+    const parsedQty = parseFloat(popupQty);
+    const qtyToAdd = (!isNaN(parsedQty) && parsedQty > 0) ? parsedQty : 1;
+    const rate = Number(popupSelectedProduct.price ?? popupSelectedProduct.rate ?? popupSelectedProduct.unit_price ?? 0) || 0;
+    const discPct = popupDiscountPercent !== '' ? Math.min(100, Math.max(0, parseFloat(popupDiscountPercent) || 0)) : '';
+
+    setCart((prev) => {
+      const existingIdx = prev.findIndex((i) => String(i.item?.id) === String(popupSelectedProduct.id));
+      if (existingIdx !== -1) {
+        const updated = [...prev];
+        const existing = updated[existingIdx];
+        const newQty = Math.round(((Number(existing.quantity) || 0) + qtyToAdd) * 1000) / 1000;
+        const newGross = newQty * (Number(existing.unit_price) || 0);
+
+        let newDiscAmt = existing.discount_amount;
+        const effectiveDiscPct = discPct !== '' ? discPct : existing.discount_percent;
+        if (effectiveDiscPct !== '' && Number(effectiveDiscPct) > 0) {
+          const pct = Math.min(100, Number(effectiveDiscPct));
+          newDiscAmt = Math.round(((newGross * pct) / 100) * 100) / 100;
+        }
+
+        updated[existingIdx] = {
+          ...existing,
+          quantity: newQty,
+          discount_percent: effectiveDiscPct !== '' ? String(effectiveDiscPct) : '',
+          discount_amount: newDiscAmt > 0 ? String(newDiscAmt) : ''
+        };
+        return updated;
+      }
+
+      let initialDiscAmt = '';
+      if (discPct !== '' && Number(discPct) > 0) {
+        const amt = Math.round(((rate * qtyToAdd * discPct) / 100) * 100) / 100;
+        initialDiscAmt = amt > 0 ? String(amt) : '';
+      }
+
+      return [
+        ...prev,
+        {
+          item: popupSelectedProduct,
+          quantity: qtyToAdd,
+          unit_price: rate,
+          discount_percent: discPct !== '' ? String(discPct) : '',
+          discount_amount: initialDiscAmt
+        }
+      ];
+    });
+
+    const addedName = popupSelectedProduct.name;
+    setPopupFeedbackMsg(`Added ${qtyToAdd}x "${addedName}" to bill!`);
+    setTimeout(() => {
+      setPopupFeedbackMsg('');
+    }, 2500);
+
+    // Reset popup input fields for the next product
+    setPopupSelectedProduct(null);
+    setPopupProductSearchQuery('');
+    setPopupQty('1');
+    // Discount remains previous value (do not reset popupDiscountPercent)
+    setIsPopupProductDropdownOpen(false);
+
+    // Add Product popup remains OPEN as requested by user.
+    // Focus automatically returns to product search for seamless consecutive entries!
+    setTimeout(() => {
+      popupProductSearchInputRef.current?.focus();
+    }, 50);
+  };
+
+  const popupPrice = popupSelectedProduct ? Number(popupSelectedProduct.price ?? popupSelectedProduct.rate ?? 0) : 0;
+  const popupQtyNum = parseFloat(popupQty) || 0;
+  const popupGross = Math.round(popupPrice * popupQtyNum * 100) / 100;
+  const popupDiscNum = parseFloat(popupDiscountPercent) || 0;
+  const popupDiscAmt = popupDiscNum > 0 ? Math.round(((popupGross * popupDiscNum) / 100) * 100) / 100 : 0;
+  const popupLineTotal = Math.max(0, Math.round((popupGross - popupDiscAmt) * 100) / 100);
 
   const manualBillDiscount = Number(discountAmount) || 0;
   const grandTotal = Math.max(0, Math.round((netSubtotal - manualBillDiscount) * 100) / 100);
@@ -401,19 +731,27 @@ export default function POS({
   };
 
   const handleCheckout = () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || isProcessingSale) return;
+    if (!selectedCustomerId) {
+      if (customerInputRef.current) {
+        customerInputRef.current.focus();
+      }
+      return;
+    }
 
     const payload = {
       branch_id: activeBranch?.id || null,
-      customer_id: selectedCustomerId ? Number(selectedCustomerId) : null,
+      customer_id: Number(selectedCustomerId),
       items: cart.map((i) => {
         const c = calculateRow(i);
+        const parsedQty = parseFloat(i.quantity);
+        const finalQty = (!isNaN(parsedQty) && parsedQty > 0) ? parsedQty : 1;
         return {
           item_id: i.item?.id,
           item_name: i.item?.name || i.item?.label || 'Item',
           short_name: i.item?.short_name || null,
           unit_price: Number(i.unit_price) || 0,
-          quantity: Number(i.quantity) || 1,
+          quantity: finalQty,
           discount_percent: Math.round(c.discPct * 100) / 100,
           discount_amount: Math.round(c.discAmt * 100) / 100,
           total_price: Math.round(c.subtotal * 100) / 100,
@@ -438,6 +776,9 @@ export default function POS({
       clearCart();
     });
   };
+
+  const handleCheckoutRef = useRef();
+  handleCheckoutRef.current = handleCheckout;
 
   const handleCreateQuickCustomer = async (e) => {
     e.preventDefault();
@@ -468,39 +809,40 @@ export default function POS({
         address: '',
         opening_balance: 0,
       });
+      // After selection of customer, open Add Product Popup
+      setIsAddProductModalOpen(true);
     }
   };
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-2 w-full overflow-hidden font-sans">
-      
+
       {/* 1. TOP BAR: CUSTOMER / PARTY SELECTION */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-2 sm:px-3 sm:py-2 shadow-2xs shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          
+
           <div className="flex-1 max-w-xl" ref={clientDropdownRef}>
             {selectedCustomer ? (
               <div className="p-1 px-2.5 rounded-xl bg-amber-50 border border-amber-300 shadow-2xs flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs shrink-0">
-                    {selectedCustomer.name.charAt(0).toUpperCase()}
+                  <div className={`w-6 h-6 rounded-lg font-black flex items-center justify-center text-xs shrink-0 ${selectedCustomer.isWalkIn ? 'bg-slate-300 text-slate-800' : 'bg-amber-500 text-slate-950'
+                    }`}>
+                    {selectedCustomer.isWalkIn ? <User className="w-3.5 h-3.5" /> : selectedCustomer.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex items-center gap-2">
                     <span className="font-extrabold text-slate-900 text-xs truncate">
                       {selectedCustomer.name}
                     </span>
                     <span className="text-[10px] text-slate-500 font-mono truncate">
-                      {selectedCustomer.mobile_no || 'No mobile'} {selectedCustomer.city ? `(${selectedCustomer.city})` : ''}
+                      {selectedCustomer.mobile_no || 'Counter Sale'} {selectedCustomer.city ? `(${selectedCustomer.city})` : ''}
                     </span>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedCustomerId('');
-                    setClientSearchQuery('');
-                  }}
+                  onClick={handleResetCustomer}
                   className="px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1 hover:bg-slate-100 cursor-pointer shrink-0"
+                  title="Change customer party"
                 >
                   Change
                   <X className="w-3 h-3 text-slate-400" />
@@ -511,18 +853,21 @@ export default function POS({
                 <div className="relative flex-1">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
+                    ref={customerInputRef}
                     type="text"
                     value={clientSearchQuery}
                     onChange={(e) => {
                       setClientSearchQuery(e.target.value);
                       setIsClientDropdownOpen(true);
+                      setHighlightedCustomerIndex(0);
                     }}
                     onFocus={(e) => {
                       e.target.select();
                       setIsClientDropdownOpen(true);
                     }}
+                    onKeyDown={handleCustomerKeyDown}
                     placeholder="Search party by name, firm, mobile (or counter cash)..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-1.5 text-xs text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-1.5 text-xs text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-1 focus:ring-amber-500/20"
                   />
                   <button
                     type="button"
@@ -544,56 +889,52 @@ export default function POS({
                 </button>
 
                 {isClientDropdownOpen && (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto p-1.5 space-y-0.5 animate-in fade-in">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomerId('');
-                        setClientSearchQuery('');
-                        setIsClientDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-100 text-left transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">
-                          <User className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <span className="font-extrabold text-xs text-slate-900 block">
-                            Walk-in Cash Customer (Counter Sale)
-                          </span>
-                          <span className="text-[10px] text-slate-400">Immediate cash billing</span>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 rounded bg-slate-100">
-                        Cash
-                      </span>
-                    </button>
+                  <div
+                    ref={customerDropdownListRef}
+                    className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto p-1.5 space-y-0.5 animate-in fade-in"
+                  >
+                    {selectableCustomerOptions.map((opt, idx) => {
+                      const isHighlighted = idx === highlightedCustomerIndex;
+                      return (
+                        <button
+                          key={opt.id || idx}
+                          ref={(el) => (customerItemRefs.current[idx] = el)}
+                          type="button"
+                          onClick={() => handleSelectCustomer(opt)}
+                          onMouseEnter={() => setHighlightedCustomerIndex(idx)}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${isHighlighted
+                              ? 'bg-amber-100 text-amber-950 font-bold border border-amber-300 ring-1 ring-amber-400/30'
+                              : 'hover:bg-slate-50 text-slate-800'
+                            }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${opt.isWalkIn ? 'bg-slate-100 text-slate-600' : 'bg-amber-500/20 text-amber-800'
+                              }`}>
+                              {opt.isWalkIn ? <User className="w-3.5 h-3.5" /> : opt.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <span className={`text-xs block truncate ${isHighlighted ? 'font-black text-amber-950' : 'font-extrabold text-slate-900'}`}>
+                                {opt.name}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-mono truncate block">
+                                {opt.subtitle}
+                              </span>
+                            </div>
+                          </div>
+                          {opt.badge ? (
+                            <span className="text-[10px] font-bold text-slate-500 px-2 py-0.5 rounded bg-slate-100 shrink-0 ml-2">
+                              {opt.badge}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-amber-700 shrink-0 ml-2">
+                              Select &rarr;
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
 
-                    <div className="border-t border-slate-100 my-1"></div>
-
-                    {filteredDropdownCustomers.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCustomerId(String(c.id));
-                          setClientSearchQuery('');
-                          setIsClientDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-amber-50 text-left transition-colors cursor-pointer"
-                      >
-                        <div className="min-w-0">
-                          <span className="font-bold text-xs text-slate-900 block truncate">{c.name}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {c.mobile_no || 'No mobile'} {c.city ? `• ${c.city}` : ''}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-bold text-amber-700">Select &rarr;</span>
-                      </button>
-                    ))}
-
-                    {filteredDropdownCustomers.length === 0 && (
+                    {selectableCustomerOptions.length === 0 && (
                       <div className="p-3 text-center text-xs text-slate-400">
                         No party matches "{clientSearchQuery}"
                       </div>
@@ -624,10 +965,10 @@ export default function POS({
 
       {/* 2. MAIN SECTION: BILL ITEMS (WITH INLINE ADD BELOW LISTING) & CHECKOUT SUMMARY */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2.5 h-full overflow-hidden">
-        
+
         {/* LEFT / CENTER: BILL ITEMS TABLE + INLINE PRODUCT ADD */}
         <div className="lg:col-span-8 flex flex-col h-full min-h-0 bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
-          
+
           {/* Header */}
           <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 shrink-0">
             <div className="flex items-center gap-2">
@@ -640,16 +981,30 @@ export default function POS({
               </span>
             </div>
 
-            {cart.length > 0 && (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={clearCart}
-                className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg hover:bg-rose-50 cursor-pointer"
+                onClick={() => setIsAddProductModalOpen(true)}
+                data-add-new-btn="true"
+                className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-2xs cursor-pointer transition-colors"
+                title="Open Add Product popup (Alt+N or F2)"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Clear Bill</span>
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>+ Add Product</span>
+                <kbd className="hidden sm:inline-block px-1 text-[10px] font-mono bg-amber-600/30 text-slate-950 rounded">Alt+N</kbd>
               </button>
-            )}
+
+              {cart.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg hover:bg-rose-50 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear Bill</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Scrollable Table Area */}
@@ -706,7 +1061,7 @@ export default function POS({
 
                   return (
                     <tr key={itemId} className="hover:bg-slate-50/80 transition-colors">
-                      
+
                       {/* 1. S.NO. */}
                       <td className="py-2 px-3 text-center font-mono font-bold text-slate-400">
                         {idx + 1}
@@ -718,7 +1073,7 @@ export default function POS({
                           <div className="font-extrabold text-slate-900 text-xs">
                             {item?.name || item?.label || 'Unnamed Item'}
                           </div>
-                          
+
                           <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
                             {(item?.short_name || item?.sku || item?.code) && (
                               <span className="font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-1 rounded">
@@ -751,11 +1106,20 @@ export default function POS({
                       <td className="py-2 px-3 text-center">
                         <input
                           type="number"
-                          min="0.01"
-                          step="1"
+                          min="0.001"
+                          step="any"
                           value={quantity}
                           onFocus={(e) => e.target.select()}
                           onChange={(e) => updateRowQuantity(itemId, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const discInput = e.target.closest('tr')?.querySelector('input[title="Discount percentage"]');
+                              discInput?.focus();
+                              discInput?.select();
+                            }
+                          }}
                           className="w-14 text-center font-black text-slate-900 font-mono text-xs bg-slate-50 border border-slate-200 rounded-lg py-1 px-1 outline-none focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-400"
                           title="Quantity"
                         />
@@ -775,7 +1139,7 @@ export default function POS({
                               type="number"
                               min="0"
                               max="100"
-                              step="0.5"
+                              step="any"
                               placeholder="0"
                               value={discount_percent}
                               onFocus={(e) => e.target.select()}
@@ -837,68 +1201,21 @@ export default function POS({
                       </div>
                       <p className="font-black text-slate-700 text-xs">No items added to the bill yet</p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        Search and select a product in the inline row below to instantly add it to this bill.
+                        Open the Add Product popup (F2) to add items.
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddProductModalOpen(true)}
+                        className="mt-3 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs inline-flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Add Product Popup (F2)</span>
+                      </button>
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-          </div>
-
-          {/* INLINE PRODUCT ADD ROW (DIRECTLY BELOW LISTING OF ADDED PRODUCTS) */}
-          <div className="relative z-30 shrink-0 p-2 sm:p-2.5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-t border-amber-300/80">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              
-              {/* Line indicator badge */}
-              <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shrink-0 shadow-2xs">
-                <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                <span className="whitespace-nowrap">Line {cart.length + 1}</span>
-              </div>
-
-              {/* Category selector */}
-              <div className="w-full sm:w-44 shrink-0">
-                <SearchableSelect
-                  options={[
-                    { value: 'All', label: `All (${itemList.length})` },
-                    ...categoryOptions.map((cat) => ({
-                      value: cat,
-                      label: cat,
-                      badge: `${itemList.filter((i) => i.category === cat && i.is_active !== false).length}`
-                    }))
-                  ]}
-                  value={entryCategory}
-                  onChange={(cat) => setEntryCategory(cat || 'All')}
-                  placeholder="All Categories"
-                  searchPlaceholder="Filter category..."
-                  size="sm"
-                  theme="light"
-                  direction="up"
-                />
-              </div>
-
-              {/* Product selector (auto-adds on select, direction="up" so dropdown opens upwards) */}
-              <div className="flex-1 min-w-0">
-                <SearchableSelect
-                  options={availableProducts.map((it) => ({
-                    ...it,
-                    value: it.id,
-                    label: it.name,
-                    sublabel: it.short_name ? `SKU: ${it.short_name}` : '',
-                    badge: `${currency}${Number(it.price || 0).toFixed(2)} • Stock: ${it.stock_quantity ?? 0} ${it.unit || 'Pcs'}`,
-                    raw: it
-                  }))}
-                  value=""
-                  onChange={(productId, rawItem) => handleProductSelectAndAdd(productId, rawItem)}
-                  placeholder="🔍 Type product name, SKU or scan barcode to add..."
-                  searchPlaceholder="Type name or code, press Enter to add..."
-                  size="sm"
-                  theme="light"
-                  direction="up"
-                />
-              </div>
-
-            </div>
           </div>
 
           {/* Bill Bottom Delivery Notes */}
@@ -917,7 +1234,7 @@ export default function POS({
 
         {/* RIGHT: BILL SUMMARY & CHECKOUT */}
         <div className="lg:col-span-4 flex flex-col h-full min-h-0 bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 shadow-xs space-y-2.5 overflow-y-auto">
-          
+
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 shrink-0">
             <h3 className="font-black text-slate-900 text-xs uppercase tracking-wider">
               Bill Summary
@@ -1011,11 +1328,10 @@ export default function POS({
                     key={m.id}
                     type="button"
                     onClick={() => setPaymentMethod(m.id)}
-                    className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-bold transition-all cursor-pointer ${
-                      isSelected
+                    className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-[10px] font-bold transition-all cursor-pointer ${isSelected
                         ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-xs font-black'
                         : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
+                      }`}
                   >
                     <Icon className="w-3.5 h-3.5 mb-0.5" />
                     <span className="truncate">{m.id}</span>
@@ -1087,14 +1403,14 @@ export default function POS({
 
           {/* Complete Sale Button */}
           <button
+            ref={completeSaleButtonRef}
             type="button"
             onClick={handleCheckout}
             disabled={cart.length === 0 || isProcessingSale}
-            className={`w-full py-2.5 sm:py-3 rounded-xl font-black text-xs tracking-wide transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0 mt-auto ${
-              cart.length === 0 || isProcessingSale
+            className={`complete-sale-btn w-full py-2.5 sm:py-3 rounded-xl font-black text-xs tracking-wide transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0 mt-auto focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${cart.length === 0 || isProcessingSale
                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none'
                 : 'bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 shadow-amber-500/25 ring-1 ring-amber-300/60 transform hover:-translate-y-0.5 active:translate-y-0'
-            }`}
+              }`}
           >
             {isProcessingSale ? (
               <>
@@ -1104,7 +1420,7 @@ export default function POS({
             ) : (
               <>
                 <Receipt className="w-4 h-4 stroke-[2.5]" />
-                <span>Complete Sale &bull; {currency}{grandTotal.toFixed(2)}</span>
+                <span>Complete Sale (Enter) &bull; {currency}{grandTotal.toFixed(2)}</span>
               </>
             )}
           </button>
@@ -1138,12 +1454,20 @@ export default function POS({
                   Customer / Business Name <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  ref={(el) => (quickCustomerInputRefs.current[0] = el)}
                   type="text"
                   required
                   placeholder="e.g. Metro Traders / Ramesh Kumar"
                   value={newCustomer.name}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      quickCustomerInputRefs.current[1]?.focus();
+                      quickCustomerInputRefs.current[1]?.select();
+                    }
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
                 />
               </div>
@@ -1154,11 +1478,19 @@ export default function POS({
                     Mobile Number
                   </label>
                   <input
+                    ref={(el) => (quickCustomerInputRefs.current[1] = el)}
                     type="tel"
                     placeholder="e.g. 9876543210"
                     value={newCustomer.mobile_no}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setNewCustomer({ ...newCustomer, mobile_no: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        quickCustomerInputRefs.current[2]?.focus();
+                        quickCustomerInputRefs.current[2]?.select();
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
                   />
                 </div>
@@ -1168,28 +1500,22 @@ export default function POS({
                     City / Town
                   </label>
                   <input
+                    ref={(el) => (quickCustomerInputRefs.current[2] = el)}
                     type="text"
                     placeholder="e.g. Mumbai / Pune"
                     value={newCustomer.city}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        quickCustomerInputRefs.current[3]?.focus();
+                        quickCustomerInputRefs.current[3]?.select();
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                  Shop / Business Address
-                </label>
-                <input
-                  type="text"
-                  placeholder="Market road, shop number, area..."
-                  value={newCustomer.address}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
-                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1198,11 +1524,19 @@ export default function POS({
                     Email Address (Optional)
                   </label>
                   <input
+                    ref={(el) => (quickCustomerInputRefs.current[3] = el)}
                     type="email"
                     placeholder="contact@business.com"
                     value={newCustomer.email}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        quickCustomerInputRefs.current[4]?.focus();
+                        quickCustomerInputRefs.current[4]?.select();
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
                   />
                 </div>
@@ -1212,15 +1546,44 @@ export default function POS({
                     Opening Balance ({currency})
                   </label>
                   <input
+                    ref={(el) => (quickCustomerInputRefs.current[4] = el)}
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     value={newCustomer.opening_balance}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setNewCustomer({ ...newCustomer, opening_balance: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        quickCustomerInputRefs.current[5]?.focus();
+                        quickCustomerInputRefs.current[5]?.select();
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono focus:outline-none focus:border-amber-500 focus:bg-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Street Address
+                </label>
+                <input
+                  ref={(el) => (quickCustomerInputRefs.current[5] = el)}
+                  type="text"
+                  placeholder="Market road, shop number, area..."
+                  value={newCustomer.address}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateQuickCustomer(e);
+                    }
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
@@ -1238,6 +1601,305 @@ export default function POS({
                   Save & Select Party
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. ADD PRODUCT POPUP MODAL (REMAINS OPEN UNTIL USER CLOSES, SHOWS BACKGROUND BILL LISTING) */}
+      {isAddProductModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-[1.5px] flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+          onClick={handleCloseAddProductModal}
+        >
+          <div
+            className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 relative text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500 text-slate-950 font-black flex items-center justify-center text-sm shadow-2xs shrink-0">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
+                    Add Product to Bill
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium truncate">
+                    {selectedCustomer ? (
+                      <>Party: <span className="font-bold text-amber-800">{selectedCustomer.name}</span></>
+                    ) : (
+                      'Direct bill entry'
+                    )} • <span className="font-mono font-bold text-slate-700">{cart.length} lines in bill ({currency}{grandTotal.toFixed(2)})</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="hidden sm:inline-block text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                  Esc to close & complete
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCloseAddProductModal}
+                  className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+                  title="Close popup (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Success Feedback banner if product was just added */}
+            {popupFeedbackMsg && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between animate-in fade-in">
+                <span>✓ {popupFeedbackMsg}</span>
+                <span className="text-[10px] text-emerald-600 font-mono">Added to bill in background</span>
+              </div>
+            )}
+
+            {/* Form Fields: Product Select, Price (disabled), Qty, Discount % */}
+            <form onSubmit={handleAddProductFromPopup} className="space-y-4">
+
+              {/* Field 1: Product Select */}
+              <div className="relative" ref={popupDropdownRef}>
+                <label className="text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Product <span className="text-rose-500">*</span></span>
+                  <span className="text-[10px] text-slate-400 font-mono">Type & use ↑ / ↓ & Enter</span>
+                </label>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    ref={popupProductSearchInputRef}
+                    type="text"
+                    value={popupProductSearchQuery}
+                    onChange={(e) => {
+                      setPopupProductSearchQuery(e.target.value);
+                      setIsPopupProductDropdownOpen(true);
+                      setPopupHighlightedProductIndex(0);
+                    }}
+                    onFocus={(e) => {
+                      e.target.select();
+                      setIsPopupProductDropdownOpen(true);
+                    }}
+                    onKeyDown={handlePopupProductKeyDown}
+                    placeholder="Search product by name, SKU, code, category..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-9 py-2 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-1 focus:ring-amber-500/20"
+                  />
+                  {popupProductSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPopupProductSearchQuery('');
+                        setPopupSelectedProduct(null);
+                        setIsPopupProductDropdownOpen(true);
+                        popupProductSearchInputRef.current?.focus();
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown Results */}
+                {isPopupProductDropdownOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-56 overflow-y-auto p-1.5 space-y-0.5 animate-in fade-in">
+                    {popupFilteredProducts.map((p, idx) => {
+                      const isHighlighted = idx === popupHighlightedProductIndex;
+                      const pPrice = Number(p.price ?? p.rate ?? p.unit_price ?? 0);
+                      return (
+                        <div
+                          key={p.id}
+                          ref={(el) => (popupItemRefs.current[idx] = el)}
+                          onClick={() => handlePopupSelectProduct(p)}
+                          onMouseEnter={() => setPopupHighlightedProductIndex(idx)}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${isHighlighted
+                              ? 'bg-amber-100 text-amber-950 font-bold border border-amber-300 ring-1 ring-amber-400/40'
+                              : 'hover:bg-slate-50 text-slate-800'
+                            }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-xs truncate ${isHighlighted ? 'font-black text-amber-950' : 'font-bold text-slate-900'}`}>
+                                {p.name}
+                              </span>
+                              {(p.short_name || p.sku || p.code) && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                  {p.short_name || p.sku || p.code}
+                                </span>
+                              )}
+                              {p.category && (
+                                <span className="text-[10px] text-slate-500 bg-amber-50 text-amber-800 px-1.5 rounded">
+                                  {p.category}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-2">
+                              <span>Stock: {p.stock_quantity ?? 0} {p.unit || 'Pcs'}</span>
+                              <span>&bull;</span>
+                              <span className="font-bold text-slate-700">{currency}{pPrice.toFixed(2)}</span>
+                            </div>
+                          </div>
+                          <span className="text-[11px] font-mono font-black text-amber-800 shrink-0 ml-2">
+                            {currency}{pPrice.toFixed(2)}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {popupFilteredProducts.length === 0 && (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        No product matches "{popupProductSearchQuery}"
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 3 Columns: Price (disabled & auto fetch), Qty, Discount % */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+                {/* Field 2: Price (disabled & auto fetch) */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Price / Rate <span className="text-[10px] font-normal text-slate-400 font-mono">(Auto Fetch)</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
+                      {currency}
+                    </span>
+                    <input
+                      type="text"
+                      disabled
+                      readOnly
+                      value={popupSelectedProduct ? Number(popupSelectedProduct.price ?? popupSelectedProduct.rate ?? popupSelectedProduct.unit_price ?? 0).toFixed(2) : '0.00'}
+                      placeholder="0.00"
+                      className="w-full bg-slate-100 border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-xs font-mono font-bold text-slate-700 cursor-not-allowed select-none"
+                      title="Rate auto fetched from selected product (disabled)"
+                    />
+                  </div>
+                </div>
+
+                {/* Field 3: Qty */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Quantity <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    ref={popupQtyInputRef}
+                    type="number"
+                    min="0.001"
+                    step="any"
+                    required
+                    value={popupQty}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setPopupQty(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        popupDiscountInputRef.current?.focus();
+                        popupDiscountInputRef.current?.select();
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleCloseAddProductModal();
+                      }
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-black text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-1 focus:ring-amber-500/20"
+                    placeholder="1"
+                    title="Enter quantity (Press Enter to move to Discount %)"
+                  />
+                </div>
+
+                {/* Field 4: Discount % */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Discount % <span className="text-[10px] font-normal text-slate-400 font-mono">(Optional)</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      ref={popupDiscountInputRef}
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="any"
+                      value={popupDiscountPercent}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setPopupDiscountPercent(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleAddProductFromPopup(e);
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCloseAddProductModal();
+                        }
+                      }}
+                      placeholder="0"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-7 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-1 focus:ring-amber-500/20"
+                      title="Enter discount percentage (Press Enter to add to bill)"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-700 font-mono">
+                      %
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Line Amount Preview Bar */}
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                    Calculated Line Total
+                  </span>
+                  <div className="text-[11px] text-slate-600 font-mono">
+                    Gross: {currency}{popupGross.toFixed(2)}
+                    {popupDiscAmt > 0 && (
+                      <span className="text-amber-700 font-bold ml-1.5">
+                        &bull; Disc: -{currency}{popupDiscAmt.toFixed(2)} ({popupDiscNum}%)
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-base font-black text-slate-900">
+                    {currency}{popupLineTotal.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleCloseAddProductModal}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-bold hover:bg-slate-100 cursor-pointer transition-colors"
+                >
+                  Close & Complete Bill (Esc)
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={!popupSelectedProduct}
+                    className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer ${popupSelectedProduct
+                        ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20 ring-1 ring-amber-300'
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                      }`}
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>Add to Bill & Continue (Enter)</span>
+                  </button>
+                </div>
+              </div>
+
             </form>
           </div>
         </div>

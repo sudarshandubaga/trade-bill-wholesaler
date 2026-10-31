@@ -91,18 +91,65 @@ export default function Navbar({
       }
     };
     const handleKeyDown = (e) => {
+      const code = e.code;
+      const key = e.key ? e.key.toLowerCase() : '';
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      const isEditable = tag === 'input' || tag === 'textarea' || tag === 'select' || document.activeElement?.isContentEditable;
+
       if (e.key === 'Escape') {
         setActiveMenu(null);
         setBranchDropdownOpen(false);
         setProfileDropdownOpen(false);
         setMobileMenuOpen(null);
+      } else if (e.altKey && (code === 'KeyM' || key === 'm' || key === 'µ')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setActiveMenu((prev) => (prev === 'master' ? null : 'master'));
+      } else if (e.altKey && (code === 'KeyV' || key === 'v' || key === '√')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setActiveMenu((prev) => (prev === 'voucher' ? null : 'voucher'));
+      } else if (e.altKey && (code === 'Digit9' || key === '9')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setActiveMenu((prev) => (prev === 'inventory' ? null : 'inventory'));
+      } else if (e.altKey && (code === 'Digit8' || key === '8')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setActiveMenu((prev) => (prev === 'reports' ? null : 'reports'));
+      } else if (activeMenu === 'master' && !isEditable) {
+        if (code === 'KeyC' || key === 'c' || key === '1') {
+          e.preventDefault();
+          setCurrentTab('customers');
+          setActiveMenu(null);
+        } else if (code === 'KeyS' || key === 's' || key === '2') {
+          e.preventDefault();
+          setCurrentTab('suppliers');
+          setActiveMenu(null);
+        } else if (code === 'KeyK' || key === 'k' || key === '3') {
+          e.preventDefault();
+          setCurrentTab('categories');
+          setActiveMenu(null);
+        } else if (code === 'KeyI' || key === 'i' || key === '4') {
+          e.preventDefault();
+          setCurrentTab('items');
+          setActiveMenu(null);
+        } else if (code === 'KeyB' || key === 'b') {
+          e.preventDefault();
+          setCurrentTab('brands');
+          setActiveMenu(null);
+        } else if (code === 'KeyH' || key === 'h') {
+          e.preventDefault();
+          setCurrentTab('hsn');
+          setActiveMenu(null);
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, []);
 
@@ -127,9 +174,11 @@ export default function Navbar({
     'notes',
     'credit_notes',
     'debit_notes',
+    'credit_note_entry',
+    'debit_note_entry',
     'adjustments'
   ].includes(currentTab);
-  const isInventoryActive = ['stock_in', 'stock_transfer', 'inventory', 'challans'].includes(currentTab);
+  const isInventoryActive = ['stock_in', 'stock_transfer', 'stock_in_entry', 'stock_transfer_entry', 'inventory', 'challans'].includes(currentTab);
   const isReportsActive = currentTab === 'reports' || ['sales_history', 'cashbook', 'daybook', 'ledger'].includes(currentTab);
 
   const getBranchIcon = (type) => {
@@ -168,21 +217,11 @@ export default function Navbar({
               }}
               title="Go to TradeBill Dashboard"
             >
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-500 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20 ring-1 ring-amber-300/40 group-hover:scale-105 transition-transform">
-                <Store className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-              </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1">
                   <span className="font-extrabold text-xs sm:text-sm tracking-tight text-white flex items-center gap-0.5">
-                    Trade<span className="text-amber-400 font-black">Bill</span>
+                    <span className="text-amber-400 font-black">{tenant?.name || 'SuperStore'}</span>
                   </span>
-                  <span className="hidden sm:inline-flex px-1 py-0.2 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[8px] font-black uppercase tracking-wider">
-                    ERP
-                  </span>
-                </div>
-                <div className="text-[10px] text-slate-400 truncate max-w-[110px] sm:max-w-xs flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                  <span className="font-medium text-slate-300 truncate">{tenant?.name || 'SuperStore'}</span>
                 </div>
               </div>
             </div>
@@ -313,9 +352,11 @@ export default function Navbar({
                   ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black shadow-md shadow-amber-500/25 ring-1 ring-amber-300/50'
                   : 'text-amber-400 hover:text-amber-300 hover:bg-slate-800/70'
                   }`}
+                title="POS Billing (Alt+P or Alt+1 or F1)"
               >
                 <Receipt className={`w-3.5 h-3.5 ${currentTab === 'pos' ? 'text-slate-950 stroke-[2.5]' : ''}`} />
                 <span>POS</span>
+                <kbd className="hidden xl:inline text-[9px] px-1 py-0.2 rounded bg-slate-900/90 text-amber-300 font-mono border border-slate-700/60">Alt+P</kbd>
 
                 {cartCount > 0 && (
                   <span className={`inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[9px] font-black ${currentTab === 'pos' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'
@@ -337,9 +378,11 @@ export default function Navbar({
                 ? 'bg-slate-800 text-white shadow-sm border border-slate-700/80 ring-1 ring-slate-600'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
+              title="Dashboard (Alt+D or Alt+2 or F3)"
             >
               <LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
               <span>Dashboard</span>
+              <kbd className="hidden xl:inline text-[9px] px-1 py-0.2 rounded bg-slate-900/90 text-slate-300 font-mono border border-slate-700/60">Alt+D</kbd>
             </button>
 
             {/* 2. Master Dropdown (Account & Items) */}
@@ -354,9 +397,11 @@ export default function Navbar({
                       ? 'bg-slate-800 text-white'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
+                  title="Master Menu (Alt+M) — Customer (Alt+C), Supplier (Alt+S), Category (Alt+K), Items (Alt+I)"
                 >
                   <Layers className={`w-3.5 h-3.5 ${isMasterActive ? 'text-amber-400' : 'text-slate-400'}`} />
                   <span>Master</span>
+                  <kbd className="hidden xl:inline text-[9px] px-1 py-0.2 rounded bg-slate-800/90 text-amber-400/90 font-mono border border-slate-700/60">Alt+M</kbd>
                   <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${activeMenu === 'master' ? 'rotate-180 text-amber-400' : ''}`} />
                   {isMasterActive && <span className="w-1 h-1 rounded-full bg-amber-400"></span>}
                 </button>
@@ -366,9 +411,12 @@ export default function Navbar({
                     {/* Account Section */}
                     {(can('customers') || can('suppliers')) && (
                       <>
-                        <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-400 font-black border-b border-slate-800/80 mb-1 flex items-center gap-1.5">
-                          <Users className="w-3 h-3 text-amber-400" />
-                          <span>Account</span>
+                        <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-400 font-black border-b border-slate-800/80 mb-1 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Users className="w-3 h-3 text-amber-400" />
+                            <span>Account</span>
+                          </div>
+                          <span className="text-[9px] text-slate-500 font-sans normal-case">Keyboard Shortcuts</span>
                         </div>
                         <div className="space-y-0.5 mb-2">
                           {can('customers') && (
@@ -377,14 +425,17 @@ export default function Navbar({
                                 setCurrentTab('customers');
                                 setActiveMenu(null);
                               }}
-                              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'customers' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'customers' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                                 }`}
                             >
-                              <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                              <div>
-                                <div className="font-bold">Customer</div>
-                                <div className="text-[10px] text-slate-400">Buyers, credit limit & balances</div>
+                              <div className="flex items-center gap-2.5">
+                                <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <div>
+                                  <div className="font-bold">Customer</div>
+                                  <div className="text-[10px] text-slate-400">Buyers, credit limit & balances</div>
+                                </div>
                               </div>
+                              <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold border border-slate-700">Alt+C</kbd>
                             </button>
                           )}
                           {can('suppliers') && (
@@ -393,14 +444,17 @@ export default function Navbar({
                                 setCurrentTab('suppliers');
                                 setActiveMenu(null);
                               }}
-                              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'suppliers' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'suppliers' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                                 }`}
                             >
-                              <Truck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                              <div>
-                                <div className="font-bold">Supplier</div>
-                                <div className="text-[10px] text-slate-400">Vendors, suppliers & payables</div>
+                              <div className="flex items-center gap-2.5">
+                                <Truck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                                <div>
+                                  <div className="font-bold">Supplier</div>
+                                  <div className="text-[10px] text-slate-400">Vendors, suppliers & payables</div>
+                                </div>
                               </div>
+                              <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono font-bold border border-slate-700">Alt+S</kbd>
                             </button>
                           )}
                         </div>
@@ -410,9 +464,12 @@ export default function Navbar({
                     {/* Items Section */}
                     {(can('categories') || can('items')) && (
                       <>
-                        <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-400 font-black border-b border-slate-800/80 mb-1 flex items-center gap-1.5">
-                          <Package className="w-3 h-3 text-amber-400" />
-                          <span>Items</span>
+                        <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-400 font-black border-b border-slate-800/80 mb-1 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Package className="w-3 h-3 text-amber-400" />
+                            <span>Items</span>
+                          </div>
+                          <span className="text-[9px] text-slate-500 font-sans normal-case">Keyboard Shortcuts</span>
                         </div>
                         <div className="space-y-0.5">
                           {can('categories') && (
@@ -421,14 +478,17 @@ export default function Navbar({
                                 setCurrentTab('categories');
                                 setActiveMenu(null);
                               }}
-                              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'categories' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'categories' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                                 }`}
                             >
-                              <Grid className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <div>
-                                <div className="font-bold">Category</div>
-                                <div className="text-[10px] text-slate-400">Departments & merchandise groups</div>
+                              <div className="flex items-center gap-2.5">
+                                <Grid className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                <div>
+                                  <div className="font-bold">Category</div>
+                                  <div className="text-[10px] text-slate-400">Departments & merchandise groups</div>
+                                </div>
                               </div>
+                              <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono font-bold border border-slate-700">Alt+K</kbd>
                             </button>
                           )}
                           {can('items') && (
@@ -437,14 +497,55 @@ export default function Navbar({
                                 setCurrentTab('items');
                                 setActiveMenu(null);
                               }}
-                              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'items' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'items' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                                 }`}
                             >
-                              <Package className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                              <div>
-                                <div className="font-bold">Items</div>
-                                <div className="text-[10px] text-slate-400">Product rates, units & stock</div>
+                              <div className="flex items-center gap-2.5">
+                                <Package className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <div>
+                                  <div className="font-bold">Items</div>
+                                  <div className="text-[10px] text-slate-400">Product rates, units & stock</div>
+                                </div>
                               </div>
+                              <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold border border-slate-700">Alt+I</kbd>
+                            </button>
+                          )}
+                          {can('brands') && (
+                            <button
+                              onClick={() => {
+                                setCurrentTab('brands');
+                                setActiveMenu(null);
+                              }}
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'brands' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                                }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <Tag className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                                <div>
+                                  <div className="font-bold">Brands</div>
+                                  <div className="text-[10px] text-slate-400">Manufacturer & wholesale brands</div>
+                                </div>
+                              </div>
+                              <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-pink-300 font-mono font-bold border border-slate-700">Alt+B</kbd>
+                            </button>
+                          )}
+                          {can('hsn') && (
+                            <button
+                              onClick={() => {
+                                setCurrentTab('hsn');
+                                setActiveMenu(null);
+                              }}
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'hsn' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                                }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <Hash className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                                <div>
+                                  <div className="font-bold">HSN / SAC Codes</div>
+                                  <div className="text-[10px] text-slate-400">GST tax rates & goods classification</div>
+                                </div>
+                              </div>
+                              <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-yellow-300 font-mono font-bold border border-slate-700">Alt+H</kbd>
                             </button>
                           )}
                         </div>
@@ -467,9 +568,11 @@ export default function Navbar({
                       ? 'bg-slate-800 text-white'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
+                  title="Vouchers (Alt+V or Alt+7)"
                 >
                   <FileText className={`w-3.5 h-3.5 ${isVoucherActive ? 'text-amber-400' : 'text-slate-400'}`} />
                   <span>Vouchers</span>
+                  <kbd className="hidden xl:inline text-[9px] px-1 py-0.2 rounded bg-slate-800/90 text-amber-400/90 font-mono border border-slate-700/60">Alt+V</kbd>
                   <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${activeMenu === 'voucher' ? 'rotate-180 text-amber-400' : ''}`} />
                   {isVoucherActive && <span className="w-1 h-1 rounded-full bg-amber-400"></span>}
                 </button>
@@ -487,28 +590,34 @@ export default function Navbar({
                               setCurrentTab('receipt_vouchers');
                               setActiveMenu(null);
                             }}
-                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'receipt_vouchers' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'receipt_vouchers' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                               }`}
                           >
-                            <ArrowDownLeft className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <div>
-                              <div className="font-bold">Receipt Voucher (Money In)</div>
-                              <div className="text-[10px] text-slate-400">Customer collections & inward receipts</div>
+                            <div className="flex items-center gap-2.5">
+                              <ArrowDownLeft className="w-4 h-4 text-emerald-400 shrink-0" />
+                              <div>
+                                <div className="font-bold">Receipt Voucher (Money In)</div>
+                                <div className="text-[10px] text-slate-400">Customer collections & inward receipts</div>
+                              </div>
                             </div>
+                            <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono font-bold border border-slate-700">Alt+7</kbd>
                           </button>
                           <button
                             onClick={() => {
                               setCurrentTab('payment_vouchers');
                               setActiveMenu(null);
                             }}
-                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'payment_vouchers' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'payment_vouchers' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                               }`}
                           >
-                            <ArrowUpRight className="w-4 h-4 text-amber-400 shrink-0" />
-                            <div>
-                              <div className="font-bold">Payment Voucher (Money Out)</div>
-                              <div className="text-[10px] text-slate-400">Supplier disbursements & expenses</div>
+                            <div className="flex items-center gap-2.5">
+                              <ArrowUpRight className="w-4 h-4 text-amber-400 shrink-0" />
+                              <div>
+                                <div className="font-bold">Payment Voucher (Money Out)</div>
+                                <div className="text-[10px] text-slate-400">Supplier disbursements & expenses</div>
+                              </div>
                             </div>
+                            <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold border border-slate-700">Alt+Shift+V</kbd>
                           </button>
                         </>
                       )}
@@ -516,31 +625,37 @@ export default function Navbar({
                         <>
                           <button
                             onClick={() => {
-                              setCurrentTab('credit_notes');
+                              setCurrentTab('credit_note_entry');
                               setActiveMenu(null);
                             }}
-                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'credit_notes' ? 'bg-rose-500/20 text-rose-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'credit_note_entry' ? 'bg-rose-500/20 text-rose-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                               }`}
                           >
-                            <RotateCcw className="w-4 h-4 text-rose-400 shrink-0" />
-                            <div>
-                              <div className="font-bold">Credit Note (Sales Return)</div>
-                              <div className="text-[10px] text-slate-400">Buyer return adjustments (Zero GST)</div>
+                            <div className="flex items-center gap-2.5">
+                              <RotateCcw className="w-4 h-4 text-rose-400 shrink-0" />
+                              <div>
+                                <div className="font-bold">Credit Note (Sales Return)</div>
+                                <div className="text-[10px] text-slate-400">Buyer return adjustments (Zero GST)</div>
+                              </div>
                             </div>
+                            <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 font-mono font-bold border border-slate-700">Alt+Shift+C</kbd>
                           </button>
                           <button
                             onClick={() => {
-                              setCurrentTab('debit_notes');
+                              setCurrentTab('debit_note_entry');
                               setActiveMenu(null);
                             }}
-                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'debit_notes' ? 'bg-purple-500/20 text-purple-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'debit_note_entry' ? 'bg-purple-500/20 text-purple-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                               }`}
                           >
-                            <RotateCcw className="w-4 h-4 text-purple-400 shrink-0" />
-                            <div>
-                              <div className="font-bold">Debit Note (Purchase Return)</div>
-                              <div className="text-[10px] text-slate-400">Vendor purchase returns (Zero GST)</div>
+                            <div className="flex items-center gap-2.5">
+                              <RotateCcw className="w-4 h-4 text-purple-400 shrink-0" />
+                              <div>
+                                <div className="font-bold">Debit Note (Purchase Return)</div>
+                                <div className="text-[10px] text-slate-400">Vendor purchase returns (Zero GST)</div>
+                              </div>
                             </div>
+                            <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-purple-300 font-mono font-bold border border-slate-700">Alt+Shift+D</kbd>
                           </button>
                         </>
                       )}
@@ -550,17 +665,20 @@ export default function Navbar({
                             setCurrentTab('payment_reminders');
                             setActiveMenu(null);
                           }}
-                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'payment_reminders' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'payment_reminders' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                             }`}
                         >
-                          <BellRing className="w-4 h-4 text-amber-400 shrink-0" />
-                          <div>
-                            <div className="font-bold flex items-center gap-1.5">
-                              <span>Payment Reminders</span>
-                              <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[9px] font-black uppercase">Dues</span>
+                          <div className="flex items-center gap-2.5">
+                            <BellRing className="w-4 h-4 text-amber-400 shrink-0" />
+                            <div>
+                              <div className="font-bold flex items-center gap-1.5">
+                                <span>Payment Reminders</span>
+                                <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[9px] font-black uppercase">Dues</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400">Overdue bills, receivables & 1-click WhatsApp</div>
                             </div>
-                            <div className="text-[10px] text-slate-400">Overdue bills, receivables & 1-click WhatsApp</div>
                           </div>
+                          <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold border border-slate-700">Alt+0</kbd>
                         </button>
                       )}
                     </div>
@@ -581,9 +699,11 @@ export default function Navbar({
                       ? 'bg-slate-800 text-white'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
+                  title="Inventory (Alt+9)"
                 >
                   <Boxes className={`w-3.5 h-3.5 ${isInventoryActive ? 'text-amber-400' : 'text-slate-400'}`} />
                   <span>Inventory</span>
+                  <kbd className="hidden xl:inline text-[9px] px-1 py-0.2 rounded bg-slate-800/90 text-amber-400/90 font-mono border border-slate-700/60">Alt+9</kbd>
                   <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${activeMenu === 'inventory' ? 'rotate-180 text-amber-400' : ''}`} />
                   {isInventoryActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>}
                 </button>
@@ -596,31 +716,37 @@ export default function Navbar({
                     <div className="space-y-0.5">
                       <button
                         onClick={() => {
-                          setCurrentTab('stock_in');
+                          setCurrentTab('stock_in_entry');
                           setActiveMenu(null);
                         }}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'stock_in' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'stock_in_entry' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                           }`}
                       >
-                        <ArrowDownLeft className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Stock In</div>
-                          <div className="text-[10px] text-slate-400">Inward stock receiving & item inventory entry</div>
+                        <div className="flex items-center gap-2.5">
+                          <ArrowDownLeft className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Stock In</div>
+                            <div className="text-[10px] text-slate-400">Inward stock receiving & item inventory entry</div>
+                          </div>
                         </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono font-bold border border-slate-700">Alt+9</kbd>
                       </button>
                       <button
                         onClick={() => {
-                          setCurrentTab('stock_transfer');
+                          setCurrentTab('stock_transfer_entry');
                           setActiveMenu(null);
                         }}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'stock_transfer' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'stock_transfer_entry' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                           }`}
                       >
-                        <ArrowRightLeft className="w-4 h-4 text-cyan-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Stock Transfer</div>
-                          <div className="text-[10px] text-slate-400">Inter-branch & warehouse transfer slips</div>
+                        <div className="flex items-center gap-2.5">
+                          <ArrowRightLeft className="w-4 h-4 text-cyan-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Stock Transfer</div>
+                            <div className="text-[10px] text-slate-400">Inter-branch & warehouse transfer slips</div>
+                          </div>
                         </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono font-bold border border-slate-700">Alt+T</kbd>
                       </button>
                       <button
                         onClick={() => {
@@ -628,14 +754,17 @@ export default function Navbar({
                           setCurrentTab('reports');
                           setActiveMenu(null);
                         }}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'reports' && reportSubTab === 'stock' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'reports' && reportSubTab === 'stock' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                           }`}
                       >
-                        <Package className="w-4 h-4 text-rose-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Stock Reports</div>
-                          <div className="text-[10px] text-slate-400">Current branch & warehouse valuation report</div>
+                        <div className="flex items-center gap-2.5">
+                          <Package className="w-4 h-4 text-rose-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Stock Reports</div>
+                            <div className="text-[10px] text-slate-400">Current branch & warehouse valuation report</div>
+                          </div>
                         </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 font-mono font-bold border border-slate-700">Alt+Shift+S</kbd>
                       </button>
                     </div>
                   </div>
@@ -655,9 +784,11 @@ export default function Navbar({
                       ? 'bg-slate-800 text-white'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
+                  title="Reports (Alt+8 or Alt+R)"
                 >
                   <BarChart3 className={`w-3.5 h-3.5 ${isReportsActive ? 'text-emerald-400' : 'text-slate-400'}`} />
                   <span>Reports</span>
+                  <kbd className="hidden xl:inline text-[9px] px-1 py-0.2 rounded bg-slate-800/90 text-emerald-400/90 font-mono border border-slate-700/60">Alt+8</kbd>
                   <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${activeMenu === 'reports' ? 'rotate-180 text-emerald-400' : ''}`} />
                   {isReportsActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
                 </button>
@@ -674,13 +805,16 @@ export default function Navbar({
                           setCurrentTab('reports');
                           setActiveMenu(null);
                         }}
-                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
                       >
-                        <Receipt className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Sale Reports</div>
-                          <div className="text-[10px] text-slate-400">Invoices archive, payment modes & sales analysis</div>
+                        <div className="flex items-center gap-2.5">
+                          <Receipt className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Sale Reports</div>
+                            <div className="text-[10px] text-slate-400">Invoices archive, payment modes & sales analysis</div>
+                          </div>
                         </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono font-bold border border-slate-700">Alt+8</kbd>
                       </button>
                       <button
                         onClick={() => {
@@ -688,13 +822,16 @@ export default function Navbar({
                           setCurrentTab('reports');
                           setActiveMenu(null);
                         }}
-                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
                       >
-                        <Calendar className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Daybook</div>
-                          <div className="text-[10px] text-slate-400">Daily sales & movement timeline</div>
+                        <div className="flex items-center gap-2.5">
+                          <Calendar className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Daybook</div>
+                            <div className="text-[10px] text-slate-400">Daily sales & movement timeline</div>
+                          </div>
                         </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-purple-300 font-mono font-bold border border-slate-700">Alt+Y</kbd>
                       </button>
                       <button
                         onClick={() => {
@@ -702,13 +839,16 @@ export default function Navbar({
                           setCurrentTab('reports');
                           setActiveMenu(null);
                         }}
-                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
                       >
-                        <Banknote className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Cashbook</div>
-                          <div className="text-[10px] text-slate-400">Cash drawer inflows, outflows & balances</div>
+                        <div className="flex items-center gap-2.5">
+                          <Banknote className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Cashbook</div>
+                            <div className="text-[10px] text-slate-400">Cash drawer inflows, outflows & balances</div>
+                          </div>
                         </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold border border-slate-700">Alt+J</kbd>
                       </button>
                       <button
                         onClick={() => {
@@ -716,13 +856,16 @@ export default function Navbar({
                           setCurrentTab('reports');
                           setActiveMenu(null);
                         }}
-                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
                       >
-                        <Coins className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Bank Entry</div>
-                          <div className="text-[10px] text-slate-400">UPI, Card, Cheque & Bank transfer ledger</div>
+                        <div className="flex items-center gap-2.5">
+                          <Coins className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Bank Entry</div>
+                            <div className="text-[10px] text-slate-400">UPI, Card, Cheque & Bank transfer ledger</div>
+                          </div>
                         </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono font-bold border border-slate-700">Alt+E</kbd>
                       </button>
                       <button
                         onClick={() => {
@@ -730,13 +873,16 @@ export default function Navbar({
                           setCurrentTab('reports');
                           setActiveMenu(null);
                         }}
-                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
                       >
-                        <Package className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Stock Reports</div>
-                          <div className="text-[10px] text-slate-400">Current branch & warehouse inventory valuation</div>
+                        <div className="flex items-center gap-2.5">
+                          <Package className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Stock Reports</div>
+                            <div className="text-[10px] text-slate-400">Current branch & warehouse inventory valuation</div>
+                          </div>
                         </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 font-mono font-bold border border-slate-700">Alt+Shift+S</kbd>
                       </button>
                       <button
                         onClick={() => {
@@ -744,12 +890,89 @@ export default function Navbar({
                           setCurrentTab('reports');
                           setActiveMenu(null);
                         }}
-                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
                       >
-                        <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                        <div>
-                          <div className="font-bold">Ledger</div>
-                          <div className="text-[10px] text-slate-400">Party account statement (Customer / Supplier)</div>
+                        <div className="flex items-center gap-2.5">
+                          <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Ledger</div>
+                            <div className="text-[10px] text-slate-400">Party account statement (Customer / Supplier)</div>
+                          </div>
+                        </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300 font-mono font-bold border border-slate-700">Alt+L</kbd>
+                      </button>
+
+                      <div className="pt-1 mt-1 border-t border-slate-800/70">
+                        <div className="px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-slate-400 font-bold">
+                          Registers & Archives
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setReportSubTab('credit_notes');
+                          setCurrentTab('reports');
+                          setActiveMenu(null);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'reports' && reportSubTab === 'credit_notes' ? 'bg-rose-500/20 text-rose-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <RotateCcw className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Credit Notes Register</div>
+                            <div className="text-[10px] text-slate-400">Sales return archive & search</div>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReportSubTab('debit_notes');
+                          setCurrentTab('reports');
+                          setActiveMenu(null);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'reports' && reportSubTab === 'debit_notes' ? 'bg-purple-500/20 text-purple-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <RotateCcw className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Debit Notes Register</div>
+                            <div className="text-[10px] text-slate-400">Purchase return archive & search</div>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReportSubTab('stock_in');
+                          setCurrentTab('reports');
+                          setActiveMenu(null);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'reports' && reportSubTab === 'stock_in' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Stock In Register</div>
+                            <div className="text-[10px] text-slate-400">Historical inward stock receiving</div>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setReportSubTab('stock_transfer');
+                          setCurrentTab('reports');
+                          setActiveMenu(null);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'reports' && reportSubTab === 'stock_transfer' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <ArrowRightLeft className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Stock Transfer Register</div>
+                            <div className="text-[10px] text-slate-400">Historical branch transfer challans</div>
+                          </div>
                         </div>
                       </button>
                     </div>
@@ -757,8 +980,6 @@ export default function Navbar({
                 )}
               </div>
             )}
-
-
 
           </nav>
 
@@ -861,10 +1082,13 @@ export default function Navbar({
                           setProfileDropdownOpen(false);
                           onOpenUserModal();
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                       >
-                        <Users className="w-4 h-4 text-cyan-400" />
-                        <span>Users, Roles & Permissions</span>
+                        <div className="flex items-center gap-2.5">
+                          <Users className="w-4 h-4 text-cyan-400" />
+                          <span>Users, Roles & Permissions</span>
+                        </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono font-bold border border-slate-700">Alt+U</kbd>
                       </button>
                     )}
 
@@ -875,10 +1099,13 @@ export default function Navbar({
                           setProfileDropdownOpen(false);
                           onOpenBranchModal();
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                       >
-                        <Building2 className="w-4 h-4 text-amber-400" />
-                        <span>Branches, Stores & Warehouses</span>
+                        <div className="flex items-center gap-2.5">
+                          <Building2 className="w-4 h-4 text-amber-400" />
+                          <span>Branches, Stores & Warehouses</span>
+                        </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold border border-slate-700">Alt+W</kbd>
                       </button>
                     )}
 
@@ -889,10 +1116,13 @@ export default function Navbar({
                           onOpenSettings();
                           setProfileDropdownOpen(false);
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                       >
-                        <Settings className="w-4 h-4 text-slate-400" />
-                        <span>Store & Invoice Settings</span>
+                        <div className="flex items-center gap-2.5">
+                          <Settings className="w-4 h-4 text-slate-400" />
+                          <span>Store & Invoice Settings</span>
+                        </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono font-bold border border-slate-700">Alt+,</kbd>
                       </button>
                     )}
 
@@ -1092,13 +1322,13 @@ export default function Navbar({
               {can('credit_debit_note') && (
                 <>
                   <button
-                    onClick={() => { setCurrentTab('credit_notes'); setMobileMenuOpen(null); }}
+                    onClick={() => { setCurrentTab('credit_note_entry'); setMobileMenuOpen(null); }}
                     className="p-2 rounded-xl bg-slate-900 text-xs text-left text-rose-300 font-semibold hover:bg-slate-800"
                   >
                     Credit Note (Return In)
                   </button>
                   <button
-                    onClick={() => { setCurrentTab('debit_notes'); setMobileMenuOpen(null); }}
+                    onClick={() => { setCurrentTab('debit_note_entry'); setMobileMenuOpen(null); }}
                     className="p-2 rounded-xl bg-slate-900 text-xs text-left text-purple-300 font-semibold hover:bg-slate-800"
                   >
                     Debit Note (Return Out)
@@ -1121,13 +1351,13 @@ export default function Navbar({
           {mobileMenuOpen === 'inventory' && (
             <div className="mt-2 pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-1.5">
               <button
-                onClick={() => { setCurrentTab('stock_in'); setMobileMenuOpen(null); }}
+                onClick={() => { setCurrentTab('stock_in_entry'); setMobileMenuOpen(null); }}
                 className="p-2 rounded-xl bg-slate-900 text-xs text-left text-emerald-300 font-semibold hover:bg-slate-800"
               >
                 Stock In
               </button>
               <button
-                onClick={() => { setCurrentTab('stock_transfer'); setMobileMenuOpen(null); }}
+                onClick={() => { setCurrentTab('stock_transfer_entry'); setMobileMenuOpen(null); }}
                 className="p-2 rounded-xl bg-slate-900 text-xs text-left text-cyan-300 font-semibold hover:bg-slate-800"
               >
                 Stock Transfer
@@ -1176,9 +1406,33 @@ export default function Navbar({
               </button>
               <button
                 onClick={() => { setReportSubTab('ledger'); setCurrentTab('reports'); setMobileMenuOpen(null); }}
-                className="p-2 rounded-xl bg-slate-900 text-xs text-left text-indigo-300 font-semibold hover:bg-slate-800 col-span-2"
+                className="p-2 rounded-xl bg-slate-900 text-xs text-left text-indigo-300 font-semibold hover:bg-slate-800"
               >
                 Party Ledger
+              </button>
+              <button
+                onClick={() => { setReportSubTab('credit_notes'); setCurrentTab('reports'); setMobileMenuOpen(null); }}
+                className="p-2 rounded-xl bg-slate-900 text-xs text-left text-rose-300 font-semibold hover:bg-slate-800"
+              >
+                Credit Notes Register
+              </button>
+              <button
+                onClick={() => { setReportSubTab('debit_notes'); setCurrentTab('reports'); setMobileMenuOpen(null); }}
+                className="p-2 rounded-xl bg-slate-900 text-xs text-left text-purple-300 font-semibold hover:bg-slate-800"
+              >
+                Debit Notes Register
+              </button>
+              <button
+                onClick={() => { setReportSubTab('stock_in'); setCurrentTab('reports'); setMobileMenuOpen(null); }}
+                className="p-2 rounded-xl bg-slate-900 text-xs text-left text-emerald-300 font-semibold hover:bg-slate-800"
+              >
+                Stock In Register
+              </button>
+              <button
+                onClick={() => { setReportSubTab('stock_transfer'); setCurrentTab('reports'); setMobileMenuOpen(null); }}
+                className="p-2 rounded-xl bg-slate-900 text-xs text-left text-cyan-300 font-semibold hover:bg-slate-800"
+              >
+                Stock Transfer Register
               </button>
             </div>
           )}

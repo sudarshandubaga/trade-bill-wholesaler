@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -12,6 +13,8 @@ import ChallanManager from './components/ChallanManager';
 import InventoryManager from './components/InventoryManager';
 import VoucherManager from './components/VoucherManager';
 import CreditDebitNoteManager from './components/CreditDebitNoteManager';
+import CreditDebitNoteEntry from './components/CreditDebitNoteEntry';
+import StockMovementEntry from './components/StockMovementEntry';
 import PurchaseManager from './components/PurchaseManager';
 import ReportsHub from './components/ReportsHub';
 import PaymentReminders from './components/PaymentReminders';
@@ -58,11 +61,94 @@ import {
   Layers
 } from 'lucide-react';
 
+const TAB_TO_PATH = {
+  pos: '/pos',
+  dashboard: '/dashboard',
+  customers: '/customers',
+  suppliers: '/suppliers',
+  items: '/items',
+  categories: '/categories',
+  brands: '/brands',
+  hsn: '/hsn',
+  credit_note_entry: '/credit-notes/new',
+  debit_note_entry: '/debit-notes/new',
+  credit_notes: '/credit-notes',
+  debit_notes: '/debit-notes',
+  stock_in_entry: '/stock-in/new',
+  stock_transfer_entry: '/stock-transfer/new',
+  stock_in: '/stock-in',
+  stock_transfer: '/stock-transfer',
+  inventory: '/inventory',
+  challans: '/challans',
+  vouchers: '/vouchers',
+  receipt_vouchers: '/receipt-vouchers',
+  payment_vouchers: '/payment-vouchers',
+  payment_reminders: '/payment-reminders',
+  purchases: '/purchases',
+  reports: '/reports',
+};
+
+const PATH_TO_TAB = {
+  '/': 'pos',
+  '/pos': 'pos',
+  '/dashboard': 'dashboard',
+  '/customers': 'customers',
+  '/suppliers': 'suppliers',
+  '/items': 'items',
+  '/categories': 'categories',
+  '/brands': 'brands',
+  '/hsn': 'hsn',
+  '/credit-notes/new': 'credit_note_entry',
+  '/credit-note-entry': 'credit_note_entry',
+  '/credit-notes': 'credit_notes',
+  '/debit-notes/new': 'debit_note_entry',
+  '/debit-note-entry': 'debit_note_entry',
+  '/debit-notes': 'debit_notes',
+  '/stock-in/new': 'stock_in_entry',
+  '/stock-in-entry': 'stock_in_entry',
+  '/stock-in': 'stock_in',
+  '/stock-transfer/new': 'stock_transfer_entry',
+  '/stock-transfer-entry': 'stock_transfer_entry',
+  '/stock-transfer': 'stock_transfer',
+  '/inventory': 'inventory',
+  '/challans': 'challans',
+  '/vouchers': 'vouchers',
+  '/receipt-vouchers': 'receipt_vouchers',
+  '/payment-vouchers': 'payment_vouchers',
+  '/payment-reminders': 'payment_reminders',
+  '/purchases': 'purchases',
+  '/reports': 'reports',
+};
+
+const getTabFromLocation = (pathname) => {
+  const clean = pathname ? pathname.replace(/\/+$/, '') || '/' : '/';
+  return PATH_TO_TAB[clean] || 'pos';
+};
+
 export default function MainApp() {
-  // Navigation & Sub-Tab State
-  const [currentTab, setCurrentTab] = useState('pos'); // Start directly on POS for swift billing
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Navigation & Sub-Tab State synchronized with BrowserRouter
+  const [currentTab, _setCurrentTab] = useState(() => getTabFromLocation(location.pathname));
   const [reportSubTab, setReportSubTab] = useState('sale');
   const [purchaseFilter, setPurchaseFilter] = useState('all');
+
+  const setCurrentTab = useCallback((tab) => {
+    _setCurrentTab(tab);
+    const targetPath = TAB_TO_PATH[tab] || `/${tab}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  }, [navigate, location.pathname]);
+
+  // Sync state if user navigates with browser Back / Forward buttons
+  useEffect(() => {
+    const tabFromUrl = getTabFromLocation(location.pathname);
+    if (tabFromUrl) {
+      _setCurrentTab(tabFromUrl);
+    }
+  }, [location.pathname]);
 
   // Authentication & Context
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -252,6 +338,177 @@ export default function MainApp() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Global Keyboard Shortcuts for Tab Navigation (Supports Mac Option & Windows Alt keys via e.code)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      const code = e.code;
+      const key = e.key ? e.key.toLowerCase() : '';
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      const isEditable = tag === 'input' || tag === 'textarea' || tag === 'select' || document.activeElement?.isContentEditable;
+
+      // Alt/Option+Key shortcuts for main navigation (work globally, even from inputs)
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        // Add New shortcut (Alt+N / Option+N) to open new entry popup anywhere in the app
+        if (code === 'KeyN' || key === 'n' || key === '˜') {
+          const addButtons = Array.from(document.querySelectorAll('[data-add-new-btn="true"]')).filter((btn) => {
+            return btn.offsetParent !== null && window.getComputedStyle(btn).display !== 'none' && !btn.disabled;
+          });
+          if (addButtons.length > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            const modalBtn = addButtons.find((b) => b.closest('.fixed'));
+            const targetBtn = modalBtn || addButtons[0];
+            targetBtn.click();
+            return;
+          }
+        }
+
+        // With Shift key combinations
+        if (e.shiftKey) {
+          if (code === 'KeyV') {
+            e.preventDefault();
+            e.stopPropagation();
+            setCurrentTab('payment_vouchers');
+            return;
+          } else if (code === 'KeyC') {
+            e.preventDefault();
+            e.stopPropagation();
+            setCurrentTab('credit_note_entry');
+            return;
+          } else if (code === 'KeyD') {
+            e.preventDefault();
+            e.stopPropagation();
+            setCurrentTab('debit_note_entry');
+            return;
+          } else if (code === 'KeyS') {
+            e.preventDefault();
+            e.stopPropagation();
+            setReportSubTab('stock');
+            setCurrentTab('reports');
+            return;
+          } else if (code === 'KeyB') {
+            e.preventDefault();
+            e.stopPropagation();
+            setBarcodePrintModalOpen(true);
+            return;
+          } else if (code === 'KeyI') {
+            e.preventDefault();
+            e.stopPropagation();
+            setCurrentTab('stock_in_entry');
+            return;
+          }
+        }
+
+        let targetTab = null;
+
+        if (code === 'Digit1' || code === 'KeyP' || key === '1' || key === 'p' || key === 'π') {
+          targetTab = 'pos';
+        } else if (code === 'Digit2' || code === 'KeyD' || key === '2' || key === 'd' || key === '∂') {
+          targetTab = 'dashboard';
+        } else if (code === 'Digit3' || code === 'KeyC' || key === '3' || key === 'c' || key === 'ç') {
+          targetTab = 'customers';
+        } else if (code === 'Digit4' || code === 'KeyS' || key === '4' || key === 's' || key === 'ß') {
+          targetTab = 'suppliers';
+        } else if (code === 'Digit5' || code === 'KeyI' || key === '5' || key === 'i' || key === 'ˆ') {
+          targetTab = 'items';
+        } else if (code === 'Digit6' || code === 'KeyK' || key === '6' || key === 'k' || key === '§') {
+          targetTab = 'categories';
+        } else if (code === 'KeyB' || key === 'b' || key === '∫') {
+          targetTab = 'brands';
+        } else if (code === 'KeyH' || key === 'h' || key === '˙') {
+          targetTab = 'hsn';
+        } else if (code === 'Digit7' || code === 'KeyV' || key === '7' || key === 'v' || key === '√') {
+          targetTab = 'receipt_vouchers';
+        } else if (code === 'Digit8' || code === 'KeyR' || key === '8' || key === 'r' || key === '®') {
+          setReportSubTab('sale');
+          targetTab = 'reports';
+        } else if (code === 'Digit9' || key === '9') {
+          targetTab = 'stock_in_entry';
+        } else if (code === 'Digit0' || key === '0') {
+          targetTab = 'payment_reminders';
+        } else if (code === 'KeyT' || key === 't' || key === '†') {
+          targetTab = 'stock_transfer_entry';
+        } else if (code === 'KeyY' || key === 'y' || key === '¥') {
+          setReportSubTab('daybook');
+          targetTab = 'reports';
+        } else if (code === 'KeyJ' || key === 'j' || key === '∆') {
+          setReportSubTab('cashbook');
+          targetTab = 'reports';
+        } else if (code === 'KeyE' || key === 'e' || key === '´') {
+          setReportSubTab('bank');
+          targetTab = 'reports';
+        } else if (code === 'KeyL' || key === 'l' || key === '¬') {
+          setReportSubTab('ledger');
+          targetTab = 'reports';
+        } else if (code === 'KeyW' || key === 'w' || key === '∑') {
+          e.preventDefault();
+          e.stopPropagation();
+          setBranchModalOpen(true);
+          return;
+        } else if (code === 'KeyU' || key === 'u' || key === '¨') {
+          e.preventDefault();
+          e.stopPropagation();
+          setUserModalOpen(true);
+          return;
+        } else if (code === 'Comma' || key === ',' || key === '≤') {
+          e.preventDefault();
+          e.stopPropagation();
+          setSettingsModalOpen(true);
+          return;
+        }
+
+        if (targetTab) {
+          e.preventDefault();
+          e.stopPropagation();
+          setCurrentTab(targetTab);
+          return;
+        }
+      }
+
+      // F-key shortcuts (work globally, no modifier needed)
+      if (!e.altKey && !e.ctrlKey && !e.metaKey && !isEditable) {
+        switch (e.key) {
+          case 'F1':
+            e.preventDefault();
+            setCurrentTab('pos');
+            break;
+          case 'F2': {
+            e.preventDefault();
+            const addButtons = Array.from(document.querySelectorAll('[data-add-new-btn="true"]')).filter((btn) => {
+              return btn.offsetParent !== null && window.getComputedStyle(btn).display !== 'none' && !btn.disabled;
+            });
+            if (addButtons.length > 0) {
+              const modalBtn = addButtons.find((b) => b.closest('.fixed'));
+              const targetBtn = modalBtn || addButtons[0];
+              targetBtn.click();
+            }
+            break;
+          }
+          case 'F3':
+            e.preventDefault();
+            setCurrentTab('dashboard');
+            break;
+          case 'F4':
+            e.preventDefault();
+            setCurrentTab('customers');
+            break;
+          case 'F5':
+            e.preventDefault();
+            setCurrentTab('items');
+            break;
+          case 'F8':
+            e.preventDefault();
+            setReportSubTab('sale');
+            setCurrentTab('reports');
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
+  }, [setCurrentTab, setReportSubTab, setBranchModalOpen, setUserModalOpen, setSettingsModalOpen, setBarcodePrintModalOpen]);
 
   // Branch Switcher
   const handleSwitchBranch = async (branchId) => {
@@ -497,7 +754,7 @@ export default function MainApp() {
         </div>
         <div className="flex items-center gap-2.5 font-bold text-sm text-slate-200">
           <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
-          <span>Verifying {domainInfo?.name || 'TradeBill Wholesaler'} Station Access...</span>
+          <span>Loading ...</span>
         </div>
       </div>
     );
@@ -715,6 +972,7 @@ export default function MainApp() {
                 preselectedCustomerId={preselectedCustomerId}
                 onClearPreselectedCustomer={() => setPreselectedCustomerId(null)}
                 categories={categories}
+                isInvoiceModalOpen={Boolean(activeInvoice)}
               />
             )}
 
@@ -798,7 +1056,39 @@ export default function MainApp() {
               />
             )}
 
-            {/* 7. Inventory: Stock In, Stock Transfer, Movements */}
+            {/* 7. Dedicated Entry Pages: Stock In & Stock Transfer (POS-Style Add Product Modal) */}
+            {currentTab === 'stock_in_entry' && (
+              <StockMovementEntry
+                mode="stock_in"
+                branches={branches}
+                suppliers={suppliers}
+                items={items}
+                tenant={tenant}
+                onStockUpdated={fetchData}
+                onViewReport={(repTab) => {
+                  setReportSubTab(repTab || 'stock_in');
+                  setCurrentTab('reports');
+                }}
+                addToast={addToast}
+              />
+            )}
+            {currentTab === 'stock_transfer_entry' && (
+              <StockMovementEntry
+                mode="stock_transfer"
+                branches={branches}
+                suppliers={suppliers}
+                items={items}
+                tenant={tenant}
+                onStockUpdated={fetchData}
+                onViewReport={(repTab) => {
+                  setReportSubTab(repTab || 'stock_transfer');
+                  setCurrentTab('reports');
+                }}
+                addToast={addToast}
+              />
+            )}
+
+            {/* Legacy / Direct Inventory Registers */}
             {currentTab === 'stock_in' && (
               <InventoryManager
                 fixedType="stock_in"
@@ -808,6 +1098,7 @@ export default function MainApp() {
                 items={items}
                 tenant={tenant}
                 onChallanUpdated={fetchData}
+                onOpenAdd={(type) => setCurrentTab(type === 'stock_transfer' ? 'stock_transfer_entry' : 'stock_in_entry')}
                 addToast={addToast}
               />
             )}
@@ -820,6 +1111,7 @@ export default function MainApp() {
                 items={items}
                 tenant={tenant}
                 onChallanUpdated={fetchData}
+                onOpenAdd={(type) => setCurrentTab(type === 'stock_transfer' ? 'stock_transfer_entry' : 'stock_in_entry')}
                 addToast={addToast}
               />
             )}
@@ -831,6 +1123,7 @@ export default function MainApp() {
                 items={items}
                 tenant={tenant}
                 onChallanUpdated={fetchData}
+                onOpenAdd={(type) => setCurrentTab(type === 'stock_transfer' ? 'stock_transfer_entry' : 'stock_in_entry')}
                 addToast={addToast}
               />
             )}
@@ -881,7 +1174,39 @@ export default function MainApp() {
               />
             )}
 
-            {/* 10. Voucher / Challan: Credit Notes & Debit Notes (Combined & Dedicated Pages) */}
+            {/* 10. Dedicated Entry Pages: Credit Note & Debit Note (POS-Style Add Product Modal) */}
+            {currentTab === 'credit_note_entry' && (
+              <CreditDebitNoteEntry
+                type="credit_note"
+                customers={customers}
+                branches={branches}
+                items={items}
+                tenant={tenant}
+                onNoteSaved={fetchData}
+                onViewReport={(repTab) => {
+                  setReportSubTab(repTab || 'credit_notes');
+                  setCurrentTab('reports');
+                }}
+                addToast={addToast}
+              />
+            )}
+            {currentTab === 'debit_note_entry' && (
+              <CreditDebitNoteEntry
+                type="debit_note"
+                suppliers={suppliers}
+                branches={branches}
+                items={items}
+                tenant={tenant}
+                onNoteSaved={fetchData}
+                onViewReport={(repTab) => {
+                  setReportSubTab(repTab || 'debit_notes');
+                  setCurrentTab('reports');
+                }}
+                addToast={addToast}
+              />
+            )}
+
+            {/* Legacy / Direct Credit & Debit Note Registers */}
             {currentTab === 'notes' && (
               <CreditDebitNoteManager
                 notes={creditDebitNotes}
@@ -891,6 +1216,7 @@ export default function MainApp() {
                 items={items}
                 tenant={tenant}
                 onNoteUpdated={fetchData}
+                onOpenAdd={(type) => setCurrentTab(type === 'credit_note' ? 'credit_note_entry' : 'debit_note_entry')}
                 addToast={addToast}
               />
             )}
@@ -904,6 +1230,7 @@ export default function MainApp() {
                 items={items}
                 tenant={tenant}
                 onNoteUpdated={fetchData}
+                onOpenAdd={() => setCurrentTab('credit_note_entry')}
                 addToast={addToast}
               />
             )}
@@ -917,6 +1244,7 @@ export default function MainApp() {
                 items={items}
                 tenant={tenant}
                 onNoteUpdated={fetchData}
+                onOpenAdd={() => setCurrentTab('debit_note_entry')}
                 addToast={addToast}
               />
             )}
@@ -935,7 +1263,7 @@ export default function MainApp() {
               />
             )}
 
-            {/* 12. Reports Hub (Purchases, Sales, Daybook, Cashbook, Bank Entry, Stock, Ledger) */}
+            {/* 12. Reports Hub (Purchases, Sales, Daybook, Cashbook, Bank Entry, Stock, Ledger, Credit/Debit Notes, Stock In/Transfer Registers) */}
             {currentTab === 'reports' && (
               <ReportsHub
                 initialSubTab={reportSubTab}
@@ -944,6 +1272,10 @@ export default function MainApp() {
                 suppliers={suppliers}
                 items={items}
                 tenant={tenant}
+                creditDebitNotes={creditDebitNotes}
+                challans={challans}
+                onDataUpdated={fetchData}
+                onNavigateTab={(tab) => setCurrentTab(tab)}
                 addToast={addToast}
                 onViewInvoice={(sale) => setActiveInvoice(sale)}
               />

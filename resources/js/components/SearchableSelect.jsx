@@ -20,16 +20,21 @@ export default function SearchableSelect({
   disabled = false,
   required = false,
   allowClear = false,
+  autoFocus = false,
   className = '',
   dropdownClassName = '',
   size = 'md', // 'sm' or 'md'
   theme = 'light', // 'light' or 'dark'
   direction = 'down', // 'down' or 'up'
+  triggerRef = null,
+  onSelectNext = null,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef(null);
   const searchInputRef = useRef(null);
+  const optionsListRef = useRef(null);
 
   const isLight = theme === 'light';
 
@@ -100,12 +105,82 @@ export default function SearchableSelect({
     }
   }, [isOpen]);
 
+  // Autofocus trigger on mount when autoFocus prop is true
+  useEffect(() => {
+    if (autoFocus && !disabled) {
+      const timer = setTimeout(() => {
+        if (triggerRef?.current) {
+          triggerRef.current.focus();
+        } else if (containerRef?.current) {
+          const triggerEl = containerRef.current.querySelector('[data-searchable-select="true"]');
+          triggerEl?.focus();
+        }
+      }, 70);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus, disabled]);
+
+  // Reset or adjust highlighted index when options or search query change
+  useEffect(() => {
+    if (isOpen) {
+      if (selectedOption && filteredOptions.length > 0) {
+        const idx = filteredOptions.findIndex((o) => String(o.value) === String(selectedOption.value));
+        setHighlightedIndex(idx >= 0 ? idx : 0);
+      } else {
+        setHighlightedIndex(0);
+      }
+    }
+  }, [isOpen, searchQuery, filteredOptions.length]);
+
+  // Auto-scroll highlighted option into view
+  useEffect(() => {
+    if (isOpen && optionsListRef.current) {
+      const children = optionsListRef.current.querySelectorAll('[data-option-item="true"]');
+      const target = children[highlightedIndex];
+      if (target && typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex, isOpen]);
+
   const handleSelect = (opt) => {
     if (onChange) {
       onChange(opt ? opt.value : '', opt ? (opt.raw?.raw || opt.raw) : null);
     }
     setIsOpen(false);
     setSearchQuery('');
+    if (onSelectNext) {
+      setTimeout(() => onSelectNext(), 60);
+    } else {
+      setTimeout(() => {
+        const triggerEl = triggerRef?.current || containerRef?.current?.querySelector('[data-searchable-select="true"]');
+        if (triggerEl) {
+          const form = triggerEl.closest('form') || triggerEl.closest('[role="dialog"]') || triggerEl.closest('.fixed');
+          if (form) {
+            const selector = [
+              'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([disabled]):not([readonly])',
+              'select:not([disabled]):not([readonly])',
+              '[data-searchable-select="true"]',
+              'textarea:not([disabled]):not([readonly])',
+              'button[type="submit"]'
+            ].join(', ');
+            const elements = Array.from(form.querySelectorAll(selector)).filter((el) => {
+              return el.offsetParent !== null && window.getComputedStyle(el).display !== 'none' && el.tabIndex !== -1;
+            });
+            const idx = elements.indexOf(triggerEl);
+            if (idx !== -1 && idx < elements.length - 1) {
+              const nextEl = elements[idx + 1];
+              nextEl.focus();
+              if (nextEl.dataset && nextEl.dataset.searchableSelect === 'true') {
+                nextEl.click();
+              } else if (typeof nextEl.select === 'function' && nextEl.tagName === 'INPUT' && nextEl.type !== 'checkbox') {
+                nextEl.select();
+              }
+            }
+          }
+        }
+      }, 60);
+    }
   };
 
   const handleClear = (e) => {
@@ -118,13 +193,41 @@ export default function SearchableSelect({
   const handleKeyDown = (e) => {
     if (disabled) return;
     if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
       setIsOpen(false);
       setSearchQuery('');
-    } else if (e.key === 'Enter') {
-      if (isOpen && filteredOptions.length > 0) {
-        e.preventDefault();
-        handleSelect(filteredOptions[0]);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isOpen) {
+        setIsOpen(true);
+      } else if (filteredOptions.length > 0) {
+        setHighlightedIndex((prev) => Math.min(prev + 1, filteredOptions.length - 1));
       }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isOpen) {
+        setIsOpen(true);
+      } else if (filteredOptions.length > 0) {
+        setHighlightedIndex((prev) => Math.max(prev - 1, 0));
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isOpen && filteredOptions.length > 0) {
+        handleSelect(filteredOptions[highlightedIndex] || filteredOptions[0]);
+      } else if (!isOpen) {
+        setIsOpen(true);
+      }
+    } else if (e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsOpen((prev) => !prev);
+    } else if (!isOpen && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      setIsOpen(true);
+      setSearchQuery(e.key);
     }
   };
 
@@ -132,8 +235,8 @@ export default function SearchableSelect({
 
   // Base styling depending on theme
   const triggerThemeStyles = isLight
-    ? `bg-slate-50 border-slate-200 text-slate-800 hover:border-slate-300 ${isOpen ? 'border-amber-500 ring-1 ring-amber-500/20 bg-white' : ''}`
-    : `bg-slate-900 border-slate-700/80 text-white hover:border-slate-600 ${isOpen ? 'border-amber-500 ring-1 ring-amber-500/30' : ''}`;
+    ? `bg-slate-50 border-slate-200 text-slate-800 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 focus:bg-white ${isOpen ? 'border-amber-500 ring-2 ring-amber-500/30 bg-white' : ''}`
+    : `bg-slate-900 border-slate-700/80 text-white hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 ${isOpen ? 'border-amber-500 ring-2 ring-amber-500/40' : ''}`;
 
   const dropdownThemeStyles = isLight
     ? 'bg-white border-slate-200 text-slate-800 shadow-xl'
@@ -167,8 +270,10 @@ export default function SearchableSelect({
 
       {/* Select Trigger Box */}
       <div
+        ref={triggerRef}
         role="button"
         tabIndex={disabled ? -1 : 0}
+        data-searchable-select="true"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`w-full flex items-center justify-between gap-2 border transition-all cursor-pointer select-none rounded-xl ${triggerThemeStyles} ${
           isSmall ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-xs'
@@ -217,6 +322,7 @@ export default function SearchableSelect({
       {/* Dropdown Menu Overlay */}
       {isOpen && (
         <div
+          data-searchable-options-open="true"
           className={`absolute z-50 left-0 right-0 ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'} border rounded-xl overflow-hidden backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 ${dropdownThemeStyles} ${dropdownClassName}`}
         >
           {/* Search Box */}
@@ -228,6 +334,31 @@ export default function SearchableSelect({
               value={searchQuery}
               onFocus={(e) => e.target.select()}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsOpen(false);
+                  setSearchQuery('');
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setHighlightedIndex((prev) => Math.min(prev + 1, filteredOptions.length - 1));
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setHighlightedIndex((prev) => Math.max(prev - 1, 0));
+                } else if (e.key === 'Enter') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (filteredOptions.length > 0) {
+                    handleSelect(filteredOptions[highlightedIndex] || filteredOptions[0]);
+                  } else {
+                    setIsOpen(false);
+                    if (onSelectNext) onSelectNext();
+                  }
+                }
+              }}
               placeholder={searchPlaceholder}
               className={`w-full bg-transparent text-xs focus:outline-none ${inputThemeStyles}`}
             />
@@ -243,7 +374,7 @@ export default function SearchableSelect({
           </div>
 
           {/* Options List */}
-          <div className={`max-h-56 overflow-y-auto py-1 divide-y ${isLight ? 'divide-slate-100' : 'divide-slate-800/40'}`}>
+          <div ref={optionsListRef} className={`max-h-56 overflow-y-auto py-1 divide-y ${isLight ? 'divide-slate-100' : 'divide-slate-800/40'}`}>
             {allowClear && (
               <div
                 onClick={() => handleSelect(null)}
@@ -260,21 +391,29 @@ export default function SearchableSelect({
                 No matching options found
               </div>
             ) : (
-              filteredOptions.map((opt) => {
+              filteredOptions.map((opt, idx) => {
                 const isSelected = selectedOption && String(selectedOption.value) === String(opt.value);
-                const optSelectedClasses = isSelected
+                const isHighlighted = idx === highlightedIndex;
+
+                const optClasses = isHighlighted
                   ? isLight
-                    ? 'bg-amber-50 text-amber-900 font-semibold'
-                    : 'bg-amber-500/15 text-amber-300 font-semibold'
-                  : isLight
-                    ? 'text-slate-700 hover:bg-amber-50/70 hover:text-amber-950'
-                    : 'text-slate-200 hover:bg-slate-800/80 hover:text-white';
+                    ? 'bg-amber-100 text-amber-950 font-bold'
+                    : 'bg-amber-500/25 text-amber-200 font-bold'
+                  : isSelected
+                    ? isLight
+                      ? 'bg-amber-50 text-amber-900 font-semibold'
+                      : 'bg-amber-500/15 text-amber-300 font-semibold'
+                    : isLight
+                      ? 'text-slate-700 hover:bg-amber-50/70 hover:text-amber-950'
+                      : 'text-slate-200 hover:bg-slate-800/80 hover:text-white';
 
                 return (
                   <div
                     key={String(opt.value)}
+                    data-option-item="true"
+                    onMouseEnter={() => setHighlightedIndex(idx)}
                     onClick={() => handleSelect(opt)}
-                    className={`px-3 py-2 text-xs cursor-pointer transition flex items-center justify-between gap-2 ${optSelectedClasses}`}
+                    className={`px-3 py-2 text-xs cursor-pointer transition flex items-center justify-between gap-2 ${optClasses}`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate flex items-center gap-1.5">

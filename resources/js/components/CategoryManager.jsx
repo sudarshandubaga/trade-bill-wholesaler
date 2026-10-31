@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Layers,
   Plus,
@@ -29,9 +29,15 @@ export default function CategoryManager({
 
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     is_active: true
   });
+  const nameInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setTimeout(() => nameInputRef.current?.focus(), 80);
+    }
+  }, [isModalOpen]);
 
   const categoryList = useMemo(() => {
     if (Array.isArray(categories)) return categories;
@@ -61,11 +67,7 @@ export default function CategoryManager({
   const filteredCategories = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
     if (!q) return categoryList;
-    return categoryList.filter(
-      (c) =>
-        c.name?.toLowerCase().includes(q) ||
-        c.description?.toLowerCase().includes(q)
-    );
+    return categoryList.filter((c) => c.name?.toLowerCase().includes(q));
   }, [categoryList, searchTerm]);
 
   // Overview metrics
@@ -77,7 +79,6 @@ export default function CategoryManager({
     setEditingCategory(null);
     setFormData({
       name: '',
-      description: '',
       is_active: true
     });
     setIsModalOpen(true);
@@ -87,7 +88,6 @@ export default function CategoryManager({
     setEditingCategory(cat);
     setFormData({
       name: cat.name || '',
-      description: cat.description || '',
       is_active: cat.is_active !== false
     });
     setIsModalOpen(true);
@@ -96,7 +96,7 @@ export default function CategoryManager({
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingCategory(null);
-    setFormData({ name: '', description: '', is_active: true });
+    setFormData({ name: '', is_active: true });
   };
 
   const handleSubmit = async (e) => {
@@ -110,7 +110,7 @@ export default function CategoryManager({
       await onSaveCategory(
         {
           name: formData.name.trim(),
-          description: formData.description.trim() || null,
+          description: null,
           is_active: formData.is_active
         },
         editingCategory ? editingCategory.id : null
@@ -165,10 +165,13 @@ export default function CategoryManager({
         <div className="flex items-center gap-2.5">
           <button
             onClick={handleOpenAdd}
+            data-add-new-btn="true"
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] cursor-pointer"
+            title="Shortcut: Alt+N or F2"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>+ Add New Category</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-600/30 text-slate-950 rounded border border-amber-600/40">Alt+N</kbd>
           </button>
         </div>
       </div>
@@ -228,7 +231,7 @@ export default function CategoryManager({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search category name or description..."
+              placeholder="Search categories..."
               className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 font-medium transition-all"
             />
             {searchTerm && (
@@ -254,7 +257,6 @@ export default function CategoryManager({
               <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                 <th className="py-3 px-4 w-12 text-center">#</th>
                 <th className="py-3 px-4">Category Name</th>
-                <th className="py-3 px-4">Description</th>
                 <th className="py-3 px-4 text-center w-36">Total Items</th>
                 <th className="py-3 px-4 text-center w-28">Status</th>
                 <th className="py-3 px-4 text-right w-28">Actions</th>
@@ -285,12 +287,6 @@ export default function CategoryManager({
                           </div>
                         </div>
                       </div>
-                    </td>
-
-                    <td className="py-3 px-4 text-slate-600 max-w-md truncate">
-                      {cat.description || (
-                        <span className="text-slate-300 italic">No description</span>
-                      )}
                     </td>
 
                     <td className="py-3 px-4 text-center">
@@ -393,25 +389,20 @@ export default function CategoryManager({
                   Category Name <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  ref={nameInputRef}
+                  autoFocus
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
                   placeholder="e.g. Stationery, Fast Moving Goods, Hardware"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/10 font-semibold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Description / Remarks
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Optional details about products grouped under this category..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/10 resize-none font-medium"
                 />
               </div>
 

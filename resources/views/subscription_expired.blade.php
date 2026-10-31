@@ -122,7 +122,7 @@
 
                     <p class="text-xs sm:text-sm text-slate-600 leading-relaxed pt-1">
                         All wholesale ERP operations for <strong
-                            class="text-slate-900 font-bold">{{ $tenant->name ?? 'this store' }}</strong> are
+                            class="text-slate-900 font-bold">{{ $tenant->name ?? 'this store' }}</strong> (<span class="font-mono text-slate-700 font-semibold">{{ $domain ?? $tenant->domain_name ?? '' }}</span>) are
                         temporarily paused
                         because the yearly software subscription has expired.
                     </p>
@@ -210,6 +210,12 @@
 
             <!-- Action Buttons Row (Dark Buttons) -->
             <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+                @if(isset($tenant))
+                <button id="btn-renew-license" onclick="renewLicense({{ $tenant->id }})"
+                    class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs transition cursor-pointer shadow-md shadow-amber-500/20">
+                    <span id="btn-renew-text">Activate License (+1 Year)</span>
+                </button>
+                @endif
                 <button onclick="window.location.reload()"
                     class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition cursor-pointer border border-slate-700 shadow-md">
                     <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2.5"

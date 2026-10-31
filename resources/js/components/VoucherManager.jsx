@@ -210,19 +210,25 @@ export default function VoucherManager({
           {(!fixedType || fixedType === 'receipt') && (
             <button
               onClick={() => handleOpenAdd('receipt')}
+              data-add-new-btn="true"
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer transition-all shadow-sm"
+              title="Shortcut: Alt+N or F2"
             >
               <ArrowDownLeft className="w-4 h-4" />
               <span>+ New Receipt Voucher (Money IN)</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-emerald-700/80 text-white rounded border border-emerald-500/40">Alt+N</kbd>
             </button>
           )}
           {(!fixedType || fixedType === 'payment') && (
             <button
               onClick={() => handleOpenAdd('payment')}
+              data-add-new-btn={fixedType === 'payment' ? 'true' : undefined}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold cursor-pointer transition-all shadow-sm"
+              title="Shortcut: Alt+N or F2"
             >
               <ArrowUpRight className="w-4 h-4" />
               <span>+ New Payment Voucher (Money OUT)</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-600/30 text-slate-950 rounded border border-amber-600/40">Alt+N</kbd>
             </button>
           )}
         </div>
@@ -395,6 +401,7 @@ export default function VoucherManager({
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Voucher Date *</label>
                   <input
+                    autoFocus
                     type="date"
                     required
                     value={formData.voucher_date}
@@ -460,12 +467,12 @@ export default function VoucherManager({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Narration / Remarks</label>
-                <textarea
-                  rows={2}
+                <input
+                  type="text"
                   placeholder="Additional accounting notes..."
                   value={formData.narration}
                   onChange={(e) => setFormData({ ...formData, narration: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
 

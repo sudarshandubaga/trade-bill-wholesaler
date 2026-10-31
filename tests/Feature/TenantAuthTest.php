@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Item;
 use App\Models\Tenant;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -175,5 +176,24 @@ class TenantAuthTest extends TestCase
 
         // Now protected endpoints are blocked again
         $this->getJson('/api/items')->assertStatus(401);
+    }
+
+    public function test_login_does_not_change_tenant_expiry_date(): void
+    {
+        $fixedExpiry = Carbon::parse('2028-06-15 10:00:00');
+        $this->tenant->update(['expires_at' => $fixedExpiry]);
+
+        $response = $this->postJson('/api/login', [
+            'email' => 'owner@speedywheels.com',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->tenant->refresh();
+        $this->assertEquals(
+            '2028-06-15 10:00:00',
+            $this->tenant->expires_at->toDateTimeString()
+        );
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Package,
   Plus,
@@ -29,6 +29,7 @@ export default function InventoryManager({
   tenant,
   onStockUpdated = () => {},
   onChallanUpdated = () => {},
+  onOpenAdd = null,
   addToast = () => {}
 }) {
   const currency = tenant?.currency || '₹';
@@ -45,6 +46,15 @@ export default function InventoryManager({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingMovement, setViewingMovement] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const searchInputRef = useRef(null);
+
+  // Auto focus search input when movement register mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [fixedType]);
 
   useEffect(() => {
     setActiveType(initialFilter);
@@ -132,6 +142,10 @@ export default function InventoryManager({
   }, [movementList, fixedType, activeType, searchTerm]);
 
   const handleOpenAdd = (kind = (fixedType || 'stock_in')) => {
+    if (onOpenAdd) {
+      onOpenAdd(kind);
+      return;
+    }
     const isTransfer = kind === 'stock_transfer';
     const isInward = kind === 'stock_in';
 
@@ -370,6 +384,7 @@ export default function InventoryManager({
         <div className="relative w-full sm:w-72">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search movement #, branch, party..."
             value={searchTerm}
@@ -539,6 +554,7 @@ export default function InventoryManager({
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Stock-in Date *</label>
                     <input
+                      autoFocus
                       type="date"
                       required
                       value={formData.movement_date}
@@ -702,12 +718,12 @@ export default function InventoryManager({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Notes / Internal Remarks</label>
-                <textarea
-                  rows={2}
+                <input
+                  type="text"
                   placeholder="Additional stock remarks or movement reference..."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Tag,
   Plus,
@@ -28,6 +28,15 @@ export default function BrandManager({
     description: '',
     is_active: true
   });
+  const nameInputRef = useRef(null);
+  const codeInputRef = useRef(null);
+  const descInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setTimeout(() => nameInputRef.current?.focus(), 80);
+    }
+  }, [isModalOpen]);
 
   const brandList = Array.isArray(brands) ? brands : (brands?.brands || brands?.data || []);
 
@@ -121,10 +130,13 @@ export default function BrandManager({
           </div>
           <button
             onClick={handleOpenAdd}
+            data-add-new-btn="true"
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs cursor-pointer transition-all"
+            title="Shortcut: Alt+N or F2"
           >
             <Plus className="w-4 h-4" />
             <span>Add Brand</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-600/30 text-slate-950 rounded border border-amber-600/40">Alt+N</kbd>
           </button>
         </div>
       </div>
@@ -199,11 +211,19 @@ export default function BrandManager({
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Brand Name *</label>
                 <input
+                  ref={nameInputRef}
+                  autoFocus
                   type="text"
                   required
                   placeholder="e.g. Nike, Apple, Samsung"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      codeInputRef.current?.focus();
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
@@ -211,21 +231,35 @@ export default function BrandManager({
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Brand Code (Short identifier)</label>
                 <input
+                  ref={codeInputRef}
                   type="text"
                   placeholder="e.g. NKE, APL"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      descInputRef.current?.focus();
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono uppercase focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Description / Category Focus</label>
-                <textarea
-                  rows={2}
+                <input
+                  ref={descInputRef}
+                  type="text"
                   placeholder="Footwear, electronics, cosmetics..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>

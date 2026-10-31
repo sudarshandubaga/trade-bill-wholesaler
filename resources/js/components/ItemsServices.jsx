@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Package,
   Plus,
@@ -35,6 +35,20 @@ export default function ItemsServices({
   // Modal & Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const nameInputRef = useRef(null);
+  const skuInputRef = useRef(null);
+  const categoryTriggerRef = useRef(null);
+  const priceInputRef = useRef(null);
+  const unitInputRef = useRef(null);
+  const stockInputRef = useRef(null);
+  const alertInputRef = useRef(null);
+  const descInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setTimeout(() => nameInputRef.current?.focus(), 80);
+    }
+  }, [isModalOpen]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -189,10 +203,13 @@ export default function ItemsServices({
 
           <button
             onClick={handleOpenAdd}
+            data-add-new-btn="true"
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs cursor-pointer transition-all hover:scale-[1.02]"
+            title="Shortcut: Alt+N or F2"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>+ Add New Item</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-600/30 text-slate-950 rounded border border-amber-600/40">Alt+N</kbd>
           </button>
         </div>
       </div>
@@ -478,11 +495,20 @@ export default function ItemsServices({
                   Product Name <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  ref={nameInputRef}
+                  autoFocus
                   type="text"
                   required
                   placeholder="e.g. Basmati Rice 25kg Bag, A4 Paper Rim, Ball Pen Box"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      skuInputRef.current?.focus();
+                      skuInputRef.current?.select?.();
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
@@ -492,10 +518,18 @@ export default function ItemsServices({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Item Code / SKU</label>
                   <input
+                    ref={skuInputRef}
                     type="text"
                     placeholder="e.g. BR-25KG, PEN-BL-10"
                     value={formData.short_name}
                     onChange={(e) => setFormData({ ...formData, short_name: e.target.value.toUpperCase() })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        categoryTriggerRef.current?.focus();
+                        categoryTriggerRef.current?.click();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono uppercase focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -503,6 +537,11 @@ export default function ItemsServices({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
                   <SearchableSelect
+                    triggerRef={categoryTriggerRef}
+                    onSelectNext={() => {
+                      priceInputRef.current?.focus();
+                      priceInputRef.current?.select?.();
+                    }}
                     options={categoryOptions.map((c) => ({
                       value: c,
                       label: c
@@ -524,36 +563,51 @@ export default function ItemsServices({
                     Rate ({currency}) <span className="text-rose-500">*</span>
                   </label>
                   <input
+                    ref={priceInputRef}
                     type="number"
                     step="0.01"
                     required
                     placeholder="0.00"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        unitInputRef.current?.focus();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-amber-700 text-xs font-mono font-black focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Unit of Measure</label>
-                  <select
-                    value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-semibold focus:bg-white focus:border-amber-400 outline-none"
-                  >
-                    <option value="Pcs">Pcs (Pieces)</option>
-                    <option value="Box">Box</option>
-                    <option value="Ctn">Ctn (Carton)</option>
-                    <option value="Pack">Pack</option>
-                    <option value="Bag">Bag</option>
-                    <option value="Dozen">Dozen</option>
-                    <option value="Kg">Kg</option>
-                    <option value="Quintal">Quintal</option>
-                    <option value="Pair">Pair</option>
-                    <option value="Set">Set</option>
-                    <option value="Meter">Meter</option>
-                    <option value="Roll">Roll</option>
-                  </select>
+                  <SearchableSelect
+                    triggerRef={unitInputRef}
+                    onSelectNext={() => {
+                      stockInputRef.current?.focus();
+                      stockInputRef.current?.select?.();
+                    }}
+                    options={[
+                      { value: 'Pcs', label: 'Pcs (Pieces)' },
+                      { value: 'Box', label: 'Box' },
+                      { value: 'Ctn', label: 'Ctn (Carton)' },
+                      { value: 'Pack', label: 'Pack' },
+                      { value: 'Bag', label: 'Bag' },
+                      { value: 'Dozen', label: 'Dozen' },
+                      { value: 'Kg', label: 'Kg' },
+                      { value: 'Quintal', label: 'Quintal' },
+                      { value: 'Pair', label: 'Pair' },
+                      { value: 'Set', label: 'Set' },
+                      { value: 'Meter', label: 'Meter' },
+                      { value: 'Roll', label: 'Roll' }
+                    ]}
+                    value={formData.unit || 'Pcs'}
+                    onChange={(val) => setFormData({ ...formData, unit: val || 'Pcs' })}
+                    placeholder="Select Unit"
+                    searchPlaceholder="Search unit..."
+                    theme="light"
+                  />
                 </div>
               </div>
 
@@ -562,10 +616,18 @@ export default function ItemsServices({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Opening Stock Quantity</label>
                   <input
+                    ref={stockInputRef}
                     type="number"
                     step="0.01"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: parseFloat(e.target.value) || 0 })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        alertInputRef.current?.focus();
+                        alertInputRef.current?.select?.();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono font-bold focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
@@ -573,24 +635,39 @@ export default function ItemsServices({
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Low Stock Alert Level</label>
                   <input
+                    ref={alertInputRef}
                     type="number"
                     step="0.01"
                     value={formData.min_stock_alert}
                     onChange={(e) => setFormData({ ...formData, min_stock_alert: parseFloat(e.target.value) || 0 })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        descInputRef.current?.focus();
+                        descInputRef.current?.select?.();
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono font-bold focus:bg-white focus:border-amber-400 outline-none"
                   />
                 </div>
               </div>
 
-              {/* Description */}
+              {/* Description (Textbox instead of textarea so on Enter product save works) */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Description / Notes (Optional)</label>
-                <textarea
-                  rows={2}
+                <input
+                  ref={descInputRef}
+                  type="text"
                   placeholder="Packaging specifications, bundle count, terms..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none resize-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
 

@@ -220,10 +220,13 @@ export default function PurchaseManager({
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => handleOpenAdd('intra_state')}
+            data-add-new-btn="true"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold cursor-pointer transition-all shadow-2xs"
+            title="Shortcut: Alt+N or F2"
           >
             <Plus className="w-4 h-4 text-emerald-700" />
             <span>+ Intra State (In-State)</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-emerald-200/60 text-emerald-900 rounded border border-emerald-300">Alt+N</kbd>
           </button>
           <button
             onClick={() => handleOpenAdd('inter_state')}
@@ -426,23 +429,24 @@ export default function PurchaseManager({
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Classification *</label>
-                  <select
+                  <SearchableSelect
+                    options={[
+                      { value: 'intra_state', label: 'Intra State (In State CGST+SGST)' },
+                      { value: 'inter_state', label: 'Inter State (Out of State IGST)' },
+                      { value: 'unregistered', label: 'Unregistered Supplier (Non-GST)' }
+                    ]}
                     value={formData.purchase_type}
-                    onChange={(e) => {
-                      const t = e.target.value;
+                    onChange={(val) => {
                       setFormData({
                         ...formData,
-                        purchase_type: t,
-                        supplier_id: t === 'unregistered' ? '' : formData.supplier_id,
-                        supplier_name: t === 'unregistered' ? 'Local Vendor' : formData.supplier_name
+                        purchase_type: val,
+                        supplier_id: val === 'unregistered' ? '' : formData.supplier_id,
+                        supplier_name: val === 'unregistered' ? 'Local Vendor' : formData.supplier_name
                       });
                     }}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white"
-                  >
-                    <option value="intra_state">🏛️ Intra State (In State CGST+SGST)</option>
-                    <option value="inter_state">✈️ Inter State (Out of State IGST)</option>
-                    <option value="unregistered">🌾 Unregistered Supplier (Non-GST)</option>
-                  </select>
+                    placeholder="Select Classification"
+                    theme="light"
+                  />
                 </div>
 
                 <div>
@@ -529,29 +533,33 @@ export default function PurchaseManager({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method</label>
-                    <select
+                    <SearchableSelect
+                      options={[
+                        { value: 'Bank Transfer', label: 'Bank Transfer' },
+                        { value: 'Cash', label: 'Cash' },
+                        { value: 'UPI', label: 'UPI' },
+                        { value: 'Credit', label: 'Credit / Account' }
+                      ]}
                       value={formData.payment_method}
-                      onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white"
-                    >
-                      <option value="Bank Transfer">Bank Transfer</option>
-                      <option value="Cash">Cash</option>
-                      <option value="UPI">UPI</option>
-                      <option value="Credit">Credit / Account</option>
-                    </select>
+                      onChange={(val) => setFormData(prev => ({ ...prev, payment_method: val }))}
+                      placeholder="Select Method"
+                      theme="light"
+                    />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Status</label>
-                    <select
+                    <SearchableSelect
+                      options={[
+                        { value: 'Paid', label: 'Paid in Full' },
+                        { value: 'Partial', label: 'Partial Paid' },
+                        { value: 'Unpaid', label: 'Unpaid / Credit' }
+                      ]}
                       value={formData.payment_status}
-                      onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white"
-                    >
-                      <option value="Paid">Paid in Full</option>
-                      <option value="Partial">Partial Paid</option>
-                      <option value="Unpaid">Unpaid / Credit</option>
-                    </select>
+                      onChange={(val) => setFormData(prev => ({ ...prev, payment_status: val }))}
+                      placeholder="Select Status"
+                      theme="light"
+                    />
                   </div>
                 </div>
               </div>

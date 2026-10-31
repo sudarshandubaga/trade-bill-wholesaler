@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Lock,
   Mail,
@@ -40,6 +40,42 @@ export default function AuthModals({
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [demoTokenGenerated, setDemoTokenGenerated] = useState('');
+
+  // Refs for keyboard navigation
+  const loginEmailRef = useRef(null);
+  const loginPasswordRef = useRef(null);
+  const currentPasswordRef = useRef(null);
+  const changeNewPasswordRef = useRef(null);
+  const changeConfirmPasswordRef = useRef(null);
+  const forgotEmailInputRef = useRef(null);
+  const resetTokenRef = useRef(null);
+  const resetPasswordRef = useRef(null);
+  const resetConfirmPasswordRef = useRef(null);
+
+  // Auto-focus when login modal opens
+  useEffect(() => {
+    if (loginOpen) {
+      setTimeout(() => loginEmailRef.current?.focus(), 100);
+    }
+  }, [loginOpen]);
+
+  // Auto-focus when change password modal opens
+  useEffect(() => {
+    if (changePasswordOpen) {
+      setTimeout(() => currentPasswordRef.current?.focus(), 100);
+    }
+  }, [changePasswordOpen]);
+
+  // Auto-focus when forgot password modal opens or step changes
+  useEffect(() => {
+    if (forgotPasswordOpen) {
+      if (forgotStep === 1) {
+        setTimeout(() => forgotEmailInputRef.current?.focus(), 100);
+      } else {
+        setTimeout(() => resetTokenRef.current?.focus(), 100);
+      }
+    }
+  }, [forgotPasswordOpen, forgotStep]);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -138,8 +174,15 @@ export default function AuthModals({
                   <input
                     type="email"
                     required
+                    ref={loginEmailRef}
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        loginPasswordRef.current?.focus();
+                      }
+                    }}
                     placeholder="owner@speedywheels.com"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
                   />

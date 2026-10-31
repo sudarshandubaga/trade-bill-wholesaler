@@ -302,6 +302,7 @@ export default function Customers({
                     Customer Full Name <span className="text-rose-500">*</span>
                   </label>
                   <input
+                    autoFocus
                     type="text"
                     required
                     placeholder="e.g. Ramesh Patel"
@@ -331,6 +332,7 @@ export default function Customers({
                     Vehicle Registration Plate <span className="text-rose-500">*</span>
                   </label>
                   <input
+                    autoFocus
                     type="text"
                     required
                     placeholder="e.g. MH 12 AB 1234"

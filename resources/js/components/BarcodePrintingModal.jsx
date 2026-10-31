@@ -11,6 +11,7 @@ import {
   Copy,
   Sliders
 } from 'lucide-react';
+import SearchableSelect from './SearchableSelect';
 
 export default function BarcodePrintingModal({
   isOpen,
@@ -178,15 +179,17 @@ export default function BarcodePrintingModal({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Sheet Format</label>
-                <select
+                <SearchableSelect
+                  options={[
+                    { value: 'sheet24', label: '24 / Sheet (3x8)' },
+                    { value: 'sheet40', label: '40 / Sheet (4x10)' },
+                    { value: 'single', label: 'Single Label Roll (50x25mm)' }
+                  ]}
                   value={layout}
-                  onChange={(e) => setLayout(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-medium focus:bg-white focus:border-amber-400 outline-none"
-                >
-                  <option value="sheet24">24 / Sheet (3x8)</option>
-                  <option value="sheet40">40 / Sheet (4x10)</option>
-                  <option value="single">Single Label Roll (50x25mm)</option>
-                </select>
+                  onChange={(val) => setLayout(val)}
+                  placeholder="Select Format"
+                  theme="light"
+                />
               </div>
             </div>
 

@@ -12,6 +12,7 @@ import {
   Wrench,
   Search
 } from 'lucide-react';
+import SearchableSelect from './SearchableSelect';
 
 export default function CategoryModal({
   isOpen,
@@ -30,12 +31,11 @@ export default function CategoryModal({
   const [formData, setFormData] = useState({
     name: '',
     type: 'Both',
-    description: '',
   });
 
   const handleStartCreate = () => {
     setEditingCategory(null);
-    setFormData({ name: '', type: 'Both', description: '' });
+    setFormData({ name: '', type: 'Both' });
     setIsCreating(true);
   };
 
@@ -44,7 +44,6 @@ export default function CategoryModal({
     setFormData({
       name: cat.name,
       type: cat.type || 'Both',
-      description: cat.description || '',
     });
     setIsCreating(false);
   };
@@ -130,6 +129,7 @@ export default function CategoryModal({
                   Category Name <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  autoFocus
                   type="text"
                   required
                   placeholder="e.g. Tyres & Balancing, Transmission Fluids"
@@ -143,29 +143,18 @@ export default function CategoryModal({
                 <label className="text-slate-700 block mb-1 font-bold text-[11px]">
                   Classification Type
                 </label>
-                <select
+                <SearchableSelect
+                  options={[
+                    { value: 'Both', label: 'Both (Service & Parts)' },
+                    { value: 'Service', label: 'Service / Labor Only' },
+                    { value: 'Part', label: 'Spare Part / Physical Only' }
+                  ]}
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 cursor-pointer"
-                >
-                  <option value="Both">Both (Service & Parts)</option>
-                  <option value="Service">Service / Labor Only</option>
-                  <option value="Part">Spare Part / Physical Only</option>
-                </select>
+                  onChange={(val) => setFormData(prev => ({ ...prev, type: val }))}
+                  placeholder="Select Type"
+                  theme="light"
+                />
               </div>
-            </div>
-
-            <div>
-              <label className="text-slate-700 block mb-1 font-bold text-[11px]">
-                Description (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="Short description or notes..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-amber-500"
-              />
             </div>
 
             <div className="flex justify-end gap-2 pt-1">

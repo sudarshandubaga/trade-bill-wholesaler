@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   FileDiff,
   Plus,
@@ -28,6 +28,7 @@ export default function CreditDebitNoteManager({
   tenant,
   fixedType = null, // 'credit_note' | 'debit_note' | null
   onNoteUpdated = () => { },
+  onOpenAdd = null,
   addToast = () => { }
 }) {
   const currency = tenant?.currency || '₹';
@@ -37,6 +38,15 @@ export default function CreditDebitNoteManager({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingNote, setViewingNote] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const searchInputRef = useRef(null);
+
+  // Auto focus search input when register screen mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [fixedType]);
 
   useEffect(() => {
     if (fixedType) {
@@ -132,6 +142,10 @@ export default function CreditDebitNoteManager({
 
   const handleOpenAdd = (targetType = null) => {
     const chosenType = fixedType || targetType || 'credit_note';
+    if (onOpenAdd) {
+      onOpenAdd(chosenType);
+      return;
+    }
     setFormData({
       type: chosenType,
       party_type: chosenType === 'credit_note' ? 'customer' : 'supplier',
@@ -373,20 +387,26 @@ export default function CreditDebitNoteManager({
           {(!fixedType || fixedType === 'credit_note') && (
             <button
               onClick={() => handleOpenAdd('credit_note')}
+              data-add-new-btn="true"
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 text-xs font-bold cursor-pointer transition-all shadow-2xs"
+              title="Shortcut: Alt+N or F2"
             >
               <RotateCcw className="w-4 h-4 text-purple-700" />
               <span>+ Issue Credit Note (Sales Return)</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-purple-200/60 text-purple-900 rounded border border-purple-300">Alt+N</kbd>
             </button>
           )}
 
           {(!fixedType || fixedType === 'debit_note') && (
             <button
               onClick={() => handleOpenAdd('debit_note')}
+              data-add-new-btn={fixedType === 'debit_note' ? 'true' : undefined}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold cursor-pointer transition-all shadow-2xs"
+              title="Shortcut: Alt+N or F2"
             >
               <ArrowUpRight className="w-4 h-4 text-amber-700" />
               <span>+ Issue Debit Note (Purchase Return)</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-200/60 text-amber-900 rounded border border-amber-300">Alt+N</kbd>
             </button>
           )}
         </div>
@@ -433,6 +453,7 @@ export default function CreditDebitNoteManager({
         <div className="relative w-full sm:w-72">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search note #, party, original invoice..."
             value={searchTerm}
@@ -546,26 +567,26 @@ export default function CreditDebitNoteManager({
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Note Type *</label>
-                  <select
+                  <SearchableSelect
                     disabled={Boolean(fixedType)}
+                    options={[
+                      { value: 'credit_note', label: 'Credit Note (Sales Return)' },
+                      { value: 'debit_note', label: 'Debit Note (Purchase Return)' }
+                    ]}
                     value={formData.type}
-                    onChange={(e) => {
-                      const t = e.target.value;
+                    onChange={(val) => {
                       setFormData({
                         ...formData,
-                        type: t,
-                        party_type: t === 'credit_note' ? 'customer' : 'supplier',
+                        type: val,
+                        party_type: val === 'credit_note' ? 'customer' : 'supplier',
                         party_id: '',
                         party_name: '',
-                        reason: t === 'credit_note' ? 'Customer sales return' : 'Purchase return to supplier'
+                        reason: val === 'credit_note' ? 'Customer sales return' : 'Purchase return to supplier'
                       });
                     }}
-                    className={`w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white ${fixedType ? 'opacity-80 cursor-not-allowed bg-slate-100' : ''
-                      }`}
-                  >
-                    <option value="credit_note">Credit Note (Sales Return)</option>
-                    <option value="debit_note">Debit Note (Purchase Return)</option>
-                  </select>
+                    placeholder="Select Note Type"
+                    theme="light"
+                  />
                 </div>
 
                 <div>
@@ -907,12 +928,12 @@ export default function CreditDebitNoteManager({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks / Note Narration</label>
-                <textarea
-                  rows={2}
+                <input
+                  type="text"
                   placeholder="Reason for return, physical condition of goods, warranty credit, customer remarks..."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none"
                 />
               </div>
 

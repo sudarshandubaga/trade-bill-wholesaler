@@ -30,7 +30,7 @@ class SaleItem extends Model
             'unit_price' => 'decimal:2',
             'discount_percent' => 'decimal:2',
             'discount_amount' => 'decimal:2',
-            'quantity' => 'integer',
+            'quantity' => 'decimal:2',
             'gst_percent' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'total_price' => 'decimal:2',

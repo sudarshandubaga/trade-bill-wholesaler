@@ -160,4 +160,44 @@ class WholesaleSaleApiTest extends TestCase
         $this->assertEquals(95.00, (float)$this->item1->fresh()->stock_quantity);
         $this->assertEquals(48.00, (float)$this->item2->fresh()->stock_quantity);
     }
+
+    public function test_can_create_wholesale_bill_with_floating_number_quantity(): void
+    {
+        $this->actingAs($this->tenant, 'web');
+
+        // Item 1: 2.50 bags @ ₹1000 = ₹2500
+        $payload = [
+            'branch_id' => $this->branch->id,
+            'customer_id' => $this->customer->id,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'item_name' => $this->item1->name,
+                    'short_name' => $this->item1->short_name,
+                    'unit_price' => 1000.00,
+                    'quantity' => 2.50,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
+                    'total_price' => 2500.00,
+                ],
+            ],
+            'subtotal' => 2500.00,
+            'discount_amount' => 0.00,
+            'total_amount' => 2500.00,
+            'payment_method' => 'Cash',
+        ];
+
+        $response = $this->postJson('/api/sales', $payload);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('sale_items', [
+            'item_id' => $this->item1->id,
+            'quantity' => 2.50,
+            'unit_price' => 1000.00,
+            'total_price' => 2500.00,
+        ]);
+
+        // Inventory should be deducted by exactly 2.50
+        $this->assertEquals(97.50, (float)$this->item1->fresh()->stock_quantity);
+    }
 }

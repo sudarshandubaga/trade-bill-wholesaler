@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Wrench,
   Lock,
@@ -24,6 +24,23 @@ export default function LoginScreen({
 }) {
   // Mode: 'login' | 'forgot' | 'reset'
   const [authMode, setAuthMode] = useState('login');
+
+  // Refs for keyboard navigation
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const forgotEmailRef = useRef(null);
+  const resetTokenRef = useRef(null);
+  const newPasswordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+
+  // Auto-focus when authMode changes
+  useEffect(() => {
+    if (authMode === 'forgot') {
+      setTimeout(() => forgotEmailRef.current?.focus(), 100);
+    } else if (authMode === 'reset') {
+      setTimeout(() => resetTokenRef.current?.focus(), 100);
+    }
+  }, [authMode]);
 
   // Form states (Only Email & Password; Domain is automatically taken from the URL)
   const [email, setEmail] = useState('');
@@ -127,22 +144,14 @@ export default function LoginScreen({
       {/* Main Container Card */}
       <div className="relative w-full max-w-md z-10">
 
-        {/* Top Header Branding */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/25 mb-3.5">
-            <Wrench className="w-8 h-8 stroke-[2.5]" />
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {domainInfo?.name || 'MotoService Pro'}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1 font-medium flex items-center justify-center gap-1.5">
-            <span>POS & Garage Management</span>
-          </p>
-        </div>
-
         {/* Auth Card: Light Theme Design (No Domain Input Field) */}
         <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/70 relative">
+
+          <h1 className="text-2xl text-center sm:text-3xl font-black text-slate-900 tracking-tight">
+            {domainInfo?.name || 'MotoService Pro'}
+          </h1>
+
+          <hr className='border-gray-300 my-5' />
 
           {/* Status / Error Alert */}
           {errorMessage && (
@@ -163,7 +172,7 @@ export default function LoginScreen({
           {authMode === 'login' && (
             <div>
               <div className="mb-5">
-                <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Sign In to Workstation</h2>
+                <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Sign In</h2>
                 <p className="text-xs text-slate-500 mt-0.5">Enter your email and password to access the register</p>
               </div>
 
@@ -172,16 +181,24 @@ export default function LoginScreen({
                 {/* 1. Tenant Email Address Field */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1 text-[11px]">
-                    Tenant Email Address *
+                    Email Address *
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="email"
                       required
+                      ref={emailRef}
+                      autoFocus
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="owner@speedywheels.com"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          passwordRef.current?.focus();
+                        }
+                      }}
+                      placeholder="Enter E-mail ID"
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-900 placeholder:text-slate-400 font-medium focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all"
                     />
                   </div>
@@ -211,8 +228,15 @@ export default function LoginScreen({
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
+                      ref={passwordRef}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.target.form?.requestSubmit();
+                        }
+                      }}
                       placeholder="••••••••••••"
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-10 py-2.5 text-slate-900 placeholder:text-slate-400 font-mono font-medium focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all"
                     />
@@ -237,7 +261,7 @@ export default function LoginScreen({
                     className="w-4 h-4 rounded border-slate-300 bg-slate-50 text-amber-500 focus:ring-amber-500/30 cursor-pointer accent-amber-500"
                   />
                   <label htmlFor="remember_me" className="text-slate-600 font-medium select-none cursor-pointer">
-                    Keep me signed in on this station
+                    Keep me signed in
                   </label>
                 </div>
 
@@ -254,7 +278,7 @@ export default function LoginScreen({
                     </>
                   ) : (
                     <>
-                      <span>Sign In to POS Station</span>
+                      <span>Sign In</span>
                       <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                     </>
                   )}
@@ -286,15 +310,22 @@ export default function LoginScreen({
               <form onSubmit={handleForgotSubmit} className="space-y-4 text-xs">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1 text-[11px]">
-                    Registered Tenant Email Address
+                    Registered Email Address
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="email"
                       required
+                      ref={forgotEmailRef}
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.target.form?.requestSubmit();
+                        }
+                      }}
                       placeholder="owner@speedywheels.com"
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white"
                     />
@@ -359,8 +390,15 @@ export default function LoginScreen({
                   <input
                     type="text"
                     required
+                    ref={resetTokenRef}
                     value={resetToken}
                     onChange={(e) => setResetToken(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        newPasswordRef.current?.focus();
+                      }
+                    }}
                     placeholder="Paste 64-character token"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-mono text-[11px] focus:outline-none focus:border-amber-500 focus:bg-white"
                   />
@@ -374,8 +412,15 @@ export default function LoginScreen({
                     type="password"
                     required
                     minLength={6}
+                    ref={newPasswordRef}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        confirmPasswordRef.current?.focus();
+                      }
+                    }}
                     placeholder="New secure password"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white font-mono"
                   />
@@ -389,8 +434,15 @@ export default function LoginScreen({
                     type="password"
                     required
                     minLength={6}
+                    ref={confirmPasswordRef}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.target.form?.requestSubmit();
+                      }
+                    }}
                     placeholder="Confirm new password"
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white font-mono"
                   />
@@ -414,12 +466,6 @@ export default function LoginScreen({
             </div>
           )}
 
-        </div>
-
-        {/* Footer Security Badges */}
-        <div className="mt-6 text-center text-slate-400 text-[11px] flex items-center justify-center gap-2">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Domain Automatically Verified from URL &bull; TLS 1.3</span>
         </div>
 
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Settings,
   X,
@@ -28,6 +28,13 @@ export default function SettingsModal({
     address: '',
     currency: '₹',
   });
+  const nameInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => nameInputRef.current?.focus(), 80);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (tenant) {
@@ -88,6 +95,8 @@ export default function SettingsModal({
                 Garage / Workshop Name <span className="text-rose-500">*</span>
               </label>
               <input
+                ref={nameInputRef}
+                autoFocus
                 type="text"
                 required
                 value={formData.name}
@@ -128,12 +137,12 @@ export default function SettingsModal({
               <label className="text-slate-700 block mb-1 font-bold text-[11px]">
                 Workshop Address
               </label>
-              <textarea
-                rows={2}
+              <input
+                type="text"
                 placeholder="Shop No., Street, City, State, PIN"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white resize-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white text-xs"
               />
             </div>
           </div>
