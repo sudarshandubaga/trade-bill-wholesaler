@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
+import { printElement, numberToWordsIndian } from '../utils/printHelper';
 
 export default function CreditDebitNoteEntry({
   type = 'credit_note', // 'credit_note' | 'debit_note'
@@ -730,14 +731,9 @@ export default function CreditDebitNoteEntry({
                         />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={it.unit_price}
-                          onChange={(e) => handleUpdateItemLine(idx, 'unit_price', e.target.value)}
-                          className="w-24 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold text-xs focus:bg-white focus:border-amber-400 outline-none text-right ml-auto"
-                        />
+                        <div className="font-mono font-bold text-slate-900 text-xs">
+                          {currency} {Number(it.unit_price || 0).toFixed(2)}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <input
@@ -984,8 +980,8 @@ export default function CreditDebitNoteEntry({
                 </div>
               )}
 
-              {/* Qty, Rate, Discount Fields */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Qty & Discount Fields (Price is auto-fetched) */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Quantity *</label>
                   <input
@@ -1003,36 +999,11 @@ export default function CreditDebitNoteEntry({
                         handleCloseAddProductModal();
                       } else if (e.key === 'Enter') {
                         e.preventDefault();
-                        popupRateInputRef.current?.focus();
-                        popupRateInputRef.current?.select();
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold text-xs focus:bg-white focus:border-amber-400 outline-none text-center"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Rate ({currency}) *</label>
-                  <input
-                    ref={popupRateInputRef}
-                    type="number"
-                    step="any"
-                    min="0"
-                    required
-                    value={popupRate}
-                    onChange={(e) => setPopupRate(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleCloseAddProductModal();
-                      } else if (e.key === 'Enter') {
-                        e.preventDefault();
                         popupDiscountInputRef.current?.focus();
                         popupDiscountInputRef.current?.select();
                       }
                     }}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold text-xs focus:bg-white focus:border-amber-400 outline-none text-right"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold text-xs focus:bg-white focus:border-amber-400 outline-none text-center"
                   />
                 </div>
 
@@ -1088,101 +1059,255 @@ export default function CreditDebitNoteEntry({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* PRINTABLE SUCCESS RECEIPT MODAL */}
+      {/* PRINTABLE SUCCESS NOTE MODAL (MATCHING SALE INVOICE FORMAT)   */}
       {/* ------------------------------------------------------------- */}
-      {createdNote && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg shadow-2xl p-6 text-slate-900 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <span className="font-bold text-xs uppercase tracking-wider text-slate-500">
-                Official Note Issued
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Note</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetForm}
-                  className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+      {createdNote && (() => {
+        const noteItems = createdNote.items || [];
+        const noteGross = noteItems.reduce((acc, it) => acc + (Number(it.quantity || 0) * Number(it.unit_price || 0)), 0);
+        const noteDiscount = Math.max(0, noteGross - Number(createdNote.total_amount || 0));
+        const noteFinal = Number(createdNote.total_amount || 0);
+        const noteTotalQty = noteItems.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
+        const isNoteCredit = createdNote.type === 'credit_note';
 
-            <div className="text-center py-2 border-b border-slate-100">
-              <h2 className="text-lg font-black uppercase text-slate-900">{tenant?.name}</h2>
-              <div className="text-xs font-bold text-slate-700 uppercase mt-0.5">
-                {createdNote.type === 'credit_note' ? 'CREDIT NOTE (SALES RETURN)' : 'DEBIT NOTE (PURCHASE RETURN)'}
-              </div>
-              <div className="text-xs font-mono text-slate-500 mt-1">
-                Note #: {createdNote.note_no} &bull; Date: {createdNote.note_date}
-              </div>
-            </div>
+        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
+        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
+        const storePhone = tenant?.phone || '9939175603, 9430472515';
+        const storeGst = tenant?.gst_number || tenant?.gstin || '10AYSPP3209J1ZC';
+        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
 
-            <div className="space-y-1.5 text-xs text-slate-700 py-1">
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-bold">Party:</span>
-                <span className="font-bold text-slate-900">{createdNote.party_name}</span>
-              </div>
-              {createdNote.original_invoice_no && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-bold">Against Bill #:</span>
-                  <span className="font-mono text-slate-900">{createdNote.original_invoice_no}</span>
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="relative w-full max-w-4xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden my-4">
+              
+              {/* Modal Top Control Bar */}
+              <div className="bg-slate-900 px-5 py-3 border-b border-slate-800 flex items-center justify-between no-print text-white">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold">
+                    <RotateCcw className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-extrabold text-white text-sm">
+                        {isNoteCredit ? 'Credit Note' : 'Debit Note'} #{createdNote.note_no}
+                      </span>
+                      <span className="text-xs text-amber-300 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        {createdNote.party_name}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">Official Wholesale Note Document</span>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            <div className="max-h-52 overflow-y-auto border-t border-b border-slate-100 py-2">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="text-slate-400 font-mono text-[10px] uppercase">
-                    <th className="py-1">Item</th>
-                    <th className="py-1 text-center">Qty</th>
-                    <th className="py-1 text-right">Rate</th>
-                    <th className="py-1 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(createdNote.items || []).map((it, idx) => (
-                    <tr key={idx}>
-                      <td className="py-1.5 font-medium text-slate-800">{it.item_name}</td>
-                      <td className="py-1.5 text-center font-bold font-mono">{it.quantity}</td>
-                      <td className="py-1.5 text-right font-mono">{currency} {Number(it.unit_price).toFixed(2)}</td>
-                      <td className="py-1.5 text-right font-mono font-bold text-slate-900">
-                        {currency} {Number(it.total_price).toFixed(2)}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => printElement('printable-credit-note-slip', { title: `${isNoteCredit ? 'Credit Note' : 'Debit Note'} - ${createdNote.note_no}` })}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs transition-all cursor-pointer ring-1 ring-amber-300"
+                    title="Print Document (Enter)"
+                  >
+                    <Printer className="w-4 h-4 stroke-[2.5]" />
+                    <span>Print Note <kbd className="ml-1 px-1.5 py-0.5 rounded bg-slate-950/15 font-mono text-[10px]">Enter</kbd></span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetForm}
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer text-xs font-bold"
+                    title="Close & New (Esc)"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Done <kbd className="ml-0.5 px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]">Esc</kbd></span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Note Container (Matches Sale Invoice Format) */}
+              <div
+                id="printable-credit-note-slip"
+                className="p-6 sm:p-8 text-black bg-white max-w-full font-sans print:p-0 print:m-0"
+              >
+                {/* Header Title Centered above the box */}
+                <div className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black">
+                  {isNoteCredit ? 'CREDIT NOTE (SALES RETURN)' : 'DEBIT NOTE (PURCHASE RETURN)'}
+                </div>
+
+                {/* Main Master Table with Black Border */}
+                <table
+                  className="w-full border-collapse border-2 border-black"
+                  style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}
+                >
+                  <tbody>
+                    {/* Row 1: Header (Store Info Left & Note Meta Right) */}
+                    <tr>
+                      {/* Left Store Info */}
+                      <td
+                        style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderRight: '2px solid black', borderBottom: '2px solid black' }}
+                        className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
+                      >
+                        <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
+                          {storeName}
+                        </h1>
+                        <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
+                          {storeAddress && <div>{storeAddress}</div>}
+                          {storePhone && <div>Mobile No: {storePhone}</div>}
+                          {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
+                          {storeEmail && <div>Email: {storeEmail}</div>}
+                        </div>
+                      </td>
+
+                      {/* Right Note Meta */}
+                      <td
+                        style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderBottom: '2px solid black' }}
+                        className="w-1/2 p-3 sm:p-4 align-top border-b-2 border-black text-xs space-y-1 print-header-cell"
+                      >
+                        <div className="flex items-center">
+                          <span className="w-24 text-red-600 font-bold shrink-0">Note No:-</span>
+                          <span className="font-bold text-red-600 font-mono text-sm">{createdNote.note_no}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 font-bold text-black shrink-0">Note Date:-</span>
+                          <span className="font-medium text-black font-mono">{createdNote.note_date}</span>
+                        </div>
+                        <div className="flex items-start">
+                          <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
+                          <span className="font-bold uppercase text-black">{createdNote.party_name}</span>
+                        </div>
+                        {createdNote.original_invoice_no && (
+                          <div className="flex items-center">
+                            <span className="w-24 font-bold text-black shrink-0">Bill No:-</span>
+                            <span className="font-mono font-bold text-slate-900">{createdNote.original_invoice_no}</span>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
 
-            <div className="pt-2 flex justify-between items-center text-sm font-black border-t border-slate-200">
-              <span>Total Note Value:</span>
-              <span className="font-mono text-base text-amber-900">
-                {currency} {Number(createdNote.total_amount).toFixed(2)}
-              </span>
-            </div>
+                    {/* Row 2: Items Table with Full Borders */}
+                    <tr>
+                      <td colSpan={2} style={{ padding: 0, borderBottom: '2px solid black' }} className="p-0 border-b-2 border-black">
+                        <table
+                          className="w-full text-left border-collapse invoice-table"
+                          style={{ width: '100%', borderCollapse: 'collapse' }}
+                        >
+                          <thead>
+                            <tr className="bg-white text-black font-bold uppercase text-xs">
+                              <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '48px' }} className="border border-black py-0 px-2 text-center w-12">SN</th>
+                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Book Name</th>
+                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '96px' }} className="border border-black py-0 px-3 text-right w-24">Rate</th>
+                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center', width: '80px' }} className="border border-black py-0 px-3 text-center w-20">Qty</th>
+                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '128px' }} className="border border-black py-0 px-3 text-right w-32">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-xs text-black">
+                            {noteItems.map((item, idx) => {
+                              const rate = Number(item.unit_price || 0);
+                              const qty = Number(item.quantity || 0);
+                              const lineAmt = qty * rate;
 
-            <div className="pt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={handleResetForm}
-                className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer transition-colors text-center"
-              >
-                + Create Another Note
-              </button>
+                              return (
+                                <tr key={idx} className="leading-snug">
+                                  <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{idx + 1}</td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-semibold uppercase">{item.item_name}</td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">{rate.toFixed(2)}</td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono">{qty}</td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
+                                    {lineAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+
+                            {noteItems.length === 0 && (
+                              <tr>
+                                <td colSpan={5} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
+                                  No items recorded on this note.
+                                </td>
+                              </tr>
+                            )}
+
+                            {/* Total Row */}
+                            <tr className="font-bold text-xs bg-white">
+                              <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-bold uppercase tracking-wider">Total</td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">{noteTotalQty}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                                {noteGross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+
+                    {/* Row 3: Bottom Summary Section */}
+                    <tr>
+                      {/* Amount in Words (Left Side - 58%) */}
+                      <td
+                        style={{ width: '58%', verticalAlign: 'top', padding: 0, borderRight: '2px solid black' }}
+                        className="w-[58%] align-top p-0 border-r-2 border-black"
+                      >
+                        <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse' }} className="w-full h-full border-collapse">
+                          <tbody>
+                            <tr>
+                              <td
+                                style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase' }}
+                                className="border-b border-black px-3 py-0 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent"
+                              >
+                                Amount in Words
+                              </td>
+                            </tr>
+                            <tr>
+                              <td
+                                style={{ padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', lineHeight: '1.4' }}
+                                className="px-3 py-2 font-bold text-xs uppercase leading-relaxed text-black"
+                              >
+                                {numberToWordsIndian(noteFinal)}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+
+                      {/* Financial Summary Table (Right Side - 42%) */}
+                      <td
+                        style={{ width: '42%', verticalAlign: 'top', padding: 0 }}
+                        className="w-[42%] align-top p-0"
+                      >
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }} className="w-full text-xs border-collapse">
+                          <tbody>
+                            <tr>
+                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Gross Amount</td>
+                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                                {noteGross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Discount / Adjustments</td>
+                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                                {noteDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '0px 12px', fontWeight: '900', color: '#dc2626' }} className="px-3 py-0 font-black text-red-600">Final Amount</td>
+                              <td style={{ padding: '0px 12px', fontWeight: '900', textAlign: 'right', color: '#dc2626', fontSize: '14px' }} className="px-3 py-0 font-black font-mono text-right text-red-600 text-sm">
+                                {noteFinal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Footer */}
+                <div className="flex justify-end items-center pt-2 px-1 text-[11px] text-slate-700 font-medium">
+                  <span className="text-red-600 font-black text-sm tracking-wider">TAX FREE</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

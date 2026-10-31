@@ -26,6 +26,7 @@ import SearchableSelect from './SearchableSelect';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
 import CreditDebitNoteManager from './CreditDebitNoteManager';
 import InventoryManager from './InventoryManager';
+import { printElement, numberToWordsIndian } from '../utils/printHelper';
 
 export default function ReportsHub({
   initialSubTab = 'sale', // 'sale', 'daybook', 'cashbook', 'bank', 'stock', 'ledger', 'credit_notes', 'debit_notes', 'stock_in', 'stock_transfer'
@@ -179,10 +180,15 @@ export default function ReportsHub({
         </div>
 
         <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 cursor-pointer transition-all self-start md:self-auto"
+          type="button"
+          onClick={() => {
+            printElement('reports-printable-panel', {
+              title: `${activeTab.replace('_', ' ').toUpperCase()} STATEMENT`
+            });
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs cursor-pointer transition-all self-start md:self-auto"
         >
-          <Printer className="w-4 h-4 text-amber-600" />
+          <Printer className="w-4 h-4 text-slate-950" />
           <span>Print Current Statement</span>
         </button>
       </div>
@@ -248,8 +254,26 @@ export default function ReportsHub({
         </div>
       )}
 
-      {/* 1. PURCHASE REPORTS */}
-      {activeTab === 'purchase' && (
+      {/* PRINTABLE REPORTS CONTENT CONTAINER */}
+      <div id="reports-printable-panel" className="space-y-4">
+        {/* Printable Statement Header (visible in print iframe for standard registers) */}
+        {activeTab !== 'ledger' && (
+          <div className="hidden print:block border-2 border-black p-4 mb-3">
+            <div className="text-center">
+              <h1 className="text-2xl font-black uppercase text-[#1e3a8a]">{tenant?.name || 'KRISHNA BOOK AGENCY'}</h1>
+              <div className="text-xs text-slate-800 font-medium">
+                {tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455'} • Mobile: {tenant?.phone || '9939175603'}
+              </div>
+              <div className="text-xs font-mono font-bold mt-0.5">GST No. {tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC'}</div>
+              <div className="text-sm font-black uppercase tracking-wider mt-2 border-t border-black pt-1">
+                {activeTab.replace('_', ' ').toUpperCase()} AUDIT STATEMENT
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1. PURCHASE REPORTS */}
+        {activeTab === 'purchase' && (
         <div className="space-y-4">
           {purchaseReportData?.summary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -666,100 +690,318 @@ export default function ReportsHub({
       )}
 
       {/* 7. PARTY LEDGER */}
-      {activeTab === 'ledger' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
-            <div className="w-64">
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Ledger Type</label>
-              <SearchableSelect
-                options={[
-                  { value: 'customer', label: 'Customer Ledger (Receivable)' },
-                  { value: 'supplier', label: 'Supplier Ledger (Payable)' }
-                ]}
-                value={ledgerPartyType}
-                onChange={(val) => {
-                  setLedgerPartyType(val);
-                  setLedgerPartyId(val === 'customer' ? customers[0]?.id : suppliers[0]?.id);
-                }}
-                placeholder="Select Ledger Type"
-                theme="light"
-              />
-            </div>
+      {activeTab === 'ledger' && (() => {
+        const ledgerTransactions = ledgerData?.transactions || [];
+        const ledgerOpeningBal = Number(ledgerData?.opening_balance || 0);
+        const ledgerClosingBal = Number(ledgerData?.closing_balance || 0);
+        const ledgerTotalDebit = ledgerTransactions.reduce((acc, t) => acc + Number(t.debit || 0), 0);
+        const ledgerTotalCredit = ledgerTransactions.reduce((acc, t) => acc + Number(t.credit || 0), 0);
 
-            <div className="w-72">
-              <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                Select {ledgerPartyType === 'customer' ? 'Customer' : 'Supplier'}
-              </label>
-              <SearchableSelect
-                options={ledgerPartyType === 'customer'
-                  ? customerList.map((c) => ({
-                    value: c.id,
-                    label: c.name,
-                    sublabel: c.mobile_no ? `Mob: ${c.mobile_no}` : '',
-                    badge: c.current_balance !== undefined ? `Bal: ₹${c.current_balance}` : ''
-                  }))
-                  : supplierList.map((s) => ({
-                    value: s.id,
-                    label: s.name,
-                    sublabel: s.company_name || s.phone || '',
-                    badge: s.current_balance !== undefined ? `Payable: ₹${s.current_balance}` : ''
-                  }))
-                }
-                value={ledgerPartyId}
-                onChange={(val) => setLedgerPartyId(val)}
-                placeholder={`Search & select ${ledgerPartyType}...`}
-                searchPlaceholder={`Search ${ledgerPartyType}...`}
-                size="sm"
-                theme="light"
-              />
-            </div>
+        const selectedParty = ledgerData?.party || (ledgerPartyType === 'customer'
+          ? customerList.find((c) => String(c.id) === String(ledgerPartyId))
+          : supplierList.find((s) => String(s.id) === String(ledgerPartyId)));
 
-            {ledgerData && (
-              <div className="ml-auto flex items-center gap-6 font-mono text-xs">
-                <div className="text-slate-600">Opening Balance: <span className="font-bold text-slate-900">{currency} {ledgerData.opening_balance}</span></div>
-                <div className="text-amber-700 font-black text-sm">
-                  Closing Balance: {currency} {ledgerData.closing_balance}
-                </div>
+        const partyName = selectedParty?.name || selectedParty?.company_name || (ledgerPartyType === 'customer' ? 'Customer Account' : 'Supplier Account');
+        const partyPhone = selectedParty?.mobile_no || selectedParty?.phone || '—';
+        const partyAddress = selectedParty?.address || '—';
+        const partyGst = selectedParty?.gst_in || selectedParty?.gst_number || selectedParty?.tax_number || '';
+        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
+        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
+        const storePhone = tenant?.phone || '9939175603, 9430472515';
+        const storeGst = tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC';
+        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+
+        return (
+          <div className="space-y-4">
+            {/* Filter Toolbar (no-print: hidden on paper/print iframe) */}
+            <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs no-print">
+              <div className="w-64">
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Ledger Type</label>
+                <SearchableSelect
+                  options={[
+                    { value: 'customer', label: 'Customer Ledger (Receivable)' },
+                    { value: 'supplier', label: 'Supplier Ledger (Payable)' }
+                  ]}
+                  value={ledgerPartyType}
+                  onChange={(val) => {
+                    setLedgerPartyType(val);
+                    setLedgerPartyId(val === 'customer' ? customers[0]?.id : suppliers[0]?.id);
+                  }}
+                  placeholder="Select Ledger Type"
+                  theme="light"
+                />
               </div>
-            )}
-          </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-xs">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase font-mono tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="px-5 py-3">Date</th>
-                  <th className="px-5 py-3">Voucher / Bill Type</th>
-                  <th className="px-5 py-3">Reference #</th>
-                  <th className="px-5 py-3">Transaction Particulars</th>
-                  <th className="px-5 py-3 text-right">Debit ({currency})</th>
-                  <th className="px-5 py-3 text-right">Credit ({currency})</th>
-                  <th className="px-5 py-3 text-right">Running Balance ({currency})</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
-                {(ledgerData?.transactions || []).map((t, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-5 py-3 text-slate-500">{t.date}</td>
-                    <td className="px-5 py-3 font-sans font-bold text-slate-900">{t.type}</td>
-                    <td className="px-5 py-3 text-amber-700 font-bold">{t.ref}</td>
-                    <td className="px-5 py-3 font-sans text-slate-600">{t.particulars}</td>
-                    <td className="px-5 py-3 text-right font-bold text-slate-900">
-                      {t.debit > 0 ? Number(t.debit).toLocaleString() : '-'}
+              <div className="w-72">
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Select {ledgerPartyType === 'customer' ? 'Customer' : 'Supplier'}
+                </label>
+                <SearchableSelect
+                  options={ledgerPartyType === 'customer'
+                    ? customerList.map((c) => ({
+                      value: c.id,
+                      label: c.name,
+                      sublabel: c.mobile_no ? `Mob: ${c.mobile_no}` : '',
+                      badge: c.current_balance !== undefined ? `Bal: ₹${c.current_balance}` : ''
+                    }))
+                    : supplierList.map((s) => ({
+                      value: s.id,
+                      label: s.name,
+                      sublabel: s.company_name || s.phone || '',
+                      badge: s.current_balance !== undefined ? `Payable: ₹${s.current_balance}` : ''
+                    }))
+                  }
+                  value={ledgerPartyId}
+                  onChange={(val) => setLedgerPartyId(val)}
+                  placeholder={`Search & select ${ledgerPartyType}...`}
+                  searchPlaceholder={`Search ${ledgerPartyType}...`}
+                  size="sm"
+                  theme="light"
+                />
+              </div>
+
+              {ledgerData && (
+                <div className="ml-auto flex items-center gap-6 font-mono text-xs">
+                  <div className="text-slate-600">Opening Balance: <span className="font-bold text-slate-900">{currency} {ledgerOpeningBal.toFixed(2)}</span></div>
+                  <div className="text-amber-700 font-black text-sm">
+                    Closing Balance: {currency} {ledgerClosingBal.toFixed(2)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sale-Invoice-Style Party Statement / Ledger Layout */}
+            <div className="bg-white p-1 sm:p-2 border border-slate-200 sm:border-0 rounded-none shadow-none">
+              {/* Document Header Title */}
+              <div className="text-center font-bold text-xs uppercase tracking-wider pb-1.5 text-black">
+                PARTY STATEMENT / LEDGER
+              </div>
+
+              {/* Master Box with 2px solid black border & sharp rectangular shape */}
+              <table
+                className="w-full border-collapse border-2 border-black"
+                style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}
+              >
+                <tbody>
+                  {/* Row 1: Header (Store Details Left & Party Details Right) */}
+                  <tr>
+                    {/* Left Column: Store Details */}
+                    <td
+                      style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderRight: '2px solid black', borderBottom: '2px solid black' }}
+                      className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
+                    >
+                      <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
+                        {storeName}
+                      </h1>
+                      <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
+                        {storeAddress && <div>{storeAddress}</div>}
+                        {storePhone && <div>Mobile No: {storePhone}</div>}
+                        {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
+                        {storeEmail && <div>Email: {storeEmail}</div>}
+                      </div>
                     </td>
-                    <td className="px-5 py-3 text-right font-bold text-slate-900">
-                      {t.credit > 0 ? Number(t.credit).toLocaleString() : '-'}
-                    </td>
-                    <td className="px-5 py-3 text-right font-black text-amber-700">
-                      {currency} {Number(t.running_balance).toLocaleString()}
+
+                    {/* Right Column: Party Info & Statement Details */}
+                    <td
+                      style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderBottom: '2px solid black' }}
+                      className="w-1/2 p-3 sm:p-4 align-top border-b-2 border-black text-xs space-y-1 print-header-cell"
+                    >
+                      <div className="flex items-start">
+                        <span className="w-28 font-bold text-black shrink-0">Party Name:</span>
+                        <span className="font-bold uppercase text-black text-sm">{partyName}</span>
+                      </div>
+                      <div className="flex items-start">
+                        <span className="w-28 font-bold text-black shrink-0">Address:-</span>
+                        <span className="uppercase text-black">{partyAddress}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
+                        <span className="font-mono text-black">{partyPhone}</span>
+                      </div>
+                      {partyGst && (
+                        <div className="flex items-center">
+                          <span className="w-28 font-bold text-black shrink-0">GST No:-</span>
+                          <span className="font-mono text-black">{partyGst}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center">
+                        <span className="w-28 font-bold text-black shrink-0">Account Type:-</span>
+                        <span className="font-bold uppercase text-slate-900">
+                          {ledgerPartyType === 'customer' ? 'Customer (Receivable)' : 'Supplier (Payable)'}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-28 font-bold text-red-600 shrink-0">Statement Date:-</span>
+                        <span className="font-bold text-red-600 font-mono">
+                          {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+
+                  {/* Row 2: Transactions Table (full width spanning 2 columns) */}
+                  <tr>
+                    <td colSpan={2} style={{ padding: 0, borderBottom: '2px solid black' }} className="p-0 border-b-2 border-black">
+                      <table
+                        className="w-full text-left border-collapse invoice-table"
+                        style={{ width: '100%', borderCollapse: 'collapse' }}
+                      >
+                        <thead>
+                          <tr className="bg-white text-black font-bold uppercase text-xs">
+                            <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '40px' }} className="border border-black py-0 px-2 text-center w-10">SN</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '85px' }} className="border border-black py-0 px-2 text-center w-20">Date</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'left', width: '130px' }} className="border border-black py-0 px-2.5 text-left w-32">Type</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', width: '100px' }} className="border border-black py-0 px-2.5 text-center w-24">Ref #</th>
+                            <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Particulars</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '95px' }} className="border border-black py-0 px-2.5 text-right w-24">Debit ({currency})</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '95px' }} className="border border-black py-0 px-2.5 text-right w-24">Credit ({currency})</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '115px' }} className="border border-black py-0 px-2.5 text-right w-28">Balance ({currency})</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-xs text-black">
+                          {/* Opening Balance Row */}
+                          <tr className="leading-snug bg-slate-50/50">
+                            <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">—</td>
+                            <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">—</td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'left' }} className="border border-black py-0 px-2.5 font-bold uppercase" colSpan={3}>
+                              Opening Balance
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono">
+                              {ledgerOpeningBal > 0 ? ledgerOpeningBal.toFixed(2) : '-'}
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono">
+                              {ledgerOpeningBal < 0 ? Math.abs(ledgerOpeningBal).toFixed(2) : '-'}
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold">
+                              {ledgerOpeningBal.toFixed(2)}
+                            </td>
+                          </tr>
+
+                          {/* Transactions Rows */}
+                          {ledgerTransactions.map((t, idx) => (
+                            <tr key={idx} className="leading-snug">
+                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{idx + 1}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{t.date}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'left' }} className="border border-black py-0 px-2.5 font-semibold uppercase">{t.type}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center' }} className="border border-black py-0 px-2.5 text-center font-mono font-bold text-slate-900">{t.ref}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3">{t.particulars}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono">
+                                {Number(t.debit) > 0 ? Number(t.debit).toFixed(2) : '-'}
+                              </td>
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono">
+                                {Number(t.credit) > 0 ? Number(t.credit).toFixed(2) : '-'}
+                              </td>
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold text-slate-900">
+                                {Number(t.running_balance).toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+
+                          {ledgerTransactions.length === 0 && (
+                            <tr>
+                              <td colSpan={8} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
+                                No ledger transactions recorded for this account.
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* Total Row */}
+                          <tr className="font-bold text-xs bg-white">
+                            <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                            <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center' }} className="border border-black py-0 px-2.5 text-center font-bold uppercase tracking-wider">Total</td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px' }} className="border border-black py-0 px-2.5"></td>
+                            <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold">
+                              {ledgerTotalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold">
+                              {ledgerTotalCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold">
+                              {ledgerClosingBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+
+                  {/* Row 3: Bottom Summary Section (Amount in Words Left & Financial Summary Right) */}
+                  <tr>
+                    {/* Amount in Words (Left Side - 58%) */}
+                    <td
+                      style={{ width: '58%', verticalAlign: 'top', padding: 0, borderRight: '2px solid black' }}
+                      className="w-[58%] align-top p-0 border-r-2 border-black"
+                    >
+                      <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse' }} className="w-full h-full border-collapse">
+                        <tbody>
+                          <tr>
+                            <td
+                              style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase' }}
+                              className="border-b border-black px-3 py-0 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent"
+                            >
+                              Closing Balance in Words
+                            </td>
+                          </tr>
+                          <tr>
+                            <td
+                              style={{ padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', lineHeight: '1.4' }}
+                              className="px-3 py-2 font-bold text-xs uppercase leading-relaxed text-black"
+                            >
+                              {numberToWordsIndian(Math.abs(ledgerClosingBal))} {ledgerClosingBal >= 0 ? '(DEBIT / RECEIVABLE)' : '(CREDIT / ADVANCE)'}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+
+                    {/* Financial Summary Table (Right Side - 42%) */}
+                    <td
+                      style={{ width: '42%', verticalAlign: 'top', padding: 0 }}
+                      className="w-[42%] align-top p-0"
+                    >
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }} className="w-full text-xs border-collapse">
+                        <tbody>
+                          <tr>
+                            <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Opening Balance</td>
+                            <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                              {ledgerOpeningBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Total Debit (Billed)</td>
+                            <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                              {ledgerTotalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Total Credit (Paid)</td>
+                            <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                              {ledgerTotalCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '0px 12px', fontWeight: '900', color: '#dc2626' }} className="px-3 py-0 font-black text-red-600">Net Closing Balance</td>
+                            <td style={{ padding: '0px 12px', fontWeight: '900', textAlign: 'right', color: '#dc2626', fontSize: '14px' }} className="px-3 py-0 font-black font-mono text-right text-red-600 text-sm">
+                              {currency} {ledgerClosingBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Footer below the box */}
+              <div className="flex justify-end items-center pt-2 px-1 text-[11px] text-slate-700 font-medium">
+                <span className="text-red-600 font-black text-sm tracking-wider">ACCOUNT STATEMENT</span>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Stock Dump / Wastage Modal */}
       {isDumpModalOpen && (
@@ -935,6 +1177,7 @@ export default function ReportsHub({
           addToast={addToast}
         />
       )}
+      </div>
 
       {/* Printable Invoice Modal Fallback */}
       <InvoiceReceiptModal

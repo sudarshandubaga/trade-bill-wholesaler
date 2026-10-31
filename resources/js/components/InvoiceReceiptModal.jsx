@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { Printer, X, FileText } from 'lucide-react';
+import { printElement } from '../utils/printHelper';
 
 /**
  * Converts numbers into Indian currency words format
@@ -124,115 +125,10 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
   const totalDiscount = Math.max(0, Math.round((grossAmount - finalAmount) * 100) / 100);
 
   const handlePrint = useCallback(() => {
-    if (isPrintingRef.current) return;
-    isPrintingRef.current = true;
-    setTimeout(() => {
-      isPrintingRef.current = false;
-    }, 1200);
-
-    const printContent = document.getElementById('printable-receipt');
-    if (!printContent) {
-      window.print();
-      return;
-    }
-
-    try {
-      let printFrame = document.getElementById('a4-print-iframe');
-      if (printFrame) {
-        printFrame.remove();
-      }
-
-      printFrame = document.createElement('iframe');
-      printFrame.id = 'a4-print-iframe';
-      printFrame.style.position = 'fixed';
-      printFrame.style.right = '0';
-      printFrame.style.bottom = '0';
-      printFrame.style.width = '0';
-      printFrame.style.height = '0';
-      printFrame.style.border = '0';
-      document.body.appendChild(printFrame);
-
-      const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-        .map((tag) => tag.outerHTML)
-        .join('\n');
-
-      const docTitle = `Sale Invoice - ${sale.invoice_no}`;
-
-      const frameDoc = printFrame.contentWindow.document;
-      frameDoc.open();
-      frameDoc.write(`
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <title>${docTitle}</title>
-            ${styleTags}
-            <style>
-              @page {
-                size: A4 portrait;
-                margin: 8mm 10mm;
-              }
-              * {
-                box-sizing: border-box;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              html, body {
-                width: 100% !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-                color: #000000 !important;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              }
-              #printable-receipt {
-                width: 100% !important;
-                margin: 0 auto !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-                color: #000000 !important;
-              }
-              .no-print {
-                display: none !important;
-              }
-              .invoice-outer-box {
-                border: 1.5px solid #000000 !important;
-              }
-              table.invoice-table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-              }
-              table.invoice-table th, table.invoice-table td {
-                border: 1px solid #000000 !important;
-              }
-              tr {
-                page-break-inside: avoid !important;
-              }
-            </style>
-          </head>
-          <body class="bg-white text-black font-sans antialiased">
-            <div id="printable-receipt">
-              ${printContent.innerHTML}
-            </div>
-          </body>
-        </html>
-      `);
-      frameDoc.close();
-
-      setTimeout(() => {
-        try {
-          printFrame.contentWindow.focus();
-          printFrame.contentWindow.print();
-        } catch (err) {
-          console.warn('Iframe print error, falling back to window.print:', err);
-          window.print();
-        }
-      }, 300);
-    } catch (e) {
-      console.warn('Print initialization error, falling back to window.print:', e);
-      window.print();
-    }
+    printElement('printable-receipt', {
+      title: `Sale Invoice - ${sale.invoice_no}`,
+      pageMargin: '8mm 10mm',
+    });
   }, [sale]);
 
   // Keyboard shortcut listener: Enter to print, Escape to close
@@ -303,162 +199,188 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
             SALE - INVOICE
           </div>
 
-          {/* Main Outer Box with Black Border */}
-          <div className="invoice-outer-box border-2 border-black">
+          {/* Main Master Table with Black Border */}
+          <table
+            className="w-full border-collapse border-2 border-black"
+            style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}
+          >
+            <tbody>
+              {/* Row 1: Header (Store Info Left & Bill Meta Right) */}
+              <tr>
+                {/* Left Column: Store Details */}
+                <td
+                  style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderRight: '2px solid black', borderBottom: '2px solid black' }}
+                  className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
+                >
+                  <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
+                    {storeName}
+                  </h1>
+                  <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
+                    {storeAddress && <div>{storeAddress}</div>}
+                    {storePhone && <div>Mobile No: {storePhone}</div>}
+                    {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
+                    {storeEmail && <div>Email: {storeEmail}</div>}
+                  </div>
+                </td>
 
-            {/* Top Grid: Store Information (Left) & Customer / Invoice Details (Right) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x-2 divide-black">
+                {/* Right Column: Bill Meta & Customer Info */}
+                <td
+                  style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderBottom: '2px solid black' }}
+                  className="w-1/2 p-3 sm:p-4 align-top border-b-2 border-black text-xs space-y-1 print-header-cell"
+                >
+                  <div className="flex items-center">
+                    <span className="w-24 text-red-600 font-bold shrink-0">Bill No:-</span>
+                    <span className="font-bold text-red-600 font-mono text-sm">{sale.invoice_no}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-24 font-bold text-black shrink-0">Bill Date:-</span>
+                    <span className="font-medium text-black font-mono">{invoiceDateStr}</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
+                    <span className="font-bold uppercase text-black">{customerName}</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="w-24 font-bold text-black shrink-0">Address:-</span>
+                    <span className="uppercase text-black">{customerAddress}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
+                    <span className="font-mono text-black">{customerPhone}</span>
+                  </div>
+                </td>
+              </tr>
 
-              {/* Left Column: Store Details */}
-              <div className="p-3.5 sm:p-4 text-center sm:text-left flex flex-col justify-center">
-                <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
-                  {storeName}
-                </h1>
-                <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                  {storeAddress && <div>{storeAddress}</div>}
-                  {storePhone && <div>Mobile No: {storePhone}</div>}
-                  {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
-                  {storeEmail && <div>Email: {storeEmail}</div>}
-                </div>
-              </div>
+              {/* Row 2: Line Items Table (full width spanning 2 columns) */}
+              <tr>
+                <td colSpan={2} style={{ padding: 0, borderBottom: '2px solid black' }} className="p-0 border-b-2 border-black">
+                  <table
+                    className="w-full text-left border-collapse invoice-table"
+                    style={{ width: '100%', borderCollapse: 'collapse' }}
+                  >
+                    <thead>
+                      <tr className="bg-white text-black font-bold uppercase text-xs">
+                        <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '48px' }} className="border border-black py-0 px-2 text-center w-12">SN</th>
+                        <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Book Name</th>
+                        <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '96px' }} className="border border-black py-0 px-3 text-right w-24">Rate</th>
+                        <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center', width: '80px' }} className="border border-black py-0 px-3 text-center w-20">Qty</th>
+                        <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '128px' }} className="border border-black py-0 px-3 text-right w-32">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-xs text-black">
+                      {items.map((item, idx) => {
+                        const rate = Number(item.unit_price || 0);
+                        const qty = Number(item.quantity || 0);
+                        const lineAmount = qty * rate;
 
-              {/* Right Column: Bill Meta & Customer Info */}
-              <div className="p-3.5 sm:p-4 text-xs space-y-1">
-                <div className="flex items-center">
-                  <span className="w-24 text-red-600 font-bold shrink-0">Bill No:-</span>
-                  <span className="font-bold text-red-600 font-mono text-sm">{sale.invoice_no}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-24 font-bold text-black shrink-0">Bill Date:-</span>
-                  <span className="font-medium text-black font-mono">{invoiceDateStr}</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
-                  <span className="font-bold uppercase text-black">{customerName}</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="w-24 font-bold text-black shrink-0">Address:-</span>
-                  <span className="uppercase text-black">{customerAddress}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
-                  <span className="font-mono text-black">{customerPhone}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-24 font-bold text-slate-600 shrink-0">Remarks:-</span>
-                  <span className="text-slate-800">{sale.notes || ''}</span>
-                </div>
-              </div>
+                        return (
+                          <tr key={idx} className="leading-snug">
+                            <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">
+                              {idx + 1}
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-semibold uppercase">
+                              {item.item_name}
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
+                              {rate.toFixed(2)}
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono">
+                              {qty}
+                            </td>
+                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
+                              {lineAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        );
+                      })}
 
-            </div>
+                      {items.length === 0 && (
+                        <tr>
+                          <td colSpan={5} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
+                            No products listed on this invoice.
+                          </td>
+                        </tr>
+                      )}
 
-            {/* Line Items Table with Complete Borders */}
-            <div className="border-t-2 border-black">
-              <table className="invoice-table w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-white text-black font-bold uppercase text-xs">
-                    <th className="border border-black py-1.5 px-2 text-center w-12">SN</th>
-                    <th className="border border-black py-1.5 px-3 text-left">Book Name</th>
-                    <th className="border border-black py-1.5 px-3 text-right w-24">Rate</th>
-                    <th className="border border-black py-1.5 px-3 text-center w-20">Qty</th>
-                    <th className="border border-black py-1.5 px-3 text-right w-32">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs text-black">
-                  {items.map((item, idx) => {
-                    const rate = Number(item.unit_price || 0);
-                    const qty = Number(item.quantity || 0);
-                    const lineAmount = qty * rate;
-
-                    return (
-                      <tr key={idx} className="leading-snug">
-                        <td className="border border-black py-1 px-2 text-center font-mono">
-                          {idx + 1}
+                      {/* Total Row */}
+                      <tr className="font-bold text-xs bg-white">
+                        <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-bold uppercase tracking-wider">
+                          Total
                         </td>
-                        <td className="border border-black py-1 px-3 font-semibold uppercase">
-                          {item.item_name}
+                        <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">
+                          {totalQty}
                         </td>
-                        <td className="border border-black py-1 px-3 text-right font-mono">
-                          {rate.toFixed(2)}
-                        </td>
-                        <td className="border border-black py-1 px-3 text-center font-mono">
-                          {qty}
-                        </td>
-                        <td className="border border-black py-1 px-3 text-right font-mono">
-                          {lineAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                          {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
-                    );
-                  })}
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
 
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="border border-black py-4 text-center text-slate-400 text-xs">
-                        No products listed on this invoice.
-                      </td>
-                    </tr>
-                  )}
+              {/* Row 3: Bottom Section (Amount in Words Left & Financial Summary Right) */}
+              <tr>
+                {/* Amount in Words (Left Side - 58%) */}
+                <td
+                  style={{ width: '58%', verticalAlign: 'top', padding: 0, borderRight: '2px solid black' }}
+                  className="w-[58%] align-top p-0 border-r-2 border-black"
+                >
+                  <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse' }} className="w-full h-full border-collapse">
+                    <tbody>
+                      <tr>
+                        <td
+                          style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase' }}
+                          className="border-b border-black px-3 py-0 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent"
+                        >
+                          Amount in Words
+                        </td>
+                      </tr>
+                      <tr>
+                        <td
+                          style={{ padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', lineHeight: '1.4' }}
+                          className="px-3 py-2 font-bold text-xs uppercase leading-relaxed text-black"
+                        >
+                          {numberToWordsIndian(finalAmount)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
 
-                  {/* Total Row */}
-                  <tr className="font-bold text-xs bg-white border-t-2 border-black">
-                    <td className="border border-black py-1 px-2"></td>
-                    <td className="border border-black py-1 px-3 text-center font-bold uppercase tracking-wider">
-                      Total
-                    </td>
-                    <td className="border border-black py-1 px-3"></td>
-                    <td className="border border-black py-1 px-3 text-center font-mono font-bold">
-                      {totalQty}
-                    </td>
-                    <td className="border border-black py-1 px-3 text-right font-mono font-bold">
-                      {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Bottom Section: Amount in Words (Left) & Financial Summary Table (Right) */}
-            <div className="border-t-2 border-black grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x-2 divide-black">
-
-              {/* Amount in Words (Left Side - 7 cols) */}
-              <div className="md:col-span-7 flex flex-col justify-between">
-                <div className="border-b border-black px-3 py-1 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent">
-                  Amount in Words
-                </div>
-                <div className="p-3 font-bold text-xs uppercase leading-relaxed text-black my-auto">
-                  {numberToWordsIndian(finalAmount)}
-                </div>
-              </div>
-
-              {/* Gross Amount, Discount & Final Amount (Right Side - 5 cols) */}
-              <div className="md:col-span-5">
-                <table className="w-full text-xs border-collapse">
-                  <tbody>
-                    <tr className="border-b border-black">
-                      <td className="px-3 py-1.5 font-bold text-black">Gross Amount</td>
-                      <td className="px-3 py-1.5 font-bold font-mono text-right text-black">
-                        {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-black">
-                      <td className="px-3 py-1.5 font-bold text-black">Discount</td>
-                      <td className="px-3 py-1.5 font-bold font-mono text-right text-black">
-                        {totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-3 py-1.5 font-black text-red-600">Final Amount</td>
-                      <td className="px-3 py-1.5 font-black font-mono text-right text-red-600 text-sm">
-                        {finalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-            </div>
-
-          </div>
+                {/* Gross Amount, Discount & Final Amount (Right Side - 42%) */}
+                <td
+                  style={{ width: '42%', verticalAlign: 'top', padding: 0 }}
+                  className="w-[42%] align-top p-0"
+                >
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }} className="w-full text-xs border-collapse">
+                    <tbody>
+                      <tr>
+                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Gross Amount</td>
+                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                          {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Discount</td>
+                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                          {totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '0px 12px', fontWeight: '900', color: '#dc2626' }} className="px-3 py-0 font-black text-red-600">Final Amount</td>
+                        <td style={{ padding: '0px 12px', fontWeight: '900', textAlign: 'right', color: '#dc2626', fontSize: '14px' }} className="px-3 py-0 font-black font-mono text-right text-red-600 text-sm">
+                          {finalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           {/* Footer below the box */}
           <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center pt-2 px-1 text-[11px] text-slate-700 font-medium gap-1">

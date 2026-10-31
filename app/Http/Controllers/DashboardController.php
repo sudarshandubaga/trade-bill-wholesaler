@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CreditDebitNote;
 use App\Models\Item;
 use App\Models\Sale;
+use App\Models\Supplier;
 use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -41,11 +43,15 @@ class DashboardController extends Controller
 
         $totalCustomers = Customer::where('tenant_id', $tenant->id)->count();
         $totalItems = Item::where('tenant_id', $tenant->id)->count();
+        $totalSuppliers = Supplier::where('tenant_id', $tenant->id)->count();
+        $totalStockUnits = (float) Item::where('tenant_id', $tenant->id)->sum('stock_quantity');
+        $creditNotesCount = CreditDebitNote::where('tenant_id', $tenant->id)->where('type', 'credit_note')->count();
+        $debitNotesCount = CreditDebitNote::where('tenant_id', $tenant->id)->where('type', 'debit_note')->count();
 
         $recentSales = Sale::where('tenant_id', $tenant->id)
             ->with(['customer', 'items'])
             ->orderBy('id', 'desc')
-            ->limit(5)
+            ->limit(8)
             ->get();
 
         return response()->json([
@@ -56,6 +62,10 @@ class DashboardController extends Controller
             'today_sales_count' => $todaySalesCount,
             'total_customers' => $totalCustomers,
             'total_items' => $totalItems,
+            'total_suppliers' => $totalSuppliers,
+            'total_stock_units' => $totalStockUnits,
+            'credit_notes_count' => $creditNotesCount,
+            'debit_notes_count' => $debitNotesCount,
             'subscription' => [
                 'plan' => $tenant->subscription_plan,
                 'price' => $tenant->subscription_price,

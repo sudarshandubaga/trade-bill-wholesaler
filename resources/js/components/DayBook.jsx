@@ -16,6 +16,7 @@ import {
   Car,
   FileSpreadsheet
 } from 'lucide-react';
+import { printElement } from '../utils/printHelper';
 
 export default function DayBook({
   sales,
@@ -94,7 +95,7 @@ export default function DayBook({
   }, [daySales]);
 
   return (
-    <div className="space-y-6">
+    <div id="printable-daybook-panel" className="space-y-6">
       
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -143,8 +144,13 @@ export default function DayBook({
           </button>
 
           <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            type="button"
+            onClick={() => {
+              printElement('printable-daybook-panel', {
+                title: `Day Book - ${selectedDate}`
+              });
+            }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all shadow-xs cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Day Book</span>

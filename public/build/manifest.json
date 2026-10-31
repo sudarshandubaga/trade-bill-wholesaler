@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-iRWGsBHn.css",
+    "file": "assets/app-BPk7MAPT.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,7 +9,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-NQdyfzVn.js",
+    "file": "assets/app-LCNurDTh.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true

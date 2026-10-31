@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
+import { printElement, numberToWordsIndian } from '../utils/printHelper';
 
 export default function VoucherManager({
   vouchers = [],
@@ -498,75 +499,237 @@ export default function VoucherManager({
       )}
 
       {/* View Voucher Slip Modal (Light Theme) */}
-      {viewingVoucher && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 text-slate-900">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <span className="font-bold text-xs uppercase tracking-wider text-slate-500">Accounting Voucher Slip</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold cursor-pointer shadow-xs"
+      {viewingVoucher && (() => {
+        const isReceipt = viewingVoucher.type === 'receipt';
+        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
+        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
+        const storePhone = tenant?.phone || '9939175603, 9430472515';
+        const storeGst = tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC';
+        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+
+        const voucherAmount = Number(viewingVoucher.amount || 0);
+
+        const handlePrint = () => {
+          printElement('printable-voucher-slip', {
+            title: `${isReceipt ? 'Receipt Voucher' : 'Payment Voucher'} - ${viewingVoucher.voucher_no}`
+          });
+        };
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in overflow-y-auto"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setViewingVoucher(null);
+              if (e.key === 'Enter' && !e.shiftKey) handlePrint();
+            }}
+            tabIndex={0}
+          >
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden my-auto">
+              {/* Modal Top Control Bar */}
+              <div className="bg-slate-900 px-6 py-3.5 flex items-center justify-between border-b border-slate-800 text-white">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs uppercase tracking-wider text-slate-400">Official Accounting Voucher</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="font-mono text-xs text-amber-400 font-bold">{viewingVoucher.voucher_no}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-md shadow-amber-500/20 cursor-pointer transition-all"
+                    title="Print Document (Enter)"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print Bill <kbd className="ml-1 px-1.5 py-0.5 rounded bg-black/20 text-slate-950 font-mono text-[10px]">Enter</kbd></span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewingVoucher(null)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer text-xs font-bold"
+                    title="Close (Esc)"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Close <kbd className="ml-0.5 px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono text-[10px]">Esc</kbd></span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Voucher Box (Matches Sale Invoice Format) */}
+              <div
+                id="printable-voucher-slip"
+                className="p-6 sm:p-8 text-black bg-white max-w-full font-sans print:p-0 print:m-0"
+              >
+                {/* Header Title Centered above the box */}
+                <div className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black">
+                  {isReceipt ? 'CASH / BANK RECEIPT VOUCHER' : 'PAYMENT VOUCHER'}
+                </div>
+
+                {/* Main Master Table with Black Border */}
+                <table
+                  className="w-full border-collapse border-2 border-black"
+                  style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}
                 >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print</span>
-                </button>
-                <button onClick={() => setViewingVoucher(null)} className="p-1 rounded text-slate-400 hover:text-slate-900 cursor-pointer">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+                  <tbody>
+                    {/* Row 1: Header (Store Info Left & Voucher Meta Right) */}
+                    <tr>
+                      {/* Left Store Info */}
+                      <td
+                        style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderRight: '2px solid black', borderBottom: '2px solid black' }}
+                        className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
+                      >
+                        <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
+                          {storeName}
+                        </h1>
+                        <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
+                          {storeAddress && <div>{storeAddress}</div>}
+                          {storePhone && <div>Mobile No: {storePhone}</div>}
+                          {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
+                          {storeEmail && <div>Email: {storeEmail}</div>}
+                        </div>
+                      </td>
 
-            <div className="pt-4 text-center pb-4 border-b border-slate-200">
-              <h2 className="text-lg font-black uppercase text-slate-900">{tenant?.name}</h2>
-              <div className="text-xs font-bold text-slate-600 uppercase mt-0.5">
-                {viewingVoucher.type === 'receipt' ? 'CASH / BANK RECEIPT VOUCHER' : 'PAYMENT VOUCHER'}
-              </div>
-              <div className="text-xs font-mono text-slate-500 mt-1">
-                Voucher #: {viewingVoucher.voucher_no} &bull; Date: {viewingVoucher.voucher_date}
-              </div>
-            </div>
+                      {/* Right Voucher Meta */}
+                      <td
+                        style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderBottom: '2px solid black' }}
+                        className="w-1/2 p-3 sm:p-4 align-top border-b-2 border-black text-xs space-y-1 print-header-cell"
+                      >
+                        <div className="flex items-center">
+                          <span className="w-28 text-red-600 font-bold shrink-0">Voucher No:-</span>
+                          <span className="font-bold text-red-600 font-mono text-sm">{viewingVoucher.voucher_no}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-28 font-bold text-black shrink-0">Voucher Date:-</span>
+                          <span className="font-medium text-black font-mono">{viewingVoucher.voucher_date}</span>
+                        </div>
+                        <div className="flex items-start">
+                          <span className="w-28 font-bold text-black shrink-0">Party / Account:</span>
+                          <span className="font-bold uppercase text-black">{viewingVoucher.party_name}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-28 font-bold text-black shrink-0">Payment Mode:</span>
+                          <span className="font-mono font-bold uppercase text-slate-900">{viewingVoucher.payment_mode}</span>
+                        </div>
+                        {viewingVoucher.reference_no && (
+                          <div className="flex items-center">
+                            <span className="w-28 font-bold text-black shrink-0">Cheque / Ref:</span>
+                            <span className="font-mono text-slate-900">{viewingVoucher.reference_no}</span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
 
-            <div className="py-4 space-y-3 text-xs text-slate-700">
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-bold">Party / Account:</span>
-                <span className="font-bold text-slate-900">{viewingVoucher.party_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-bold">Branch:</span>
-                <span className="font-bold text-slate-900">{viewingVoucher.branch?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-bold">Payment Mode:</span>
-                <span className="uppercase font-mono font-bold text-slate-900">{viewingVoucher.payment_mode}</span>
-              </div>
-              {viewingVoucher.reference_no && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-bold">Reference / Cheque:</span>
-                  <span className="font-mono text-slate-900">{viewingVoucher.reference_no}</span>
+                    {/* Row 2: Particulars Table with Full Borders */}
+                    <tr>
+                      <td colSpan={2} style={{ padding: 0, borderBottom: '2px solid black' }} className="p-0 border-b-2 border-black">
+                        <table
+                          className="w-full text-left border-collapse invoice-table"
+                          style={{ width: '100%', borderCollapse: 'collapse' }}
+                        >
+                          <thead>
+                            <tr className="bg-white text-black font-bold uppercase text-xs">
+                              <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '48px' }} className="border border-black py-0 px-2 text-center w-12">SN</th>
+                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Particulars / Transaction Description</th>
+                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center', width: '128px' }} className="border border-black py-0 px-3 text-center w-32">Type</th>
+                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '160px' }} className="border border-black py-0 px-3 text-right w-40">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-xs text-black">
+                            <tr className="leading-snug">
+                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">1</td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-semibold uppercase">
+                                {isReceipt ? 'Payment Received From' : 'Payment Issued To'}: {viewingVoucher.party_name}
+                                {viewingVoucher.narration ? ` (${viewingVoucher.narration})` : ''}
+                              </td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono uppercase font-bold text-slate-700">
+                                {viewingVoucher.payment_mode}
+                              </td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold text-slate-900">
+                                {voucherAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+
+                            {/* Total Row */}
+                            <tr className="font-bold text-xs bg-white">
+                              <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-bold uppercase tracking-wider">Total</td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                                {voucherAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+
+                    {/* Row 3: Bottom Summary Section */}
+                    <tr>
+                      {/* Amount in Words (Left Side - 58%) */}
+                      <td
+                        style={{ width: '58%', verticalAlign: 'top', padding: 0, borderRight: '2px solid black' }}
+                        className="w-[58%] align-top p-0 border-r-2 border-black"
+                      >
+                        <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse' }} className="w-full h-full border-collapse">
+                          <tbody>
+                            <tr>
+                              <td
+                                style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase' }}
+                                className="border-b border-black px-3 py-0 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent"
+                              >
+                                Amount in Words
+                              </td>
+                            </tr>
+                            <tr>
+                              <td
+                                style={{ padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', lineHeight: '1.4' }}
+                                className="px-3 py-2 font-bold text-xs uppercase leading-relaxed text-black"
+                              >
+                                {numberToWordsIndian(voucherAmount)}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+
+                      {/* Financial Summary Table (Right Side - 42%) */}
+                      <td
+                        style={{ width: '42%', verticalAlign: 'top', padding: 0 }}
+                        className="w-[42%] align-top p-0"
+                      >
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }} className="w-full text-xs border-collapse">
+                          <tbody>
+                            <tr>
+                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Gross Amount</td>
+                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                                {voucherAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Discount</td>
+                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">0.00</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '0px 12px', fontWeight: '900', color: '#dc2626' }} className="px-3 py-0 font-black text-red-600">Net Settled</td>
+                              <td style={{ padding: '0px 12px', fontWeight: '900', textAlign: 'right', color: '#dc2626', fontSize: '14px' }} className="px-3 py-0 font-black font-mono text-right text-red-600 text-sm">
+                                {voucherAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Footer */}
+                <div className="flex justify-end items-center pt-2 px-1 text-[11px] text-slate-700 font-medium">
+                  <span className="text-red-600 font-black text-sm tracking-wider">TAX FREE</span>
                 </div>
-              )}
-              {viewingVoucher.narration && (
-                <div className="pt-2 border-t border-slate-100 text-slate-600 italic">
-                  Note: {viewingVoucher.narration}
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between">
-              <span className="text-xs font-bold uppercase text-slate-700">Amount Paid / Received:</span>
-              <span className="text-xl font-black font-mono text-amber-700">
-                {currency} {Number(viewingVoucher.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-
-            <div className="pt-8 grid grid-cols-2 gap-8 text-center text-xs text-slate-400">
-              <div className="border-t border-slate-200 pt-1">Accountant / Cashier</div>
-              <div className="border-t border-slate-200 pt-1">Receiver Signature</div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

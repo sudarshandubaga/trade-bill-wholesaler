@@ -12,6 +12,7 @@ import {
   Sliders
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
+import { printElement } from '../utils/printHelper';
 
 export default function BarcodePrintingModal({
   isOpen,
@@ -93,7 +94,9 @@ export default function BarcodePrintingModal({
   };
 
   const handlePrint = () => {
-    window.print();
+    printElement('printable-barcode-sheet', {
+      title: `Barcodes - ${currentItem?.name || 'Labels'}`
+    });
   };
 
   return (
@@ -238,7 +241,7 @@ export default function BarcodePrintingModal({
             </div>
 
             {/* Simulated Label Sheet */}
-            <div className="flex-1 overflow-y-auto bg-white text-black p-4 rounded-xl shadow-xs border border-slate-200 max-h-[500px]">
+            <div id="printable-barcode-sheet" className="flex-1 overflow-y-auto bg-white text-black p-4 rounded-xl shadow-xs border border-slate-200 max-h-[500px]">
               <div
                 className={`grid gap-3 ${
                   layout === 'sheet40'

@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   DollarSign
 } from 'lucide-react';
+import { printElement } from '../utils/printHelper';
 
 export default function CashBook({
   sales,
@@ -103,7 +104,7 @@ export default function CashBook({
   }, [filteredCashSales]);
 
   return (
-    <div className="space-y-6">
+    <div id="printable-cashbook-panel" className="space-y-6">
       
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -120,10 +121,15 @@ export default function CashBook({
         </div>
 
         <button
-          onClick={() => window.print()}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold transition-all shrink-0 shadow-xs cursor-pointer"
+          type="button"
+          onClick={() => {
+            printElement('printable-cashbook-panel', {
+              title: 'Cash Book Report'
+            });
+          }}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all shrink-0 shadow-xs cursor-pointer"
         >
-          <Printer className="w-4 h-4 text-slate-600" />
+          <Printer className="w-4 h-4 text-slate-950" />
           <span>Print Cash Report</span>
         </button>
       </div>

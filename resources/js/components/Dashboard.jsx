@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  DollarSign,
+  BookOpen,
   Receipt,
   Users,
   Package,
@@ -9,14 +9,22 @@ import {
   TrendingUp,
   ShieldCheck,
   AlertTriangle,
-  RefreshCw,
+  RotateCcw,
+  Building2,
+  Boxes,
+  Truck,
   Plus,
-  Car,
-  Clock,
+  ArrowDownLeft,
+  ArrowRightLeft,
   Sparkles,
-  ChevronRight,
   Printer,
-  Compass
+  BookMarked,
+  FileText,
+  Wallet,
+  Phone,
+  MapPin,
+  Mail,
+  Hash
 } from 'lucide-react';
 
 export default function Dashboard({
@@ -34,62 +42,85 @@ export default function Dashboard({
     ? stats.recent_sales
     : (stats?.recent_sales?.data || []);
 
+  const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
+
   return (
     <div className="space-y-6">
 
-      {/* Executive Command Hero Banner (Dark Theme) */}
+      {/* Executive Command Hero Banner (Book Agency Edition) */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800/90 text-white p-6 sm:p-8 shadow-2xl">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
 
           <div className="space-y-2.5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-amber-300 text-xs font-semibold backdrop-blur-xs">
-              <Car className="w-3.5 h-3.5 text-amber-400" />
-              <span>Automotive Service Center & Workshop POS</span>
+              <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+              <span>Book Agency & Wholesale Educational Distribution</span>
               <span className="w-1 h-1 rounded-full bg-amber-400"></span>
-              <span className="font-mono text-[11px] text-slate-300">{tenant?.domain_name}</span>
+              <span className="font-mono text-[11px] text-slate-300">{tenant?.domain_name || 'agency'}</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-              {tenant?.name || 'Wholesale Command Center'}
+              {storeName}
             </h1>
 
-            <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-xl leading-relaxed">
-              Real-time wholesale billing counter, buyer party ledgers, inventory tracking, and instant trade bill printing.
+            <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-2xl leading-relaxed">
+              Wholesale textbook distribution, school & institution supply lots, publisher consignment receipts, buyer party ledgers, and zero-tax book invoice billing.
             </p>
           </div>
 
           {/* Quick Launch Buttons */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               onClick={() => onNavigate('pos')}
-              className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/20 ring-1 ring-amber-300/60 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs shadow-xl shadow-amber-500/20 ring-1 ring-amber-300/60 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              title="Launch POS Wholesale Counter Billing (F1)"
             >
               <Receipt className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-              <span>Launch POS Billing</span>
+              <span>POS Book Billing (F1)</span>
               <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
             </button>
 
             <button
-              onClick={() => onNavigate('items')}
-              className="flex items-center gap-2 px-4 py-3.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+              onClick={() => onNavigate('credit_note_entry')}
+              className="flex items-center gap-2 px-3.5 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-rose-300 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+              title="Issue Credit Note for Returned Books (Alt+Shift+C)"
             >
-              <Plus className="w-4 h-4 text-amber-400" />
-              <span>Add Service / Part</span>
+              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+              <span>Credit Note</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('stock_in_entry')}
+              className="flex items-center gap-2 px-3.5 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+              title="Record Inward Consignment from Publishers (Alt+9)"
+            >
+              <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Stock In</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('items')}
+              className="flex items-center gap-2 px-3.5 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+              title="Book Catalog & Titles Master (F5)"
+            >
+              <BookMarked className="w-3.5 h-3.5 text-amber-400" />
+              <span>Book Catalog</span>
             </button>
 
             <button
               onClick={() => onNavigate('customers')}
-              className="flex items-center gap-2 px-4 py-3.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+              title="Retail Bookstore & School Directory (F4)"
             >
-              <Users className="w-4 h-4 text-amber-400" />
-              <span>Directory</span>
+              <Users className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Parties</span>
             </button>
           </div>
         </div>
 
         {/* Ambient subtle glow circles */}
         <div className="absolute -right-16 -top-16 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-orange-500/5 rounded-full blur-2xl pointer-events-none"></div>
+        <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
       </div>
 
       {/* Subscription Status Card */}
@@ -116,7 +147,7 @@ export default function Dashboard({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-slate-900 text-sm">
-                  {sub?.plan || 'Annual Garage Pro'}
+                  {sub?.plan || 'Wholesale Book Agency Annual License'}
                 </h3>
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isExpired
                     ? 'bg-rose-100 text-rose-700 border border-rose-200'
@@ -129,7 +160,7 @@ export default function Dashboard({
               </div>
               <p className="text-xs text-slate-600 mt-1">
                 {isExpired ? (
-                  <span className="text-rose-600 font-semibold">Your yearly subscription has expired. Please contact administration to renew.</span>
+                  <span className="text-rose-600 font-semibold">Your yearly software subscription has expired. Please contact administration to renew.</span>
                 ) : (
                   <span>
                     Valid until <strong className="text-slate-900">{sub?.expires_at_formatted}</strong> &bull;{' '}
@@ -150,99 +181,216 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Stats Grid (Agency Metrics) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
 
-        {/* Total Revenue */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
+        {/* 1. Total Revenue */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Lifetime Billing</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <span className="font-mono text-sm">{currency}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Book Sales</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <span className="font-mono text-xs">{currency}</span>
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight group-hover:text-emerald-700 transition-colors">
+          <div className="mt-2.5">
+            <div className="text-xl font-black text-slate-900 font-mono tracking-tight group-hover:text-emerald-700 transition-colors">
               {currency}{Number(stats?.total_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 font-medium">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Cumulative sales revenue</span>
+            <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1 font-medium">
+              <TrendingUp className="w-3 h-3 text-emerald-600" />
+              <span>{stats?.total_sales_count || 0} bills issued</span>
             </div>
           </div>
         </div>
 
-        {/* Today's Sales */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
+        {/* 2. Today's Revenue */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Today's Revenue</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Calendar className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Today's Billing</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Calendar className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-amber-600 font-mono tracking-tight group-hover:text-amber-500 transition-colors">
+          <div className="mt-2.5">
+            <div className="text-xl font-black text-amber-600 font-mono tracking-tight group-hover:text-amber-500 transition-colors">
               {currency}{Number(stats?.today_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1 font-medium">
-              <strong className="text-slate-800">{stats?.today_sales_count || 0}</strong> invoices issued today
+            <div className="text-[10px] text-slate-500 mt-1 font-medium">
+              <strong className="text-slate-800">{stats?.today_sales_count || 0}</strong> invoices today
             </div>
           </div>
         </div>
 
-        {/* Registered Customers */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
+        {/* 3. Book Titles & Stationary */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Customer Fleet</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Users className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Book Titles</span>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <BookOpen className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors">
-              {stats?.total_customers || 0}
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1 font-medium">
-              Registered vehicle owners
-            </div>
-          </div>
-        </div>
-
-        {/* Services & Spare Parts */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Catalog Services</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight group-hover:text-purple-600 transition-colors">
+          <div className="mt-2.5">
+            <div className="text-xl font-black text-slate-900 tracking-tight group-hover:text-purple-600 transition-colors">
               {stats?.total_items || 0}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1 font-medium">
-              Active repair services & spare parts
+            <div className="text-[10px] text-slate-500 mt-1 font-medium">
+              Registered textbook titles
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Retail Bookstores & Schools */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Retailers / Schools</span>
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Users className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="mt-2.5">
+            <div className="text-xl font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors">
+              {stats?.total_customers || 0}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-1 font-medium">
+              Registered wholesale buyers
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Publishers / Vendors */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Publishers / Vendors</span>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Building2 className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="mt-2.5">
+            <div className="text-xl font-black text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors">
+              {stats?.total_suppliers || 0}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-1 font-medium">
+              Publishing houses & mills
+            </div>
+          </div>
+        </div>
+
+        {/* 6. Physical Inventory Units */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all group">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Stock In Godown</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+              <Boxes className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="mt-2.5">
+            <div className="text-xl font-black text-amber-800 tracking-tight group-hover:text-amber-900 transition-colors">
+              {Number(stats?.total_stock_units || 0).toLocaleString()}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-1 font-medium">
+              Total book copies in stock
             </div>
           </div>
         </div>
 
       </div>
 
-      {/* Recent Invoices Table & Workshop Details */}
+      {/* Book Agency Core Operations Workflow Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <button
+          onClick={() => onNavigate('pos')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-amber-400 hover:shadow-md transition-all text-left cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold mb-2 group-hover:scale-110 transition-transform">
+            <Receipt className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-extrabold text-xs text-slate-900 group-hover:text-amber-600">POS Billing</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Quick sale invoices & book lot billing</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('credit_note_entry')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-rose-400 hover:shadow-md transition-all text-left cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold mb-2 group-hover:scale-110 transition-transform">
+            <RotateCcw className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-extrabold text-xs text-slate-900 group-hover:text-rose-600">Credit Note</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Student / Retailer book returns</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('debit_note_entry')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-purple-400 hover:shadow-md transition-all text-left cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold mb-2 group-hover:scale-110 transition-transform">
+            <RotateCcw className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-extrabold text-xs text-slate-900 group-hover:text-purple-600">Debit Note</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Publisher returns & debit adjustments</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('stock_in_entry')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-emerald-400 hover:shadow-md transition-all text-left cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold mb-2 group-hover:scale-110 transition-transform">
+            <ArrowDownLeft className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-extrabold text-xs text-slate-900 group-hover:text-emerald-600">Stock Inward</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Receive publisher lot consignments</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('stock_transfer_entry')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-cyan-400 hover:shadow-md transition-all text-left cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold mb-2 group-hover:scale-110 transition-transform">
+            <ArrowRightLeft className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-extrabold text-xs text-slate-900 group-hover:text-cyan-600">Stock Transfer</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Inter-godown & branch challans</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('reports')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-blue-400 hover:shadow-md transition-all text-left cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold mb-2 group-hover:scale-110 transition-transform">
+            <FileText className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-extrabold text-xs text-slate-900 group-hover:text-blue-600">Reports Hub</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Daybook, cashbook, ledger & stock</div>
+          </div>
+        </button>
+      </div>
+
+      {/* Recent Invoices Table & Agency Profile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 
-        {/* Recent Invoices (Takes 3 out of 4 columns on large screens) */}
+        {/* Recent Wholesale Invoices Table */}
         <div className="lg:col-span-2 xl:col-span-3 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-extrabold text-slate-900">Recent Service Invoices</h2>
-              <p className="text-xs text-slate-500">Latest completed & repair tickets</p>
+              <h2 className="text-base font-extrabold text-slate-900">Recent Book Sale Invoices</h2>
+              <p className="text-xs text-slate-500">Latest wholesale trade bills issued to bookstores & schools</p>
             </div>
             <button
-              onClick={() => onNavigate('sales')}
+              onClick={() => onNavigate('reports')}
               className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer"
             >
-              <span>View All Invoices</span>
+              <span>View Invoices Register</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -252,11 +400,11 @@ export default function Dashboard({
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-500 font-bold uppercase text-[10px] tracking-wider bg-slate-50/60">
-                    <th className="py-2.5 px-3">Invoice #</th>
-                    <th className="py-2.5 px-3">Customer</th>
-                    <th className="py-2.5 px-3">Vehicle Plate</th>
-                    <th className="py-2.5 px-3">Method</th>
-                    <th className="py-2.5 px-3 text-right">Total</th>
+                    <th className="py-2.5 px-3">Bill #</th>
+                    <th className="py-2.5 px-3">Retailer / School Party</th>
+                    <th className="py-2.5 px-3">Date</th>
+                    <th className="py-2.5 px-3">Payment Mode</th>
+                    <th className="py-2.5 px-3 text-right">Bill Total</th>
                     <th className="py-2.5 px-3 text-right">Action</th>
                   </tr>
                 </thead>
@@ -267,20 +415,23 @@ export default function Dashboard({
                         {sale.invoice_no}
                       </td>
                       <td className="py-3 px-3 text-slate-900 font-semibold">
-                        {sale.customer?.name || 'Walk-in Customer'}
-                      </td>
-                      <td className="py-3 px-3">
-                        {sale.customer?.vehicle_no ? (
-                          <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-amber-50 text-amber-900 border border-amber-200">
-                            {sale.customer.vehicle_no}
+                        {sale.customer?.name || sale.customer_name || 'Retail Bookstore'}
+                        {sale.customer?.city && (
+                          <span className="text-[10px] text-slate-400 font-normal ml-1">
+                            ({sale.customer.city})
                           </span>
-                        ) : (
-                          <span className="text-slate-400 font-mono text-[11px]">—</span>
                         )}
                       </td>
+                      <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
+                        {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'Today'}
+                      </td>
                       <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {sale.payment_method}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                          sale.payment_method === 'Credit'
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        }`}>
+                          {sale.payment_method || 'Credit'}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-black text-slate-900">
@@ -289,9 +440,11 @@ export default function Dashboard({
                       <td className="py-3 px-3 text-right">
                         <button
                           onClick={() => onViewInvoice(sale)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 text-[11px] font-bold transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                          title="Print A4 Wholesale Bill"
                         >
-                          Receipt
+                          <Printer className="w-3 h-3" />
+                          <span>Print Bill</span>
                         </button>
                       </td>
                     </tr>
@@ -302,38 +455,58 @@ export default function Dashboard({
           ) : (
             <div className="py-12 text-center text-slate-400 text-xs bg-slate-50/50 rounded-xl border border-dashed border-slate-200 space-y-2">
               <Receipt className="w-7 h-7 text-slate-300 mx-auto" />
-              <p className="font-semibold text-slate-600">No invoices recorded yet</p>
-              <p className="text-[11px] text-slate-400">Click "Launch POS Billing" above to start generating garage invoices.</p>
+              <p className="font-semibold text-slate-600">No book sale invoices recorded yet</p>
+              <p className="text-[11px] text-slate-400">Click "POS Book Billing" above to start generating wholesale invoices.</p>
             </div>
           )}
         </div>
 
-        {/* Garage Details & Workshop Metadata (1 Col) */}
+        {/* Book Agency Identity & Store Details */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 space-y-4 shadow-xs">
           <div>
-            <h2 className="text-base font-extrabold text-slate-900">Workshop Profile</h2>
-            <p className="text-xs text-slate-500">Garage identity and contact settings</p>
+            <h2 className="text-base font-extrabold text-slate-900">Agency Profile</h2>
+            <p className="text-xs text-slate-500">Official publishing & distributor details</p>
           </div>
 
           <div className="space-y-2.5 text-xs">
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Subdomain Slug</span>
-              <span className="font-mono text-amber-600 font-extrabold text-sm">{tenant?.domain_name}</span>
+              <div className="flex items-center gap-1 text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                <Building2 className="w-3 h-3 text-slate-400" />
+                <span>Agency Name</span>
+              </div>
+              <span className="font-black text-blue-900 text-sm">{storeName}</span>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Owner Email</span>
-              <span className="text-slate-800 font-semibold">{tenant?.email}</span>
+              <div className="flex items-center gap-1 text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                <Hash className="w-3 h-3 text-slate-400" />
+                <span>GSTIN / Tax Registration</span>
+              </div>
+              <span className="font-mono text-slate-900 font-bold">{tenant?.gst_number || tenant?.gstin || '10AYSPP3209J1ZC'}</span>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Workshop Phone</span>
-              <span className="text-slate-800 font-medium">{tenant?.phone || 'Not configured'}</span>
+              <div className="flex items-center gap-1 text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                <Phone className="w-3 h-3 text-slate-400" />
+                <span>Mobile Contact</span>
+              </div>
+              <span className="font-mono text-slate-800 font-medium">{tenant?.phone || '9939175603, 9430472515'}</span>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Garage Address</span>
-              <span className="text-slate-800 font-medium">{tenant?.address || 'Not configured'}</span>
+              <div className="flex items-center gap-1 text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                <MapPin className="w-3 h-3 text-slate-400" />
+                <span>Operating Address</span>
+              </div>
+              <span className="text-slate-800 font-medium leading-relaxed">{tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455'}</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-1 text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                <Mail className="w-3 h-3 text-slate-400" />
+                <span>Email Address</span>
+              </div>
+              <span className="text-slate-800 font-mono text-[11px]">{tenant?.email || 'krishnabookagency@gmail.com'}</span>
             </div>
           </div>
         </div>
