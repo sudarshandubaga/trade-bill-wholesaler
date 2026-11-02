@@ -265,7 +265,11 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
                   <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
                     {storeName}
                   </h1>
-                  <div className="space-y-0.5 text-[14px] text-slate-800 text-center font-medium" dangerouslySetInnerHTML={{ __html: storeAddress }}>
+                  <div className="space-y-0.5 text-[14px] text-slate-800 text-center font-medium">
+                    {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }}></div>}
+                    {storePhone && <div>Mobile No: {storePhone}</div>}
+                    {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
+                    {storeEmail && <div>Email: {storeEmail}</div>}
                   </div>
                 </td>
 
