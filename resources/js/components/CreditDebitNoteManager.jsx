@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   Package,
   RotateCcw,
-  Tag
+  Tag,
+  MessageCircle
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
@@ -121,6 +122,39 @@ export default function CreditDebitNoteManager({
       return matchType && matchSearch;
     });
   }, [noteList, fixedType, activeType, searchTerm]);
+
+  const handleSendNoteWhatsApp = (note) => {
+    const isCredit = note.type === 'credit_note';
+    const party = isCredit
+      ? customerList.find((c) => String(c.id) === String(note.party_id))
+      : supplierList.find((s) => String(s.id) === String(note.party_id));
+
+    const rawPhone = party?.mobile_no || party?.phone || note.party_phone;
+    if (!rawPhone) {
+      addToast('No mobile number available for this party.', 'error');
+      return;
+    }
+
+    let cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const storeName = tenant?.name || activeBranch?.name || 'Krishna Book Agency';
+    const partyName = party?.name || note.party_name || (isCredit ? 'Customer' : 'Supplier');
+    const noteTypeTitle = isCredit ? 'Credit Note' : 'Debit Note';
+    const noteNo = note.note_no;
+    const noteDate = formatDateDMY(note.note_date || note.created_at);
+    const total = Number(note.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const refBill = note.original_invoice_no ? `\n🔗 *Against Bill Ref:* ${note.original_invoice_no}` : '';
+    const itemsCount = (note.items || []).length;
+
+    const message = `Dear ${partyName},\n\nThis is regarding *${noteTypeTitle}* issued by *${storeName}*.\n\n📄 *${noteTypeTitle} #:* ${noteNo}\n📅 *Date:* ${noteDate}\n💰 *Net Amount:* ₹${total}${refBill}${itemsCount > 0 ? `\n📦 *Items Count:* ${itemsCount}` : ''}\n${note.reason ? `📝 *Reason:* ${note.reason}\n` : ''}\nThank you!\n*${storeName}*`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    addToast(`WhatsApp opened for ${noteTypeTitle} ${noteNo}!`, 'success');
+  };
 
   // Line calculation helper
   const calculateLine = (it) => {
@@ -533,13 +567,25 @@ export default function CreditDebitNoteManager({
                     </td>
 
                     <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => setViewingNote(n)}
-                        className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-slate-500" />
-                        <span>View / Print</span>
-                      </button>
+                      <div className="inline-flex items-center gap-1.5 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleSendNoteWhatsApp(n)}
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold cursor-pointer inline-flex items-center gap-1 transition-colors shadow-2xs no-print"
+                          title="Send Note details via WhatsApp"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>WhatsApp</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewingNote(n)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-slate-500" />
+                          <span>View / Print</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1003,6 +1049,15 @@ export default function CreditDebitNoteManager({
                   <span className="font-mono text-xs text-amber-400 font-bold">{viewingNote.note_no}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSendNoteWhatsApp(viewingNote)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs cursor-pointer transition-all ring-1 ring-emerald-400"
+                    title="Send Note details via WhatsApp"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handlePrint}

@@ -9,6 +9,7 @@ use App\Models\Item;
 use App\Models\ItemStock;
 use App\Models\Supplier;
 use App\Models\Tenant;
+use App\Services\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -78,13 +79,8 @@ class CreditDebitNoteController extends Controller
         ]);
 
         return DB::transaction(function () use ($tenant, $validated) {
-            $datePrefix = Carbon::now()->format('Ym');
-            $prefix = ($validated['type'] === 'credit_note') ? 'CN' : 'DN';
-
-            $countToday = CreditDebitNote::where('tenant_id', $tenant->id)
-                ->where('note_no', 'like', "{$prefix}-{$datePrefix}-%")
-                ->count() + 1;
-            $noteNo = sprintf('%s-%s-%04d', $prefix, $datePrefix, $countToday);
+            // Sequence Note Number managed according to Financial Year (e.g. CN/2627/0001 or DN/2627/0001)
+            $noteNo = DocumentNumberService::generateNoteNo($tenant->id, $validated['type']);
 
             $subtotal = 0;
             foreach ($validated['items'] as $it) {

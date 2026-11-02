@@ -80,6 +80,7 @@ export default function ReportsHub({
   const [stockData, setStockData] = useState(null);
   const [ledgerData, setLedgerData] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [saleSearchTerm, setSaleSearchTerm] = useState('');
 
   const handlePrintInvoice = (sale) => {
     if (onViewInvoice) {
@@ -88,6 +89,59 @@ export default function ReportsHub({
       setSelectedInvoice(sale);
     }
   };
+
+  const handleSendInvoiceWhatsApp = (sale) => {
+    const party = sale.customer || customerList.find((c) => String(c.id) === String(sale.customer_id));
+    const rawPhone = party?.mobile_no || party?.phone;
+
+    if (!rawPhone) {
+      addToast('No mobile number available for this customer.', 'error');
+      return;
+    }
+
+    let cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
+    const customerName = party?.name || 'Customer';
+    const invNo = sale.invoice_no;
+    const invDate = formatDateDMY(sale.created_at);
+    const total = Number(sale.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const paymentMode = sale.payment_method || 'Cash';
+    const itemsCount = (sale.items || []).length;
+
+    const message = `Dear ${customerName},\n\nThank you for your purchase from *${storeName}*.\n\n📄 *Invoice #:* ${invNo}\n📅 *Date:* ${invDate}\n💰 *Invoice Amount:* ₹${total}\n💳 *Payment Mode:* ${paymentMode.toUpperCase()}${itemsCount > 0 ? `\n📦 *Items Count:* ${itemsCount}` : ''}\n\nWe appreciate your business!\n*${storeName}*`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    addToast(`WhatsApp opened for invoice ${invNo}!`, 'success');
+  };
+
+  const filteredSales = React.useMemo(() => {
+    const list = saleReportData?.sales || [];
+    const term = saleSearchTerm.toLowerCase().trim();
+    if (!term) return list;
+    return list.filter((s) => {
+      const invNo = String(s.invoice_no || '').toLowerCase();
+      const custName = String(s.customer?.name || '').toLowerCase();
+      const custPhone = String(s.customer?.mobile_no || s.customer?.phone || '').toLowerCase();
+      const payMode = String(s.payment_method || '').toLowerCase();
+      const totalAmt = String(s.total_amount || '');
+      const itemsMatch = (s.items || []).some(
+        (it) => String(it.item_name || it.item?.name || '').toLowerCase().includes(term)
+      );
+      return (
+        invNo.includes(term) ||
+        custName.includes(term) ||
+        custPhone.includes(term) ||
+        payMode.includes(term) ||
+        totalAmt.includes(term) ||
+        itemsMatch
+      );
+    });
+  }, [saleReportData?.sales, saleSearchTerm]);
 
   // Ledger party selection
   const [ledgerPartyType, setLedgerPartyType] = useState('customer'); // 'customer' or 'supplier'
@@ -291,6 +345,29 @@ export default function ReportsHub({
               className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-mono focus:bg-white focus:border-amber-400 outline-none"
             />
           </div>
+
+          {activeTab === 'sale' && (
+            <div className="relative flex-1 min-w-[240px] max-w-md sm:ml-auto no-print">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={saleSearchTerm}
+                onChange={(e) => setSaleSearchTerm(e.target.value)}
+                placeholder="Search invoice #, customer, mobile, amount..."
+                className="w-full pl-9 pr-8 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none transition-colors"
+              />
+              {saleSearchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSaleSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -420,6 +497,14 @@ export default function ReportsHub({
           )}
 
           <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-xs">
+            {saleSearchTerm && (
+              <div className="px-5 py-2.5 bg-amber-50/70 border-b border-amber-200/60 flex items-center justify-between text-xs font-semibold text-amber-900">
+                <span>Showing matching results for "<strong>{saleSearchTerm}</strong>"</span>
+                <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded-md border border-amber-300 font-bold">
+                  {filteredSales.length} of {(saleReportData?.sales || []).length} bills
+                </span>
+              </div>
+            )}
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase font-mono tracking-wider border-b border-slate-200">
                 <tr>
@@ -434,7 +519,7 @@ export default function ReportsHub({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
-                {(saleReportData?.sales || []).map((s) => (
+                {filteredSales.map((s) => (
                   <tr key={s.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3 font-bold text-amber-700">
                       <button
@@ -454,6 +539,15 @@ export default function ReportsHub({
                     <td className="px-5 py-3 text-right font-black text-emerald-600">{currency} {Number(s.total_amount).toLocaleString()}</td>
                     <td className="px-5 py-3 text-center">
                       <div className="inline-flex items-center gap-1.5 justify-center">
+                        <button
+                          type="button"
+                          onClick={() => handleSendInvoiceWhatsApp(s)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors cursor-pointer shadow-2xs no-print"
+                          title="Send Invoice details to customer via WhatsApp"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>WhatsApp</span>
+                        </button>
                         {onEditSale && (
                           <button
                             type="button"
@@ -478,10 +572,12 @@ export default function ReportsHub({
                     </td>
                   </tr>
                 ))}
-                {(saleReportData?.sales || []).length === 0 && (
+                {filteredSales.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-5 py-8 text-center text-slate-400">
-                      No sale records found for the selected period / filters.
+                      {saleSearchTerm
+                        ? `No sale invoices match search query "${saleSearchTerm}".`
+                        : 'No sale records found for the selected period / filters.'}
                     </td>
                   </tr>
                 )}
@@ -931,31 +1027,30 @@ export default function ReportsHub({
                       >
                         <thead>
                           <tr className="bg-white text-black font-bold uppercase text-xs">
-                            <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '40px' }} className="border border-black py-0 px-2 text-center w-10">SN</th>
-                            <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '85px' }} className="border border-black py-0 px-2 text-center w-20">Date</th>
-                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'left', width: '130px' }} className="border border-black py-0 px-2.5 text-left w-32">Type</th>
-                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', width: '100px' }} className="border border-black py-0 px-2.5 text-center w-24">Ref #</th>
-                            <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Particulars</th>
-                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '95px' }} className="border border-black py-0 px-2.5 text-right w-24">Debit ({currency})</th>
-                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '95px' }} className="border border-black py-0 px-2.5 text-right w-24">Credit ({currency})</th>
-                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '115px' }} className="border border-black py-0 px-2.5 text-right w-28">Balance ({currency})</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '40px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2 text-center w-10 whitespace-nowrap">SN</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '90px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2 text-center w-24 whitespace-nowrap">Date</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', width: '130px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-center w-32 whitespace-nowrap">Ref #</th>
+                            <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left', whiteSpace: 'nowrap' }} className="border border-black py-0 px-3 text-left whitespace-nowrap">Particulars</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '105px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right w-28 whitespace-nowrap">Debit ({currency})</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '105px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right w-28 whitespace-nowrap">Credit ({currency})</th>
+                            <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '120px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right w-32 whitespace-nowrap">Balance ({currency})</th>
                           </tr>
                         </thead>
                         <tbody className="text-xs text-black">
                           {/* Opening Balance Row */}
                           <tr className="leading-snug bg-slate-50/50">
-                            <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">—</td>
-                            <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">—</td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'left' }} className="border border-black py-0 px-2.5 font-bold uppercase" colSpan={3}>
+                            <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2 text-center font-mono whitespace-nowrap">—</td>
+                            <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2 text-center font-mono whitespace-nowrap">—</td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'left', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 font-bold uppercase whitespace-nowrap" colSpan={2}>
                               Opening Balance
                             </td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono">
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono whitespace-nowrap">
                               {ledgerOpeningBal > 0 ? ledgerOpeningBal.toFixed(2) : '-'}
                             </td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono">
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono whitespace-nowrap">
                               {ledgerOpeningBal < 0 ? Math.abs(ledgerOpeningBal).toFixed(2) : '-'}
                             </td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold">
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold whitespace-nowrap">
                               {ledgerOpeningBal.toFixed(2)}
                             </td>
                           </tr>
@@ -963,18 +1058,17 @@ export default function ReportsHub({
                           {/* Transactions Rows */}
                           {ledgerTransactions.map((t, idx) => (
                             <tr key={idx} className="leading-snug">
-                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{idx + 1}</td>
-                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{formatDateDMY(t.date)}</td>
-                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'left' }} className="border border-black py-0 px-2.5 font-semibold uppercase">{t.type}</td>
-                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center' }} className="border border-black py-0 px-2.5 text-center font-mono font-bold text-slate-900">{t.ref}</td>
-                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3">{t.particulars}</td>
-                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono">
+                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2 text-center font-mono whitespace-nowrap">{idx + 1}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2 text-center font-mono whitespace-nowrap">{formatDateDMY(t.date)}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-center font-mono font-bold text-slate-900 whitespace-nowrap">{t.ref}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left', whiteSpace: 'nowrap' }} className="border border-black py-0 px-3 whitespace-nowrap overflow-hidden text-ellipsis">{t.particulars}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono whitespace-nowrap">
                                 {Number(t.debit) > 0 ? Number(t.debit).toFixed(2) : '-'}
                               </td>
-                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono">
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono whitespace-nowrap">
                                 {Number(t.credit) > 0 ? Number(t.credit).toFixed(2) : '-'}
                               </td>
-                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold text-slate-900">
+                              <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
                                 {Number(t.running_balance).toFixed(2)}
                               </td>
                             </tr>
@@ -982,7 +1076,7 @@ export default function ReportsHub({
 
                           {ledgerTransactions.length === 0 && (
                             <tr>
-                              <td colSpan={8} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
+                              <td colSpan={7} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
                                 No ledger transactions recorded for this account.
                               </td>
                             </tr>
@@ -990,18 +1084,17 @@ export default function ReportsHub({
 
                           {/* Total Row */}
                           <tr className="font-bold text-xs bg-white">
-                            <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
-                            <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center' }} className="border border-black py-0 px-2.5 text-center font-bold uppercase tracking-wider">Total</td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px' }} className="border border-black py-0 px-2.5"></td>
-                            <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold">
+                            <td style={{ border: '1px solid black', padding: '0px 8px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2 whitespace-nowrap"></td>
+                            <td style={{ border: '1px solid black', padding: '0px 8px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2 whitespace-nowrap"></td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-center font-bold uppercase tracking-wider whitespace-nowrap">Total</td>
+                            <td style={{ border: '1px solid black', padding: '0px 12px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-3 whitespace-nowrap"></td>
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold whitespace-nowrap">
                               {ledgerTotalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold">
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold whitespace-nowrap">
                               {ledgerTotalCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold">
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-right font-mono font-bold whitespace-nowrap">
                               {ledgerClosingBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                           </tr>

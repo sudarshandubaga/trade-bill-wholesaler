@@ -421,8 +421,8 @@ export default function CustomerLedger({
                         <tr className="bg-white text-black font-bold uppercase text-xs">
                           <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '40px' }} className="border border-black py-0 px-2 text-center w-10">SN</th>
                           <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '90px' }} className="border border-black py-0 px-2 text-center w-24">Date</th>
-                          <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', width: '120px' }} className="border border-black py-0 px-2.5 text-center w-28">Invoice #</th>
-                          <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Services / Books Supplied</th>
+                          <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', width: '120px', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-center w-28 whitespace-nowrap">Invoice #</th>
+                          <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left', whiteSpace: 'nowrap' }} className="border border-black py-0 px-3 text-left whitespace-nowrap">Particulars</th>
                           <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', width: '90px' }} className="border border-black py-0 px-2.5 text-center w-24">Pay Mode</th>
                           <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '95px' }} className="border border-black py-0 px-2.5 text-right w-24">Subtotal</th>
                           <th style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'right', width: '85px' }} className="border border-black py-0 px-2.5 text-right w-20">Discount</th>
@@ -438,10 +438,10 @@ export default function CustomerLedger({
                             <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">
                               {sale.created_at ? formatDateDMY(sale.created_at) : '—'}
                             </td>
-                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center' }} className="border border-black py-0 px-2.5 text-center font-mono font-bold text-amber-700">
+                            <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center', whiteSpace: 'nowrap' }} className="border border-black py-0 px-2.5 text-center font-mono font-bold text-amber-700 whitespace-nowrap">
                               {sale.invoice_no}
                             </td>
-                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-semibold uppercase">
+                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left', whiteSpace: 'nowrap' }} className="border border-black py-0 px-3 font-semibold uppercase whitespace-nowrap overflow-hidden text-ellipsis">
                               {sale.items && sale.items.length > 0 ? (
                                 <span>
                                   {sale.items[0].item_name}

@@ -9,6 +9,7 @@ use App\Models\ItemStock;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Tenant;
+use App\Services\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -141,12 +142,8 @@ class SaleController extends Controller
                 $customer = Customer::where('tenant_id', $tenant->id)->find($validated['customer_id']);
             }
 
-            // Sequence Invoice Number: INV-YYYYMM-XXXX
-            $datePrefix = Carbon::now()->format('Ym');
-            $countToday = Sale::where('tenant_id', $tenant->id)
-                ->where('invoice_no', 'like', "INV-{$datePrefix}-%")
-                ->count() + 1;
-            $invoiceNo = sprintf('INV-%s-%04d', $datePrefix, $countToday);
+            // Sequence Invoice Number managed according to Financial Year (e.g. INV/2627/0002)
+            $invoiceNo = DocumentNumberService::generateInvoiceNo($tenant->id);
 
             $user = Auth::guard('web')->user();
             $createdByName = $user ? $user->name : 'POS Counter';
@@ -417,5 +414,14 @@ class SaleController extends Controller
                 $stockRec->save();
             }
         }
+    }
+
+    /**
+     * Generate sequential invoice number managed according to Financial Year
+     * e.g., INV/2627/0002 for FY 2026-2027
+     */
+    protected function generateInvoiceNumber(int $tenantId, ?Carbon $date = null): string
+    {
+        return DocumentNumberService::generateInvoiceNo($tenantId, $date);
     }
 }

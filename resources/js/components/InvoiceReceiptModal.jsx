@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Printer, X, FileText, Edit } from 'lucide-react';
+import { Printer, X, FileText, Edit, MessageCircle } from 'lucide-react';
 import { printElement } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
 
@@ -134,6 +134,30 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
     });
   }, [sale]);
 
+  const handleSendWhatsApp = () => {
+    const rawPhone = sale.customer?.mobile_no || sale.customer?.phone || sale.customer_phone;
+    if (!rawPhone) {
+      alert('No mobile number available for this customer.');
+      return;
+    }
+    let cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+    const sName = tenant?.name || 'Krishna Book Agency';
+    const cName = customerName || 'Customer';
+    const invNo = sale.invoice_no;
+    const invDate = formatDateDMY(sale.created_at);
+    const total = Number(sale.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const paymentMode = sale.payment_method || 'Cash';
+    const itemsCount = items.length;
+
+    const message = `Dear ${cName},\n\nThank you for your purchase from *${sName}*!\n\n📄 *Invoice #:* ${invNo}\n📅 *Date:* ${invDate}\n💰 *Invoice Amount:* ₹${total}\n💳 *Payment Mode:* ${paymentMode.toUpperCase()}${itemsCount > 0 ? `\n📦 *Items Count:* ${itemsCount}` : ''}\n\nWe appreciate your business!\n*${sName}*`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   // Keyboard shortcut listener: Enter to print, Escape to close
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -187,6 +211,15 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
                 <span>Edit Bill</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={handleSendWhatsApp}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer ring-1 ring-emerald-400"
+              title="Send Invoice details via WhatsApp"
+            >
+              <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>WhatsApp</span>
+            </button>
             <button
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs transition-all cursor-pointer ring-1 ring-amber-300"

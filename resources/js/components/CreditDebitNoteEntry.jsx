@@ -17,7 +17,8 @@ import {
   Sparkles,
   BarChart3,
   Percent,
-  FileText
+  FileText,
+  MessageCircle
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
@@ -1112,6 +1113,27 @@ export default function CreditDebitNoteEntry({
           });
         };
 
+        const handleSendWhatsAppCreatedNote = () => {
+          if (!partyPhone) {
+            alert('No mobile number available for this party.');
+            return;
+          }
+          let cleanPhone = String(partyPhone).replace(/[^0-9]/g, '');
+          if (cleanPhone.length === 10) {
+            cleanPhone = '91' + cleanPhone;
+          }
+          const noteTypeTitle = isNoteCredit ? 'Credit Note' : 'Debit Note';
+          const noteNo = createdNote.note_no;
+          const noteDate = formatDateDMY(createdNote.note_date || createdNote.created_at);
+          const total = Number(noteFinal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const refBill = createdNote.original_invoice_no ? `\n🔗 *Against Bill Ref:* ${createdNote.original_invoice_no}` : '';
+
+          const message = `Dear ${party?.name || createdNote.party_name || 'Customer'},\n\nThis is regarding *${noteTypeTitle}* issued by *${storeName}*.\n\n📄 *${noteTypeTitle} #:* ${noteNo}\n📅 *Date:* ${noteDate}\n💰 *Net Amount:* ₹${total}${refBill}${noteItems.length > 0 ? `\n📦 *Items Count:* ${noteItems.length}` : ''}\n${createdNote.reason ? `📝 *Reason:* ${createdNote.reason}\n` : ''}\nThank you!\n*${storeName}*`;
+
+          const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+          window.open(waUrl, '_blank', 'noopener,noreferrer');
+        };
+
         return (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto animate-in fade-in"
@@ -1148,6 +1170,15 @@ export default function CreditDebitNoteEntry({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSendWhatsAppCreatedNote}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer ring-1 ring-emerald-400"
+                    title="Send Note details via WhatsApp"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>WhatsApp</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handlePrintCreatedNote}

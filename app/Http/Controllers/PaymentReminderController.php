@@ -7,6 +7,7 @@ use App\Models\PaymentReminder;
 use App\Models\Sale;
 use App\Models\Tenant;
 use App\Models\Voucher;
+use App\Services\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -282,10 +283,8 @@ class PaymentReminderController extends Controller
                 $cust->save();
             }
 
-            // Create Voucher record
-            $datePrefix = Carbon::now()->format('Ym');
-            $countToday = Voucher::where('tenant_id', $tenant->id)->count() + 1;
-            $voucherNo = sprintf('VCH-%s-%04d', $datePrefix, $countToday);
+            // Create Voucher record managed according to Financial Year
+            $voucherNo = DocumentNumberService::generateVoucherNo($tenant->id, 'receipt');
 
             $voucher = Voucher::create([
                 'tenant_id' => $tenant->id,

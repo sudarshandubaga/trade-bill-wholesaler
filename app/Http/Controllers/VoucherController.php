@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\Voucher;
+use App\Services\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -67,11 +68,8 @@ class VoucherController extends Controller
         ]);
 
         return DB::transaction(function () use ($tenant, $validated) {
-            $datePrefix = Carbon::now()->format('Ym');
-            $countToday = Voucher::where('tenant_id', $tenant->id)
-                ->where('voucher_no', 'like', "VCH-{$datePrefix}-%")
-                ->count() + 1;
-            $voucherNo = sprintf('VCH-%s-%04d', $datePrefix, $countToday);
+            // Sequence Voucher Number managed according to Financial Year (e.g. RV/2627/0001 or PV/2627/0001)
+            $voucherNo = DocumentNumberService::generateVoucherNo($tenant->id, $validated['type']);
 
             $user = Auth::guard('web')->user();
             $amount = (float)$validated['amount'];
