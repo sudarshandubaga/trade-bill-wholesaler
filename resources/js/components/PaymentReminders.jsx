@@ -23,6 +23,8 @@ import {
   User,
   ArrowRight
 } from 'lucide-react';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function PaymentReminders({ tenant, onDataUpdated, addToast }) {
   const [data, setData] = useState({
@@ -105,6 +107,16 @@ export default function PaymentReminders({ tenant, onDataUpdated, addToast }) {
 
     return items;
   }, [data.receivables, activeFilter, searchQuery]);
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems: paginatedReceivables
+  } = usePagination(filteredReceivables, 25, [activeFilter, searchQuery]);
 
   // Handle WhatsApp Reminder Click
   const handleSendWhatsApp = async (rec) => {
@@ -393,7 +405,7 @@ export default function PaymentReminders({ tenant, onDataUpdated, addToast }) {
                   </td>
                 </tr>
               ) : (
-                filteredReceivables.map((rec) => {
+                paginatedReceivables.map((rec) => {
                   const isHighOverdue = rec.days_overdue >= 30;
                   const isModerateOverdue = rec.days_overdue >= 7 && rec.days_overdue < 30;
 
@@ -542,6 +554,15 @@ export default function PaymentReminders({ tenant, onDataUpdated, addToast }) {
           </div>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       {/* QUICK SETTLEMENT MODAL */}
       {settleModalOpen && selectedReceivable && (

@@ -10,6 +10,8 @@ import {
   Wand2
 } from 'lucide-react';
 import axios from 'axios';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function BulkBarcodeModal({
   isOpen,
@@ -74,6 +76,16 @@ export default function BulkBarcodeModal({
     const matchMissing = filterMissingOnly ? !it.barcode : true;
     return matchSearch && matchMissing;
   });
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems
+  } = usePagination(filtered, 25, [searchTerm, filterMissingOnly]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-xs p-4 animate-in fade-in">
@@ -158,7 +170,7 @@ export default function BulkBarcodeModal({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filtered.map((item) => (
+              {paginatedItems.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                   <td className="px-4 py-2.5 font-bold text-slate-900">
                     {item.name}
@@ -189,9 +201,26 @@ export default function BulkBarcodeModal({
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-slate-400">
+                    No items found matching filter criteria.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Barcode Pagination Bar */}
+        <PaginationControls
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          className="rounded-none border-t border-slate-100 shadow-none px-4"
+        />
       </div>
     </div>
   );

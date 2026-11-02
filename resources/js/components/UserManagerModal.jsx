@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function UserManagerModal({
   isOpen,
@@ -61,6 +63,9 @@ export default function UserManagerModal({
 
   const userNameRef = useRef(null);
   const roleTitleRef = useRef(null);
+
+  // Pagination hook for users list
+  const userPagination = usePagination(users, 15, [activeTab]);
 
   useEffect(() => {
     if (isUserFormOpen) {
@@ -330,7 +335,7 @@ export default function UserManagerModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {users.map((u) => (
+                    {userPagination.paginatedItems.map((u) => (
                       <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="px-4 py-3">
                           <div className="font-bold text-slate-900">{u.name}</div>
@@ -381,9 +386,25 @@ export default function UserManagerModal({
                         </td>
                       </tr>
                     ))}
+                    {users.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+                          No staff users found.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Users Pagination */}
+              <PaginationControls
+                currentPage={userPagination.currentPage}
+                pageSize={userPagination.pageSize}
+                totalItems={userPagination.totalItems}
+                onPageChange={userPagination.setCurrentPage}
+                onPageSizeChange={userPagination.setPageSize}
+              />
             </div>
           )}
 

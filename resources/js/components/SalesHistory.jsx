@@ -16,6 +16,8 @@ import {
   Filter
 } from 'lucide-react';
 import { formatDateDMY } from '../utils/dateHelper';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function SalesHistory({
   sales,
@@ -46,6 +48,16 @@ export default function SalesHistory({
       return matchMethod && matchSearch;
     });
   }, [sales, selectedMethod, searchTerm]);
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems
+  } = usePagination(filteredSales, 25, [searchTerm, selectedMethod]);
 
   // Aggregate stats
   const totalFilteredRevenue = useMemo(() => {
@@ -185,7 +197,7 @@ export default function SalesHistory({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredSales.map((sale) => (
+              {paginatedItems.map((sale) => (
                 <tr key={sale.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3.5 px-4 font-mono font-bold text-amber-600 whitespace-nowrap">
                     {sale.invoice_no}
@@ -261,6 +273,15 @@ export default function SalesHistory({
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
     </div>
   );

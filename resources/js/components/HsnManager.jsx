@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function HsnManager({
   hsnCodes = [],
@@ -47,6 +49,16 @@ export default function HsnManager({
       h.hsn_code?.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
       h.description?.toLowerCase().includes(searchTerm.toLowerCase().trim())
   );
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems: paginatedHsn
+  } = usePagination(filteredHsn, 25, [searchTerm]);
 
   const handleOpenAdd = () => {
     setEditingHsn(null);
@@ -157,7 +169,7 @@ export default function HsnManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredHsn.map((h) => (
+              {paginatedHsn.map((h) => (
                 <tr key={h.id} className="hover:bg-slate-50/70 transition-colors">
                   <td className="px-5 py-3.5 font-mono font-bold text-amber-700 text-sm">
                     {h.hsn_code}
@@ -194,10 +206,26 @@ export default function HsnManager({
                   </td>
                 </tr>
               ))}
+              {filteredHsn.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                    No HSN / SAC codes found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       {/* Modal */}
       {isModalOpen && (

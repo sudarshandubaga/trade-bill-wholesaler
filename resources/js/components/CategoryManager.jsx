@@ -13,6 +13,8 @@ import {
   AlertCircle,
   ArrowRight
 } from 'lucide-react';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function CategoryManager({
   categories = [],
@@ -69,6 +71,17 @@ export default function CategoryManager({
     if (!q) return categoryList;
     return categoryList.filter((c) => c.name?.toLowerCase().includes(q));
   }, [categoryList, searchTerm]);
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    startIndex,
+    paginatedItems: paginatedCategories
+  } = usePagination(filteredCategories, 25, [searchTerm]);
 
   // Overview metrics
   const totalCategories = categoryList.length;
@@ -263,7 +276,7 @@ export default function CategoryManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCategories.map((cat, idx) => {
+              {paginatedCategories.map((cat, idx) => {
                 const count = cat.items_count || categoryItemCounts[cat.name] || 0;
                 const isActive = cat.is_active !== false;
 
@@ -273,7 +286,7 @@ export default function CategoryManager({
                     className="hover:bg-slate-50/70 transition-colors group"
                   >
                     <td className="py-3 px-4 text-center font-mono font-bold text-slate-400">
-                      {idx + 1}
+                      {startIndex + idx + 1}
                     </td>
 
                     <td className="py-3 px-4">
@@ -351,6 +364,16 @@ export default function CategoryManager({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar */}
+        <PaginationControls
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          className="border-t border-slate-100 rounded-none rounded-b-3xl shadow-none"
+        />
       </div>
 
       {/* Add / Edit Category Modal */}

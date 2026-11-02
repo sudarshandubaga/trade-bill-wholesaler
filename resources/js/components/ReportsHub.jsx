@@ -30,6 +30,8 @@ import CreditDebitNoteManager from './CreditDebitNoteManager';
 import InventoryManager from './InventoryManager';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function ReportsHub({
   initialSubTab = 'sale', // 'sale', 'daybook', 'cashbook', 'bank', 'stock', 'ledger', 'credit_notes', 'debit_notes', 'stock_in', 'stock_transfer'
@@ -142,6 +144,14 @@ export default function ReportsHub({
       );
     });
   }, [saleReportData?.sales, saleSearchTerm]);
+
+  // Pagination hooks for report tables
+  const purchasePagination = usePagination(purchaseReportData?.purchases || [], 25, [startDate, endDate]);
+  const salePagination = usePagination(filteredSales, 25, [saleSearchTerm, startDate, endDate]);
+  const daybookPagination = usePagination(daybookData?.entries || [], 25, [selectedDate]);
+  const cashbookPagination = usePagination(cashbookData?.transactions || [], 25, [startDate, endDate]);
+  const bankPagination = usePagination(bankData?.entries || [], 25, [startDate, endDate]);
+  const stockPagination = usePagination(stockData?.items || [], 25);
 
   // Ledger party selection
   const [ledgerPartyType, setLedgerPartyType] = useState('customer'); // 'customer' or 'supplier'
@@ -447,7 +457,7 @@ export default function ReportsHub({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
-                {(purchaseReportData?.purchases || []).map((p) => (
+                {purchasePagination.paginatedItems.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3 font-bold text-amber-700">{p.purchase_no}</td>
                     <td className="px-5 py-3 text-slate-500">{p.purchase_date}</td>
@@ -458,9 +468,23 @@ export default function ReportsHub({
                     <td className="px-5 py-3 text-right font-black text-amber-700">{currency} {Number(p.total_amount).toLocaleString()}</td>
                   </tr>
                 ))}
+                {purchasePagination.totalItems === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-400 font-sans">
+                      No purchase records found for this date range.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            currentPage={purchasePagination.currentPage}
+            pageSize={purchasePagination.pageSize}
+            totalItems={purchasePagination.totalItems}
+            onPageChange={purchasePagination.setCurrentPage}
+            onPageSizeChange={purchasePagination.setPageSize}
+          />
         </div>
       )}
 
@@ -519,7 +543,7 @@ export default function ReportsHub({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
-                {filteredSales.map((s) => (
+                {salePagination.paginatedItems.map((s) => (
                   <tr key={s.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3 font-bold text-amber-700">
                       <button
@@ -584,6 +608,13 @@ export default function ReportsHub({
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            currentPage={salePagination.currentPage}
+            pageSize={salePagination.pageSize}
+            totalItems={salePagination.totalItems}
+            onPageChange={salePagination.setCurrentPage}
+            onPageSizeChange={salePagination.setPageSize}
+          />
         </div>
       )}
 
@@ -627,7 +658,7 @@ export default function ReportsHub({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {(daybookData?.entries || []).map((e, idx) => (
+                {daybookPagination.paginatedItems.map((e, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3 font-mono text-slate-500">{e.time}</td>
                     <td className="px-5 py-3 font-bold text-slate-900">{e.type}</td>
@@ -642,9 +673,23 @@ export default function ReportsHub({
                     </td>
                   </tr>
                 ))}
+                {daybookPagination.totalItems === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
+                      No daybook transactions recorded for this date.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            currentPage={daybookPagination.currentPage}
+            pageSize={daybookPagination.pageSize}
+            totalItems={daybookPagination.totalItems}
+            onPageChange={daybookPagination.setCurrentPage}
+            onPageSizeChange={daybookPagination.setPageSize}
+          />
         </div>
       )}
 
@@ -680,7 +725,7 @@ export default function ReportsHub({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
-                {(cashbookData?.transactions || []).map((t, idx) => (
+                {cashbookPagination.paginatedItems.map((t, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3 text-slate-500">{t.date}</td>
                     <td className="px-5 py-3 font-sans font-bold text-slate-900">{t.type}</td>
@@ -697,9 +742,23 @@ export default function ReportsHub({
                     </td>
                   </tr>
                 ))}
+                {cashbookPagination.totalItems === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-400 font-sans">
+                      No cash transactions recorded for this period.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            currentPage={cashbookPagination.currentPage}
+            pageSize={cashbookPagination.pageSize}
+            totalItems={cashbookPagination.totalItems}
+            onPageChange={cashbookPagination.setCurrentPage}
+            onPageSizeChange={cashbookPagination.setPageSize}
+          />
         </div>
       )}
 
@@ -735,7 +794,7 @@ export default function ReportsHub({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
-                {(bankData?.entries || []).map((e, idx) => (
+                {bankPagination.paginatedItems.map((e, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3 text-slate-500">{e.date}</td>
                     <td className="px-5 py-3 uppercase text-[10px] font-bold text-sky-700">{e.mode}</td>
@@ -752,9 +811,23 @@ export default function ReportsHub({
                     </td>
                   </tr>
                 ))}
+                {bankPagination.totalItems === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-400 font-sans">
+                      No bank/digital transactions recorded for this period.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            currentPage={bankPagination.currentPage}
+            pageSize={bankPagination.pageSize}
+            totalItems={bankPagination.totalItems}
+            onPageChange={bankPagination.setCurrentPage}
+            onPageSizeChange={bankPagination.setPageSize}
+          />
         </div>
       )}
 
@@ -817,7 +890,7 @@ export default function ReportsHub({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {(stockData?.items || []).map((it) => (
+                {stockPagination.paginatedItems.map((it) => (
                   <tr key={it.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3 font-bold text-slate-900">{it.name}</td>
                     <td className="px-5 py-3 font-mono text-[11px] text-amber-700 font-bold">{it.short_name || '-'}</td>
@@ -844,9 +917,23 @@ export default function ReportsHub({
                     </td>
                   </tr>
                 ))}
+                {stockPagination.totalItems === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
+                      No stock items found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            currentPage={stockPagination.currentPage}
+            pageSize={stockPagination.pageSize}
+            totalItems={stockPagination.totalItems}
+            onPageChange={stockPagination.setCurrentPage}
+            onPageSizeChange={stockPagination.setPageSize}
+          />
         </div>
       )}
 

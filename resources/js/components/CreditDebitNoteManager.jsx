@@ -21,6 +21,8 @@ import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function CreditDebitNoteManager({
   notes = [],
@@ -122,6 +124,16 @@ export default function CreditDebitNoteManager({
       return matchType && matchSearch;
     });
   }, [noteList, fixedType, activeType, searchTerm]);
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems: paginatedNotes
+  } = usePagination(filteredNotes, 25, [searchTerm, activeType, fixedType]);
 
   const handleSendNoteWhatsApp = (note) => {
     const isCredit = note.type === 'credit_note';
@@ -515,14 +527,14 @@ export default function CreditDebitNoteManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredNotes.length === 0 ? (
+              {paginatedNotes.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
                     No {fixedType === 'credit_note' ? 'Credit' : (fixedType === 'debit_note' ? 'Debit' : 'Credit or Debit')} notes recorded yet.
                   </td>
                 </tr>
               ) : (
-                filteredNotes.map((n) => (
+                paginatedNotes.map((n) => (
                   <tr key={n.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="font-mono font-bold text-slate-900 text-sm">{n.note_no}</div>
@@ -594,6 +606,15 @@ export default function CreditDebitNoteManager({
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       {/* Add Modal (Light Theme) */}
       {isModalOpen && (

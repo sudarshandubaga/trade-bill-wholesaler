@@ -19,6 +19,8 @@ import {
   X
 } from 'lucide-react';
 import axios from 'axios';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function AccountManager({
   activeSubTab = 'customer', // 'customer' or 'supplier'
@@ -137,6 +139,10 @@ export default function AccountManager({
         s.gstin?.toLowerCase().includes(term)
     );
   }, [supplierList, searchTerm]);
+
+  // Pagination hooks for Customer and Supplier tabs
+  const custPagination = usePagination(filteredCustomers, 25, [searchTerm, activeSubTab]);
+  const suppPagination = usePagination(filteredSuppliers, 25, [searchTerm, activeSubTab]);
 
   // Customer Handlers
   const handleOpenAddCustomer = () => {
@@ -358,14 +364,14 @@ export default function AccountManager({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredCustomers.length === 0 ? (
+                {custPagination.paginatedItems.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-5 py-12 text-center text-slate-400">
                       No customers found matching search filter.
                     </td>
                   </tr>
                 ) : (
-                  filteredCustomers.map((c) => (
+                  custPagination.paginatedItems.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="font-bold text-slate-900 text-sm">{c.name}</div>
@@ -443,6 +449,14 @@ export default function AccountManager({
               </tbody>
             </table>
           </div>
+          {/* Customer Pagination */}
+          <PaginationControls
+            currentPage={custPagination.currentPage}
+            pageSize={custPagination.pageSize}
+            totalItems={custPagination.totalItems}
+            onPageChange={custPagination.setCurrentPage}
+            onPageSizeChange={custPagination.setPageSize}
+          />
         </div>
       )}
 
@@ -461,14 +475,14 @@ export default function AccountManager({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredSuppliers.length === 0 ? (
+                {suppPagination.paginatedItems.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-5 py-12 text-center text-slate-400">
                       No suppliers found. Click "Add New Supplier" to register one.
                     </td>
                   </tr>
                 ) : (
-                  filteredSuppliers.map((s) => (
+                  suppPagination.paginatedItems.map((s) => (
                     <tr key={s.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="font-bold text-slate-900 text-sm">{s.name}</div>
@@ -544,6 +558,14 @@ export default function AccountManager({
               </tbody>
             </table>
           </div>
+          {/* Supplier Pagination */}
+          <PaginationControls
+            currentPage={suppPagination.currentPage}
+            pageSize={suppPagination.pageSize}
+            totalItems={suppPagination.totalItems}
+            onPageChange={suppPagination.setCurrentPage}
+            onPageSizeChange={suppPagination.setPageSize}
+          />
         </div>
       )}
 

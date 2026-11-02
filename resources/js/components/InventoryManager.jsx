@@ -20,6 +20,8 @@ import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function InventoryManager({
   fixedType = null, // 'stock_in' | 'stock_transfer' | null
@@ -142,6 +144,16 @@ export default function InventoryManager({
       return matchSearch;
     });
   }, [movementList, fixedType, activeType, searchTerm]);
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems: paginatedMovements
+  } = usePagination(filteredMovements, 25, [searchTerm, activeType, fixedType]);
 
   const handleOpenAdd = (kind = (fixedType || 'stock_in')) => {
     if (onOpenAdd) {
@@ -411,14 +423,14 @@ export default function InventoryManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredMovements.length === 0 ? (
+              {paginatedMovements.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
                     No stock movements recorded yet.
                   </td>
                 </tr>
               ) : (
-                filteredMovements.map((m) => {
+                paginatedMovements.map((m) => {
                   const isTransfer = m.type === 'outward' && m.target_branch_id;
                   const isInward = m.type === 'inward';
 
@@ -504,6 +516,15 @@ export default function InventoryManager({
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       {/* CREATE STOCK MOVEMENT MODAL */}
       {isModalOpen && (

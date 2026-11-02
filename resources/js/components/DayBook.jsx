@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { printElement } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function DayBook({
   sales,
@@ -54,6 +56,16 @@ export default function DayBook({
       return sDateStr === selectedDate;
     });
   }, [sales, selectedDate]);
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems: paginatedDaySales
+  } = usePagination(daySales, 25, [selectedDate]);
 
   // Aggregate day financial metrics
   const dayGrossSubtotal = useMemo(() => {
@@ -273,7 +285,7 @@ export default function DayBook({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {daySales.map((sale) => (
+              {paginatedDaySales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3.5 px-4 text-slate-500 font-mono whitespace-nowrap">
                     {sale.created_at ? new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
@@ -345,6 +357,15 @@ export default function DayBook({
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
     </div>
   );

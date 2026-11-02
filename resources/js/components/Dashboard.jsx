@@ -28,6 +28,8 @@ import {
   Edit
 } from 'lucide-react';
 import { formatDateDMY } from '../utils/dateHelper';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function Dashboard({
   stats,
@@ -44,6 +46,8 @@ export default function Dashboard({
   const recentSales = Array.isArray(stats?.recent_sales)
     ? stats.recent_sales
     : (stats?.recent_sales?.data || []);
+
+  const recentSalesPagination = usePagination(recentSales, 5);
 
   const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
 
@@ -412,7 +416,7 @@ export default function Dashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {recentSales.map((sale) => (
+                  {recentSalesPagination.paginatedItems.map((sale) => (
                     <tr key={sale.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-3 font-mono font-bold text-amber-600">
                         {sale.invoice_no}
@@ -467,6 +471,15 @@ export default function Dashboard({
                   ))}
                 </tbody>
               </table>
+              <PaginationControls
+                currentPage={recentSalesPagination.currentPage}
+                pageSize={recentSalesPagination.pageSize}
+                totalItems={recentSalesPagination.totalItems}
+                onPageChange={recentSalesPagination.setCurrentPage}
+                onPageSizeChange={recentSalesPagination.setPageSize}
+                pageSizeOptions={[5, 10, 25, 999999]}
+                className="rounded-none border-t border-slate-100 shadow-none px-3 py-2 text-[11px]"
+              />
             </div>
           ) : (
             <div className="py-12 text-center text-slate-400 text-xs bg-slate-50/50 rounded-xl border border-dashed border-slate-200 space-y-2">

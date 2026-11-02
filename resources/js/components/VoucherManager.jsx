@@ -19,6 +19,8 @@ import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function VoucherManager({
   vouchers = [],
@@ -123,6 +125,16 @@ export default function VoucherManager({
       return matchType && matchSearch;
     });
   }, [voucherList, activeType, searchTerm]);
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems: paginatedVouchers
+  } = usePagination(filteredVouchers, 25, [searchTerm, activeType, fixedType]);
 
   useEffect(() => {
     if (fixedType) {
@@ -335,14 +347,14 @@ export default function VoucherManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredVouchers.length === 0 ? (
+              {paginatedVouchers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
                     No vouchers recorded yet.
                   </td>
                 </tr>
               ) : (
-                filteredVouchers.map((v) => (
+                paginatedVouchers.map((v) => (
                   <tr key={v.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="font-mono font-bold text-slate-900 text-sm">{v.voucher_no}</div>
@@ -417,6 +429,15 @@ export default function VoucherManager({
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       {/* Add Voucher Modal (Light Theme) */}
       {isModalOpen && (

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { printElement } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
+import PaginationControls from './PaginationControls';
+import { usePagination } from '../utils/usePagination';
 
 export default function CashBook({
   sales,
@@ -80,6 +82,16 @@ export default function CashBook({
       return matchDate && matchSearch;
     });
   }, [cashSales, dateFilter, searchTerm]);
+
+  // Pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    paginatedItems: paginatedCashSales
+  } = usePagination(filteredCashSales, 25, [dateFilter, searchTerm]);
 
   // Calculations
   const totalCashBilled = useMemo(() => {
@@ -261,7 +273,7 @@ export default function CashBook({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCashSales.map((sale) => {
+              {paginatedCashSales.map((sale) => {
                 const paid = Number(sale.paid_amount) || Number(sale.total_amount);
                 const total = Number(sale.total_amount);
                 const change = paid > total ? paid - total : 0;
@@ -330,6 +342,15 @@ export default function CashBook({
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      <PaginationControls
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
     </div>
   );

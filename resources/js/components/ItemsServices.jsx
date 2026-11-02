@@ -11,7 +11,11 @@ import {
   List,
   CheckCircle2,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 
@@ -87,6 +91,29 @@ export default function ItemsServices({
     return [];
   }, [items]);
 
+  // Status & Pagination states
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
+  const [pageSize, setPageSize] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Status counts (Total, Active, Inactive)
+  const statusCounts = useMemo(() => {
+    let active = 0;
+    let inactive = 0;
+    itemList.forEach((it) => {
+      if (it.is_active !== false) {
+        active++;
+      } else {
+        inactive++;
+      }
+    });
+    return {
+      all: itemList.length,
+      active,
+      inactive
+    };
+  }, [itemList]);
+
   // Filter items
   const filteredItems = useMemo(() => {
     return itemList.filter((it) => {
@@ -98,9 +125,54 @@ export default function ItemsServices({
         (it.short_name && it.short_name.toLowerCase().includes(term)) ||
         (it.category && it.category.toLowerCase().includes(term));
 
-      return matchCat && matchSearch;
+      const matchStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && it.is_active !== false) ||
+        (statusFilter === 'inactive' && it.is_active === false);
+
+      return matchCat && matchSearch && matchStatus;
     });
-  }, [itemList, selectedCategory, searchTerm]);
+  }, [itemList, selectedCategory, searchTerm, statusFilter]);
+
+  // Reset page when search, category, status or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, statusFilter, pageSize]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (validCurrentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+
+  const paginatedItems = useMemo(() => {
+    if (pageSize >= 999999) return filteredItems;
+    return filteredItems.slice(startIndex, endIndex);
+  }, [filteredItems, startIndex, endIndex, pageSize]);
+
+  // Quick toggle Active / Inactive status
+  const handleToggleStatus = async (it) => {
+    try {
+      const newStatus = !(it.is_active !== false);
+      const payload = {
+        name: it.name,
+        short_name: it.short_name || null,
+        category: it.category || 'General',
+        price: parseFloat(it.price) || 0,
+        unit: it.unit || 'Pcs',
+        stock_quantity: parseFloat(it.stock_quantity) || 0,
+        min_stock_alert: parseFloat(it.min_stock_alert) || 5,
+        description: it.description || null,
+        is_active: newStatus
+      };
+      await onSaveItem(payload, it.id);
+      addToast(`"${it.name}" marked as ${newStatus ? 'Active' : 'Inactive'}`, 'success');
+      onItemsRefresh();
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to update product status', 'error');
+    }
+  };
 
   // Open Add modal
   const handleOpenAdd = () => {
@@ -248,10 +320,10 @@ export default function ItemsServices({
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/90 shadow-xs">
-        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Search */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-64">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -263,7 +335,7 @@ export default function ItemsServices({
           </div>
 
           {/* Category Filter */}
-          <div className="w-52">
+          <div className="w-48">
             <SearchableSelect
               options={['All', ...categoryOptions]}
               value={selectedCategory}
@@ -274,26 +346,97 @@ export default function ItemsServices({
               theme="light"
             />
           </div>
+
+          {/* Status Filter (All, Active, Inactive) */}
+          <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === 'all'
+                  ? 'bg-white text-slate-900 font-black shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>All</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${statusFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                {statusCounts.all}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('active')}
+              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === 'active'
+                  ? 'bg-emerald-600 text-white font-black shadow-2xs'
+                  : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50'
+              }`}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              <span>Active</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${statusFilter === 'active' ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+                {statusCounts.active}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('inactive')}
+              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === 'inactive'
+                  ? 'bg-slate-700 text-white font-black shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <XCircle className="w-3 h-3" />
+              <span>Inactive</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${statusFilter === 'inactive' ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                {statusCounts.inactive}
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
-          <button
-            onClick={() => setViewMode('table')}
-            className={`p-1.5 rounded-lg text-xs cursor-pointer ${viewMode === 'table' ? 'bg-white text-amber-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+        {/* Right side controls: Show Items Selector & View Mode Toggle */}
+        <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0">
+          {/* Show No of items selector */}
+          <div className="flex items-center gap-1.5 text-xs text-slate-600">
+            <span className="font-semibold text-slate-500 whitespace-nowrap">Show:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-amber-400 focus:bg-white cursor-pointer"
+            >
+              <option value={10}>10 items</option>
+              <option value={25}>25 items</option>
+              <option value={50}>50 items</option>
+              <option value={100}>100 items</option>
+              <option value={999999}>All items</option>
+            </select>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                viewMode === 'table' ? 'bg-white text-amber-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
               }`}
-            title="Table View"
-          >
-            <List className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded-lg text-xs cursor-pointer ${viewMode === 'grid' ? 'bg-white text-amber-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+              title="Table View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                viewMode === 'grid' ? 'bg-white text-amber-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
               }`}
-            title="Grid View"
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
+              title="Grid View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -309,12 +452,12 @@ export default function ItemsServices({
                   <th className="px-4 py-3.5">Category</th>
                   <th className="px-4 py-3.5">Rate</th>
                   <th className="px-4 py-3.5">Current Stock</th>
-                  <th className="px-4 py-3.5 text-center w-24">Status</th>
+                  <th className="px-4 py-3.5 text-center w-28">Status</th>
                   <th className="px-4 py-3.5 text-right w-24">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredItems.length === 0 ? (
+                {paginatedItems.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
                       <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -323,12 +466,13 @@ export default function ItemsServices({
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map((it, idx) => {
+                  paginatedItems.map((it, idx) => {
                     const isLowStock = Number(it.stock_quantity || 0) <= Number(it.min_stock_alert || 0);
+                    const isActive = it.is_active !== false;
                     return (
-                      <tr key={it.id} className="hover:bg-slate-50/70 transition-colors group">
+                      <tr key={it.id} className={`hover:bg-slate-50/70 transition-colors group ${!isActive ? 'bg-slate-50/50 opacity-80' : ''}`}>
                         <td className="px-4 py-3 text-center font-mono font-bold text-slate-400">
-                          {idx + 1}
+                          {startIndex + idx + 1}
                         </td>
 
                         <td className="px-4 py-3">
@@ -379,17 +523,28 @@ export default function ItemsServices({
                         </td>
 
                         <td className="px-4 py-3 text-center">
-                          {it.is_active !== false ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Active
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                              <XCircle className="w-3 h-3" />
-                              Inactive
-                            </span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(it)}
+                            title={isActive ? 'Click to mark as Inactive' : 'Click to mark as Active'}
+                            className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 hover:border-emerald-300'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-300'
+                            }`}
+                          >
+                            {isActive ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Active</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3 h-3 text-slate-400" />
+                                <span>Inactive</span>
+                              </>
+                            )}
+                          </button>
                         </td>
 
                         <td className="px-4 py-3 text-right">
@@ -425,69 +580,218 @@ export default function ItemsServices({
       ) : (
         /* Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredItems.map((it) => (
-            <div
-              key={it.id}
-              className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-3xl p-4 shadow-xs hover:shadow-md flex flex-col justify-between transition-all"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center font-black text-sm shrink-0">
-                    {it.name.charAt(0).toUpperCase()}
+          {paginatedItems.map((it) => {
+            const isActive = it.is_active !== false;
+            return (
+              <div
+                key={it.id}
+                className={`bg-white border rounded-3xl p-4 shadow-xs hover:shadow-md flex flex-col justify-between transition-all ${
+                  !isActive ? 'border-slate-200 opacity-80 bg-slate-50/40' : 'border-slate-200/90 hover:border-slate-300'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center font-black text-sm shrink-0">
+                      {it.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(it)}
+                        title={isActive ? 'Click to mark as Inactive' : 'Click to mark as Active'}
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-300'
+                        }`}
+                      >
+                        {isActive ? (
+                          <>
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                            <span>Active</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-2.5 h-2.5 text-slate-400" />
+                            <span>Inactive</span>
+                          </>
+                        )}
+                      </button>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                        {it.category || 'General'}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                    {it.category || 'General'}
-                  </span>
-                </div>
 
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-sm line-clamp-2 leading-snug">{it.name}</h3>
-                  {it.short_name && (
-                    <span className="font-mono text-[10px] text-slate-500 font-semibold mt-1 block">
-                      Code: {it.short_name}
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-sm line-clamp-2 leading-snug">{it.name}</h3>
+                    {it.short_name && (
+                      <span className="font-mono text-[10px] text-slate-500 font-semibold mt-1 block">
+                        Code: {it.short_name}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                    <span className="text-[11px] text-slate-500">Stock:</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {it.stock_quantity} {it.unit || 'Pcs'}
                     </span>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                  <span className="text-[11px] text-slate-500">Stock:</span>
-                  <span className="font-mono font-bold text-slate-900">
-                    {it.stock_quantity} {it.unit || 'Pcs'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Selling Rate</span>
-                  <div className="font-mono font-black text-amber-700 text-base">
-                    {currency}{Number(it.price || 0).toFixed(2)}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleOpenEdit(it)}
-                    className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:text-amber-700 hover:bg-amber-100 cursor-pointer transition-colors"
-                    title="Edit Product"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`Delete product "${it.name}"?`)) {
-                        onDeleteItem(it.id);
-                      }
-                    }}
-                    className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
-                    title="Delete Product"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase">Selling Rate</span>
+                    <div className="font-mono font-black text-amber-700 text-base">
+                      {currency}{Number(it.price || 0).toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEdit(it)}
+                      className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:text-amber-700 hover:bg-amber-100 cursor-pointer transition-colors"
+                      title="Edit Product"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Delete product "${it.name}"?`)) {
+                          onDeleteItem(it.id);
+                        }
+                      }}
+                      className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
+                      title="Delete Product"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination Footer */}
+      {filteredItems.length > 0 && (
+        <div className="bg-white border border-slate-200/90 p-3.5 rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+          {/* Showing X to Y of Z items & Items per page */}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-medium text-slate-600">
+              Showing <span className="font-black text-slate-900">{filteredItems.length === 0 ? 0 : startIndex + 1}</span> to{' '}
+              <span className="font-black text-slate-900">{Math.min(startIndex + pageSize, filteredItems.length)}</span> of{' '}
+              <span className="font-black text-slate-900">{filteredItems.length}</span> items
+            </span>
+
+            <div className="h-4 w-[1px] bg-slate-200 hidden sm:block" />
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-500 font-medium">Show:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-amber-400 focus:bg-white cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={999999}>All</option>
+              </select>
+              <span className="text-slate-500 font-medium">per page</span>
             </div>
-          ))}
+          </div>
+
+          {/* Page Buttons (shown when not "All" and totalPages > 1) */}
+          {pageSize < 999999 && totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              {/* First Page */}
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={validCurrentPage === 1}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors text-slate-600"
+                title="First Page"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+
+              {/* Prev Page */}
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={validCurrentPage === 1}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors text-slate-600"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Page Numbers */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => {
+                  if (totalPages <= 7) return true;
+                  if (p === 1 || p === totalPages) return true;
+                  return Math.abs(p - validCurrentPage) <= 1;
+                })
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) {
+                    acc.push('ellipsis-' + p);
+                  }
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item) => {
+                  if (typeof item === 'string') {
+                    return (
+                      <span key={item} className="px-1.5 text-slate-400 font-mono">
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = item === validCurrentPage;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setCurrentPage(item)}
+                      className={`min-w-8 h-8 px-2 rounded-lg font-bold text-xs cursor-pointer transition-all ${
+                        isCurrent
+                          ? 'bg-amber-500 text-slate-950 shadow-xs'
+                          : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
+
+              {/* Next Page */}
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={validCurrentPage === totalPages}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors text-slate-600"
+                title="Next Page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Last Page */}
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={validCurrentPage === totalPages}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors text-slate-600"
+                title="Last Page"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
