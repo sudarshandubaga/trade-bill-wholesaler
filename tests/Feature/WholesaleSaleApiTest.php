@@ -281,4 +281,80 @@ class WholesaleSaleApiTest extends TestCase
         // item2 stock: started 50, new deduction 3 -> 47
         $this->assertEquals(47.00, (float)$this->item2->fresh()->stock_quantity);
     }
+
+    public function test_cannot_create_wholesale_bill_if_item_is_out_of_stock(): void
+    {
+        $this->actingAs($this->tenant, 'web');
+
+        // Create an out of stock item
+        $outOfStockItem = Item::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Empty Stock Item',
+            'short_name' => 'OUT-01',
+            'category' => 'General',
+            'price' => 500.00,
+            'stock_quantity' => 0.00,
+            'unit' => 'Pcs',
+        ]);
+
+        $payload = [
+            'branch_id' => $this->branch->id,
+            'customer_id' => $this->customer->id,
+            'items' => [
+                [
+                    'item_id' => $outOfStockItem->id,
+                    'item_name' => $outOfStockItem->name,
+                    'short_name' => $outOfStockItem->short_name,
+                    'unit_price' => 500.00,
+                    'quantity' => 1,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
+                    'total_price' => 500.00,
+                ],
+            ],
+            'subtotal' => 500.00,
+            'discount_amount' => 0.00,
+            'total_amount' => 500.00,
+            'payment_method' => 'Cash',
+        ];
+
+        $response = $this->postJson('/api/sales', $payload);
+        $response->assertStatus(422);
+        $response->assertJsonFragment([
+            'message' => "Item 'Empty Stock Item' is out of stock and cannot be billed.",
+        ]);
+    }
+
+    public function test_cannot_create_wholesale_bill_if_quantity_exceeds_stock(): void
+    {
+        $this->actingAs($this->tenant, 'web');
+
+        // item2 has stock 50.00. Attempt to sell 60.
+        $payload = [
+            'branch_id' => $this->branch->id,
+            'customer_id' => $this->customer->id,
+            'items' => [
+                [
+                    'item_id' => $this->item2->id,
+                    'item_name' => $this->item2->name,
+                    'short_name' => $this->item2->short_name,
+                    'unit_price' => 1500.00,
+                    'quantity' => 60,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
+                    'total_price' => 90000.00,
+                ],
+            ],
+            'subtotal' => 90000.00,
+            'discount_amount' => 0.00,
+            'total_amount' => 90000.00,
+            'payment_method' => 'Credit',
+        ];
+
+        $response = $this->postJson('/api/sales', $payload);
+        $response->assertStatus(422);
+        $response->assertJsonFragment([
+            'message' => "Requested quantity (60) exceeds available stock (50) for 'Refined Cooking Oil 15L Tin'.",
+        ]);
+    }
 }

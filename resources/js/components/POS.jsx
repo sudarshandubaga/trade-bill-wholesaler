@@ -32,7 +32,8 @@ export default function POS({
   preselectedCustomerId,
   onClearPreselectedCustomer,
   categories: categoriesList = [],
-  isInvoiceModalOpen = false
+  isInvoiceModalOpen = false,
+  addToast = () => {}
 }) {
   const currency = tenant?.currency || '₹';
 
@@ -249,7 +250,13 @@ export default function POS({
     setCart((prev) =>
       prev.map((i) => {
         if (String(i.item?.id) !== String(itemId)) return i;
-        const qty = newQty === '' ? '' : Math.max(0.01, parseFloat(newQty) || 0);
+        const availableStock = Number(i.item?.stock_quantity ?? 0);
+        const parsedNewQty = parseFloat(newQty);
+        if (newQty !== '' && !isNaN(parsedNewQty) && parsedNewQty > availableStock) {
+          addToast(`Cannot exceed available stock of ${availableStock} ${i.item?.unit || 'units'} for "${i.item?.name}".`, 'error');
+          return i;
+        }
+        const qty = newQty === '' ? '' : Math.max(0.01, parsedNewQty || 0);
         const rate = Math.max(0, Number(i.unit_price) || 0);
         const newGross = (Number(qty) || 0) * rate;
 
@@ -608,6 +615,12 @@ export default function POS({
 
   const handlePopupSelectProduct = (product) => {
     if (!product) return;
+    const availableStock = Number(product.stock_quantity ?? 0);
+    if (availableStock <= 0) {
+      addToast(`"${product.name}" is out of stock (0 ${product.unit || 'Pcs'}) and cannot be added to bill.`, 'error');
+      setPopupFeedbackMsg(`"${product.name}" is out of stock!`);
+      return;
+    }
     setPopupSelectedProduct(product);
     setPopupProductSearchQuery(product.name || '');
     setIsPopupProductDropdownOpen(false);
@@ -684,8 +697,28 @@ export default function POS({
       return;
     }
 
+    const availableStock = Number(popupSelectedProduct.stock_quantity ?? 0);
+    if (availableStock <= 0) {
+      addToast(`"${popupSelectedProduct.name}" is out of stock and cannot be added to bill.`, 'error');
+      setPopupFeedbackMsg(`Cannot add: "${popupSelectedProduct.name}" is out of stock!`);
+      return;
+    }
+
     const parsedQty = parseFloat(popupQty);
     const qtyToAdd = (!isNaN(parsedQty) && parsedQty > 0) ? parsedQty : 1;
+
+    // Check against total stock considering current items in cart
+    const existingInCart = cart.find((i) => String(i.item?.id) === String(popupSelectedProduct.id));
+    const currentInCartQty = existingInCart ? (Number(existingInCart.quantity) || 0) : 0;
+    if (currentInCartQty + qtyToAdd > availableStock) {
+      addToast(
+        `Cannot add ${qtyToAdd}. Only ${availableStock} ${popupSelectedProduct.unit || 'units'} available in stock${currentInCartQty > 0 ? ` (Cart already has ${currentInCartQty})` : ''}.`,
+        'error'
+      );
+      setPopupFeedbackMsg(`Stock limit exceeded! Max available: ${availableStock}`);
+      return;
+    }
+
     const rate = Number(popupSelectedProduct.price ?? popupSelectedProduct.rate ?? popupSelectedProduct.unit_price ?? 0) || 0;
     const discPct = popupDiscountPercent !== '' ? Math.min(100, Math.max(0, parseFloat(popupDiscountPercent) || 0)) : '';
 
@@ -757,6 +790,17 @@ export default function POS({
   const popupDiscNum = parseFloat(popupDiscountPercent) || 0;
   const popupDiscAmt = popupDiscNum > 0 ? Math.round(((popupGross * popupDiscNum) / 100) * 100) / 100 : 0;
   const popupLineTotal = Math.max(0, Math.round((popupGross - popupDiscAmt) * 100) / 100);
+
+  const popupSelectedAvailableStock = popupSelectedProduct ? Number(popupSelectedProduct.stock_quantity ?? 0) : null;
+  const popupExistingInCart = popupSelectedProduct
+    ? cart.find((i) => String(i.item?.id) === String(popupSelectedProduct.id))
+    : null;
+  const popupCurrentInCartQty = popupExistingInCart ? (Number(popupExistingInCart.quantity) || 0) : 0;
+  const isPopupOutOfStock = popupSelectedProduct ? (popupSelectedAvailableStock <= 0) : false;
+  const isPopupQtyExceeded = Boolean(popupSelectedProduct && popupSelectedAvailableStock !== null && (
+    (popupQtyNum + popupCurrentInCartQty) > popupSelectedAvailableStock
+  ));
+  const canAddFromPopup = Boolean(popupSelectedProduct && !isPopupOutOfStock && !isPopupQtyExceeded && popupQtyNum > 0);
 
   const manualBillDiscount = Number(discountAmount) || 0;
   const grandTotal = Math.max(0, Math.round((netSubtotal - manualBillDiscount) * 100) / 100);
@@ -1156,6 +1200,13 @@ export default function POS({
                             )}
                             <span className="text-slate-400 font-mono">
                               Unit: {item?.unit || 'Pcs'}
+                            </span>
+                            <span className={`text-[10px] font-mono px-1 py-0.2 rounded border font-semibold ${
+                              Number(item?.stock_quantity ?? 0) > 0
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}>
+                              Stock: {item?.stock_quantity ?? 0}
                             </span>
 
                             {/* Editable Rate input */}
@@ -1808,20 +1859,33 @@ export default function POS({
                     {popupFilteredProducts.map((p, idx) => {
                       const isHighlighted = idx === popupHighlightedProductIndex;
                       const pPrice = Number(p.price ?? p.rate ?? p.unit_price ?? 0);
+                      const pStock = Number(p.stock_quantity ?? 0);
+                      const isOutOfStock = pStock <= 0;
                       return (
                         <div
                           key={p.id}
                           ref={(el) => (popupItemRefs.current[idx] = el)}
                           onClick={() => handlePopupSelectProduct(p)}
                           onMouseEnter={() => setPopupHighlightedProductIndex(idx)}
-                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${isHighlighted
-                              ? 'bg-amber-100 text-amber-950 font-bold border border-amber-300 ring-1 ring-amber-400/40'
-                              : 'hover:bg-slate-50 text-slate-800'
-                            }`}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
+                            isOutOfStock
+                              ? isHighlighted
+                                ? 'bg-rose-100/90 text-rose-950 font-bold border border-rose-300 ring-1 ring-rose-400/40 opacity-80'
+                                : 'hover:bg-rose-50/70 text-slate-500 opacity-60'
+                              : isHighlighted
+                                ? 'bg-amber-100 text-amber-950 font-bold border border-amber-300 ring-1 ring-amber-400/40'
+                                : 'hover:bg-slate-50 text-slate-800'
+                          }`}
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className={`text-xs truncate ${isHighlighted ? 'font-black text-amber-950' : 'font-bold text-slate-900'}`}>
+                              <span className={`text-xs truncate ${
+                                isOutOfStock
+                                  ? 'font-bold line-through text-slate-500'
+                                  : isHighlighted
+                                    ? 'font-black text-amber-950'
+                                    : 'font-bold text-slate-900'
+                              }`}>
                                 {p.name}
                               </span>
                               {(p.short_name || p.sku || p.code) && (
@@ -1830,18 +1894,29 @@ export default function POS({
                                 </span>
                               )}
                               {p.category && (
-                                <span className="text-[10px] text-slate-500 bg-amber-50 text-amber-800 px-1.5 rounded">
+                                <span className="text-[10px] bg-amber-50 text-amber-800 px-1.5 rounded">
                                   {p.category}
+                                </span>
+                              )}
+                              {isOutOfStock ? (
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 border border-rose-200">
+                                  Out of Stock
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  Stock: {pStock} {p.unit || 'Pcs'}
                                 </span>
                               )}
                             </div>
                             <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-2">
-                              <span>Stock: {p.stock_quantity ?? 0} {p.unit || 'Pcs'}</span>
+                              <span className={isOutOfStock ? 'text-rose-600 font-bold' : ''}>
+                                Stock: {pStock} {p.unit || 'Pcs'}
+                              </span>
                               <span>&bull;</span>
                               <span className="font-bold text-slate-700">{currency}{pPrice.toFixed(2)}</span>
                             </div>
                           </div>
-                          <span className="text-[11px] font-mono font-black text-amber-800 shrink-0 ml-2">
+                          <span className={`text-[11px] font-mono font-black shrink-0 ml-2 ${isOutOfStock ? 'text-slate-400 line-through' : 'text-amber-800'}`}>
                             {currency}{pPrice.toFixed(2)}
                           </span>
                         </div>
@@ -1883,16 +1958,25 @@ export default function POS({
 
                 {/* Field 3: Qty */}
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Quantity <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Quantity <span className="text-rose-500">*</span>
+                    </label>
+                    {popupSelectedProduct && (
+                      <span className={`text-[10px] font-mono font-bold ${isPopupOutOfStock ? 'text-rose-600' : 'text-slate-500'}`}>
+                        Stock: {popupSelectedAvailableStock} {popupSelectedProduct.unit || 'Pcs'}
+                      </span>
+                    )}
+                  </div>
                   <input
                     ref={popupQtyInputRef}
                     type="number"
                     min="0.001"
+                    max={popupSelectedAvailableStock !== null && popupSelectedAvailableStock > 0 ? popupSelectedAvailableStock : undefined}
                     step="any"
                     required
                     value={popupQty}
+                    disabled={isPopupOutOfStock}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setPopupQty(e.target.value)}
                     onKeyDown={(e) => {
@@ -1907,7 +1991,13 @@ export default function POS({
                         handleCloseAddProductModal();
                       }
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-black text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-1 focus:ring-amber-500/20"
+                    className={`w-full border rounded-xl px-3 py-2 text-xs font-mono font-black focus:outline-none focus:ring-1 ${
+                      isPopupOutOfStock
+                        ? 'bg-slate-100 border-rose-300 text-rose-500 cursor-not-allowed'
+                        : isPopupQtyExceeded
+                          ? 'bg-rose-50 border-rose-400 text-rose-900 focus:border-rose-500 focus:ring-rose-400/20'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-amber-500 focus:bg-white focus:ring-amber-500/20'
+                    }`}
                     placeholder="1"
                     title="Enter quantity (Press Enter to move to Discount %)"
                   />
@@ -1951,6 +2041,18 @@ export default function POS({
 
               </div>
 
+              {/* Stock Warning Messages */}
+              {popupSelectedProduct && isPopupOutOfStock && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
+                  <span>⚠️ "{popupSelectedProduct.name}" is out of stock (0 {popupSelectedProduct.unit || 'Pcs'}) and cannot be added to the bill.</span>
+                </div>
+              )}
+              {popupSelectedProduct && !isPopupOutOfStock && isPopupQtyExceeded && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
+                  <span>⚠️ Total quantity ({popupQtyNum + popupCurrentInCartQty}) exceeds available stock ({popupSelectedAvailableStock} {popupSelectedProduct.unit || 'Pcs'}). {popupCurrentInCartQty > 0 ? `(Cart already has ${popupCurrentInCartQty})` : ''}</span>
+                </div>
+              )}
+
               {/* Line Amount Preview Bar */}
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
@@ -1986,14 +2088,21 @@ export default function POS({
                 <div className="flex items-center gap-2">
                   <button
                     type="submit"
-                    disabled={!popupSelectedProduct}
-                    className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer ${popupSelectedProduct
+                    disabled={!canAddFromPopup}
+                    className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer ${
+                      canAddFromPopup
                         ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20 ring-1 ring-amber-300'
                         : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                      }`}
+                    }`}
                   >
                     <Plus className="w-4 h-4 stroke-[3]" />
-                    <span>Add to Bill & Continue (Enter)</span>
+                    <span>
+                      {isPopupOutOfStock
+                        ? 'Out of Stock'
+                        : isPopupQtyExceeded
+                          ? 'Exceeds Stock'
+                          : 'Add to Bill & Continue (Enter)'}
+                    </span>
                   </button>
                 </div>
               </div>

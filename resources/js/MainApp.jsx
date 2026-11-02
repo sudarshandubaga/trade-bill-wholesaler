@@ -1021,6 +1021,7 @@ export default function MainApp() {
                 onClearPreselectedCustomer={() => setPreselectedCustomerId(null)}
                 categories={categories}
                 isInvoiceModalOpen={Boolean(activeInvoice)}
+                addToast={addToast}
               />
             )}
 

@@ -110,6 +110,33 @@ class SaleController extends Controller
                 ?? session('active_branch_id')
                 ?? Branch::where('tenant_id', $tenant->id)->first()?->id;
 
+            // Validate item stock availability before billing
+            foreach ($validated['items'] as $it) {
+                if (! empty($it['item_id'])) {
+                    $itemModel = Item::where('tenant_id', $tenant->id)->find($it['item_id']);
+                    if ($itemModel) {
+                        $availableStock = (float) $itemModel->stock_quantity;
+                        $requestedQty = (float) $it['quantity'];
+                        if ($availableStock <= 0) {
+                            return response()->json([
+                                'message' => "Item '{$itemModel->name}' is out of stock and cannot be billed.",
+                                'errors' => [
+                                    'items' => ["Item '{$itemModel->name}' is out of stock."],
+                                ],
+                            ], 422);
+                        }
+                        if ($requestedQty > $availableStock) {
+                            return response()->json([
+                                'message' => "Requested quantity ({$requestedQty}) exceeds available stock ({$availableStock}) for '{$itemModel->name}'.",
+                                'errors' => [
+                                    'items' => ["Requested quantity exceeds available stock for '{$itemModel->name}'."],
+                                ],
+                            ], 422);
+                        }
+                    }
+                }
+            }
+
             $subtotal = 0;
 
             foreach ($validated['items'] as $it) {
@@ -250,6 +277,33 @@ class SaleController extends Controller
             foreach ($sale->items as $oldItem) {
                 if (! empty($oldItem->item_id)) {
                     $this->revertItemStock($tenant->id, $oldBranchId, $oldItem->item_id, (float)$oldItem->quantity);
+                }
+            }
+
+            // Validate item stock availability for updated items
+            foreach ($validated['items'] as $it) {
+                if (! empty($it['item_id'])) {
+                    $itemModel = Item::where('tenant_id', $tenant->id)->find($it['item_id']);
+                    if ($itemModel) {
+                        $availableStock = (float) $itemModel->stock_quantity;
+                        $requestedQty = (float) $it['quantity'];
+                        if ($availableStock <= 0) {
+                            return response()->json([
+                                'message' => "Item '{$itemModel->name}' is out of stock and cannot be billed.",
+                                'errors' => [
+                                    'items' => ["Item '{$itemModel->name}' is out of stock."],
+                                ],
+                            ], 422);
+                        }
+                        if ($requestedQty > $availableStock) {
+                            return response()->json([
+                                'message' => "Requested quantity ({$requestedQty}) exceeds available stock ({$availableStock}) for '{$itemModel->name}'.",
+                                'errors' => [
+                                    'items' => ["Requested quantity exceeds available stock for '{$itemModel->name}'."],
+                                ],
+                            ], 422);
+                        }
+                    }
                 }
             }
 
