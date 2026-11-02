@@ -265,7 +265,7 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
                   <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
                     {storeName}
                   </h1>
-                  <div className="space-y-0.5 text-[14px] sm:text-xs text-slate-800 text-center font-medium">
+                  <div className="space-y-0.5 text-[14px] text-slate-800 text-center font-medium">
                     {storeAddress && <div>{storeAddress}</div>}
                     {storePhone && <div>Mobile No: {storePhone}</div>}
                     {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
