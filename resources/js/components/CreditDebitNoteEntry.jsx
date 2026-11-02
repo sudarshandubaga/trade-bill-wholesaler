@@ -861,7 +861,7 @@ export default function CreditDebitNoteEntry({
       {/* POS-STYLE ADD PRODUCT POPUP MODAL */}
       {/* ------------------------------------------------------------- */}
       {isAddProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/20 p-4 animate-in fade-in">
           <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl shadow-2xl p-6 text-slate-800 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -890,6 +890,26 @@ export default function CreditDebitNoteEntry({
               <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{popupFeedbackMsg}</span>
+              </div>
+            )}
+
+            {/* Recently added item summary strip */}
+            {formData.items.length > 0 && (
+              <div className="px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">
+                    Recently Added:
+                  </span>
+                  <span className="font-bold text-slate-800 truncate">
+                    {formData.items[formData.items.length - 1].item?.name || formData.items[formData.items.length - 1].item_name}
+                  </span>
+                  <span className="font-mono font-bold text-amber-700 shrink-0">
+                    ({formData.items[formData.items.length - 1].quantity} @ {currency}{formData.items[formData.items.length - 1].unit_price})
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500 shrink-0 ml-2">
+                  Total Items: <strong className="text-slate-900 font-bold">{formData.items.length}</strong>
+                </span>
               </div>
             )}
 

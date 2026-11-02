@@ -35,6 +35,7 @@ export default function ItemsServices({
   // Modal & Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [recentlyAddedItem, setRecentlyAddedItem] = useState(null);
   const nameInputRef = useRef(null);
   const skuInputRef = useRef(null);
   const categoryTriggerRef = useRef(null);
@@ -48,6 +49,16 @@ export default function ItemsServices({
     if (isModalOpen) {
       setTimeout(() => nameInputRef.current?.focus(), 80);
     }
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isModalOpen]);
 
   const [formData, setFormData] = useState({
@@ -94,6 +105,7 @@ export default function ItemsServices({
   // Open Add modal
   const handleOpenAdd = () => {
     setEditingItem(null);
+    setRecentlyAddedItem(null);
     const initialCategory = categoryOptions[0] || 'General';
 
     setFormData({
@@ -113,6 +125,7 @@ export default function ItemsServices({
   // Open Edit modal
   const handleOpenEdit = (it) => {
     setEditingItem(it);
+    setRecentlyAddedItem(null);
 
     setFormData({
       name: it.name,
@@ -161,10 +174,30 @@ export default function ItemsServices({
 
       if (editingItem) {
         await onSaveItem(payload, editingItem.id);
+        setIsModalOpen(false);
       } else {
         await onSaveItem(payload, null);
+        // Do not close popup when adding new item; keep open for next entries
+        setRecentlyAddedItem({
+          name: payload.name,
+          price: payload.price,
+          unit: payload.unit,
+          category: payload.category
+        });
+        // Clear input fields for next product (retaining category and unit for rapid entry)
+        setFormData((prev) => ({
+          ...prev,
+          name: '',
+          short_name: '',
+          price: '',
+          stock_quantity: 10,
+          min_stock_alert: 5,
+          description: ''
+        }));
+        setTimeout(() => {
+          nameInputRef.current?.focus();
+        }, 60);
       }
-      setIsModalOpen(false);
       onItemsRefresh();
     } catch (err) {
       console.error(err);
@@ -460,7 +493,7 @@ export default function ItemsServices({
 
       {/* Add / Edit Item Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/20 p-4 animate-in fade-in">
           <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col text-slate-800">
 
             {/* Modal Header */}
@@ -474,17 +507,38 @@ export default function ItemsServices({
                     {editingItem ? 'Edit Item' : 'Add New Item'}
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Enter product name, category, wholesale selling rate and stock
+                    {editingItem
+                      ? 'Update product details and selling rate'
+                      : 'Popup stays open for continuous adding • Unblurred background'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer transition-colors"
+                title="Close popup (Esc)"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Recently added item confirmation banner */}
+            {recentlyAddedItem && !editingItem && (
+              <div className="mx-6 mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs animate-in fade-in">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-bold text-emerald-950 truncate">
+                    Recently Added: <strong>{recentlyAddedItem.name}</strong>
+                  </span>
+                  <span className="font-mono font-bold text-amber-700 shrink-0">
+                    ({currency}{Number(recentlyAddedItem.price).toFixed(2)} / {recentlyAddedItem.unit})
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-emerald-700 font-bold shrink-0 ml-2">
+                  ✓ Listed in table behind
+                </span>
+              </div>
+            )}
 
             {/* Modal Form Body */}
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-4">
@@ -686,21 +740,28 @@ export default function ItemsServices({
               </div>
 
               {/* Modal Footer */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-bold cursor-pointer transition-colors"
                 >
-                  Cancel
+                  {editingItem ? 'Cancel' : 'Close (Esc)'}
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 cursor-pointer transition-colors disabled:opacity-50"
-                >
-                  {isSaving ? 'Saving...' : editingItem ? 'Update Product' : 'Save Product'}
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 cursor-pointer transition-colors disabled:opacity-50"
+                  >
+                    {isSaving
+                      ? 'Saving...'
+                      : editingItem
+                        ? 'Update Product'
+                        : '+ Save & Add Another'}
+                  </button>
+                </div>
               </div>
 
             </form>

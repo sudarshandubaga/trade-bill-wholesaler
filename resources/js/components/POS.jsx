@@ -1685,11 +1685,10 @@ export default function POS({
         </div>
       )}
 
-      {/* 4. ADD PRODUCT POPUP MODAL (REMAINS OPEN UNTIL USER CLOSES, SHOWS BACKGROUND BILL LISTING) */}
+      {/* 4. ADD PRODUCT POPUP MODAL (REMAINS OPEN UNTIL USER CLOSES, NO BLUR SO BACKGROUND BILL IS VISIBLE) */}
       {isAddProductModalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-[1.5px] flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
-          onClick={handleCloseAddProductModal}
+          className="fixed inset-0 z-50 bg-slate-950/20 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
         >
           <div
             className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 relative text-left"
@@ -1735,6 +1734,26 @@ export default function POS({
               <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between animate-in fade-in">
                 <span>✓ {popupFeedbackMsg}</span>
                 <span className="text-[10px] text-emerald-600 font-mono">Added to bill in background</span>
+              </div>
+            )}
+
+            {/* Recently added item summary strip */}
+            {cart.length > 0 && (
+              <div className="px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">
+                    Recently Added:
+                  </span>
+                  <span className="font-bold text-slate-800 truncate">
+                    {cart[cart.length - 1].item?.name}
+                  </span>
+                  <span className="font-mono font-bold text-amber-700 shrink-0">
+                    ({cart[cart.length - 1].quantity} {cart[cart.length - 1].item?.unit || 'Pcs'} @ {currency}{cart[cart.length - 1].unit_price})
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500 shrink-0 ml-2">
+                  Total Items: <strong className="text-slate-900 font-bold">{cart.length}</strong>
+                </span>
               </div>
             )}
 
