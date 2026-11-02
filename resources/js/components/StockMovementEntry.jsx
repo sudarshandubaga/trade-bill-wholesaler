@@ -21,6 +21,7 @@ import {
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function StockMovementEntry({
   mode = 'stock_in', // 'stock_in' | 'stock_transfer'
@@ -1013,11 +1014,11 @@ export default function StockMovementEntry({
       {/* PRINTABLE SUCCESS CHALLAN MODAL */}
       {/* ------------------------------------------------------------- */}
       {createdChallan && (() => {
-        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
-        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
-        const storePhone = tenant?.phone || '9939175603, 9430472515';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC';
-        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+        const storeName = tenant?.name || activeBranch?.name || '';
+        const storeAddress = tenant?.address || activeBranch?.address || '';
+        const storePhone = tenant?.phone || activeBranch?.phone || '';
+        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeEmail = tenant?.email || activeBranch?.email || '';
 
         const challanItems = createdChallan.items || [];
         const challanTotalQty = challanItems.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
@@ -1116,7 +1117,7 @@ export default function StockMovementEntry({
                         </div>
                         <div className="flex items-center">
                           <span className="w-28 font-bold text-black shrink-0">Challan Date:-</span>
-                          <span className="font-medium text-black font-mono">{createdChallan.challan_date}</span>
+                          <span className="font-medium text-black font-mono">{formatDateDMY(createdChallan.challan_date || createdChallan.created_at)}</span>
                         </div>
                         {isStockIn ? (
                           <div className="flex items-start">

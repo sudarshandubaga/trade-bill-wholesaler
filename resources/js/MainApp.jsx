@@ -89,9 +89,9 @@ const TAB_TO_PATH = {
 };
 
 const PATH_TO_TAB = {
-  '/': 'pos',
-  '/pos': 'pos',
+  '/': 'dashboard',
   '/dashboard': 'dashboard',
+  '/pos': 'pos',
   '/customers': 'customers',
   '/suppliers': 'suppliers',
   '/items': 'items',
@@ -122,7 +122,7 @@ const PATH_TO_TAB = {
 
 const getTabFromLocation = (pathname) => {
   const clean = pathname ? pathname.replace(/\/+$/, '') || '/' : '/';
-  return PATH_TO_TAB[clean] || 'pos';
+  return PATH_TO_TAB[clean] || 'dashboard';
 };
 
 export default function MainApp() {
@@ -181,6 +181,7 @@ export default function MainApp() {
 
   // Modals visibility
   const [activeInvoice, setActiveInvoice] = useState(null);
+  const [editingSale, setEditingSale] = useState(null);
   const [branchModalOpen, setBranchModalOpen] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [barcodePrintModalOpen, setBarcodePrintModalOpen] = useState(false);
@@ -511,8 +512,10 @@ export default function MainApp() {
   }, [setCurrentTab, setReportSubTab, setBranchModalOpen, setUserModalOpen, setSettingsModalOpen, setBarcodePrintModalOpen]);
 
   // Branch Switcher
-  const handleSwitchBranch = async (branchId) => {
+  const handleSwitchBranch = async (branchOrId) => {
     try {
+      const branchId = (branchOrId && typeof branchOrId === 'object') ? branchOrId.id : branchOrId;
+      if (!branchId) return;
       const res = await axios.post('/api/branches/switch', { branch_id: branchId });
       setActiveBranch(res.data.active_branch);
       addToast(`Switched active branch to ${res.data.active_branch.name}`);
@@ -547,6 +550,46 @@ export default function MainApp() {
       setItems(itemsRes.data?.items || itemsRes.data || []);
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to process sale', 'error');
+    } finally {
+      setIsProcessingSale(false);
+    }
+  };
+
+  const handleStartEditSale = (sale) => {
+    setEditingSale(sale);
+    setActiveInvoice(null);
+    setCurrentTab('pos');
+    addToast(`Editing Bill #${sale.invoice_no}`);
+  };
+
+  const handleCancelEditSale = () => {
+    setEditingSale(null);
+  };
+
+  const handleUpdateSale = async (saleId, payload, onSuccess) => {
+    try {
+      setIsProcessingSale(true);
+      const res = await axios.put(`/api/sales/${saleId}`, {
+        ...payload,
+        branch_id: activeBranch?.id || payload.branch_id || null,
+      });
+      const updatedSale = res.data.sale;
+      addToast(`Invoice ${updatedSale.invoice_no} updated successfully!`);
+      setEditingSale(null);
+      setActiveInvoice(updatedSale);
+
+      if (onSuccess) onSuccess();
+
+      const [statsRes, salesRes, itemsRes] = await Promise.all([
+        axios.get('/api/dashboard/stats'),
+        axios.get('/api/sales'),
+        axios.get('/api/items')
+      ]);
+      setStats(statsRes.data);
+      setSales(salesRes.data?.data || salesRes.data || []);
+      setItems(itemsRes.data?.items || itemsRes.data || []);
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to update sale', 'error');
     } finally {
       setIsProcessingSale(false);
     }
@@ -678,6 +721,8 @@ export default function MainApp() {
       setCurrentUser(res.data.user || null);
       setActiveBranch(res.data.active_branch || null);
       setIsAuthenticated(true);
+      setCurrentTab('dashboard');
+      navigate('/dashboard', { replace: true });
       addToast(`Welcome back, ${res.data.user?.name || res.data.tenant?.name || 'Admin'}!`);
       await fetchData();
     } catch (err) {
@@ -967,6 +1012,9 @@ export default function MainApp() {
                 tenant={tenant}
                 activeBranch={activeBranch}
                 onCompleteSale={handleCompleteSale}
+                editingSale={editingSale}
+                onCancelEditSale={handleCancelEditSale}
+                onUpdateSale={handleUpdateSale}
                 onQuickAddCustomer={handleQuickAddCustomer}
                 isProcessingSale={isProcessingSale}
                 preselectedCustomerId={preselectedCustomerId}
@@ -991,6 +1039,7 @@ export default function MainApp() {
                 }}
                 onOpenSubscriptionModal={() => setSubscriptionModalOpen(true)}
                 onViewInvoice={(sale) => setActiveInvoice(sale)}
+                onEditSale={handleStartEditSale}
               />
             )}
 
@@ -1278,6 +1327,7 @@ export default function MainApp() {
                 onNavigateTab={(tab) => setCurrentTab(tab)}
                 addToast={addToast}
                 onViewInvoice={(sale) => setActiveInvoice(sale)}
+                onEditSale={handleStartEditSale}
               />
             )}
           </>
@@ -1291,6 +1341,7 @@ export default function MainApp() {
         tenant={tenant}
         customers={customers}
         onClose={() => setActiveInvoice(null)}
+        onEditSale={handleStartEditSale}
       />
 
       {/* MODAL: Branch / Store / Warehouse Manager */}

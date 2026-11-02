@@ -19,6 +19,7 @@ import {
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function InventoryManager({
   fixedType = null, // 'stock_in' | 'stock_transfer' | null
@@ -429,7 +430,7 @@ export default function InventoryManager({
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1 font-mono">
                           <Calendar className="w-3 h-3 text-slate-400" />
-                          <span>{m.challan_date}</span>
+                          <span>{formatDateDMY(m.challan_date || m.created_at)}</span>
                         </div>
                       </td>
 
@@ -753,11 +754,11 @@ export default function InventoryManager({
       {viewingMovement && (() => {
         const isStockIn = viewingMovement.type === 'inward';
         const isTransfer = Boolean(viewingMovement.target_branch_id);
-        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
-        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
-        const storePhone = tenant?.phone || '9939175603, 9430472515';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC';
-        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+        const storeName = tenant?.name || activeBranch?.name || '';
+        const storeAddress = tenant?.address || activeBranch?.address || '';
+        const storePhone = tenant?.phone || activeBranch?.phone || '';
+        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeEmail = tenant?.email || activeBranch?.email || '';
 
         const movementItems = viewingMovement.items || [];
         const totalUnits = viewingMovement.total_quantity || movementItems.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
@@ -860,7 +861,7 @@ export default function InventoryManager({
                         </div>
                         <div className="flex items-center">
                           <span className="w-28 font-bold text-black shrink-0">Challan Date:-</span>
-                          <span className="font-medium text-black font-mono">{viewingMovement.challan_date}</span>
+                          <span className="font-medium text-black font-mono">{formatDateDMY(viewingMovement.challan_date || viewingMovement.created_at)}</span>
                         </div>
                         {isStockIn ? (
                           <div className="flex items-start">

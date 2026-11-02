@@ -22,6 +22,7 @@ import {
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function CreditDebitNoteEntry({
   type = 'credit_note', // 'credit_note' | 'debit_note'
@@ -1069,14 +1070,42 @@ export default function CreditDebitNoteEntry({
         const noteTotalQty = noteItems.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
         const isNoteCredit = createdNote.type === 'credit_note';
 
-        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
-        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
-        const storePhone = tenant?.phone || '9939175603, 9430472515';
-        const storeGst = tenant?.gst_number || tenant?.gstin || '10AYSPP3209J1ZC';
-        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+        const storeName = tenant?.name || activeBranch?.name || '';
+        const storeAddress = tenant?.address || activeBranch?.address || '';
+        const storePhone = tenant?.phone || activeBranch?.phone || '';
+        const storeGst = tenant?.gst_number || tenant?.gstin || tenant?.tax_number || '';
+        const storeEmail = tenant?.email || activeBranch?.email || '';
+
+        const party = isNoteCredit
+          ? customerList.find((c) => String(c.id) === String(createdNote.party_id))
+          : supplierList.find((s) => String(s.id) === String(createdNote.party_id));
+        const partyPhone = party?.mobile_no || party?.phone || '';
+        const partyAddress = party?.address || '';
+        const partyEmail = party?.email || '';
+
+        const handlePrintCreatedNote = () => {
+          printElement('printable-credit-note-slip', {
+            title: `${isNoteCredit ? 'Credit Note' : 'Debit Note'} - ${createdNote.note_no}`,
+            onAfterPrint: () => {
+              window.location.href = isNoteCredit ? '/credit-note-entry' : '/debit-note-entry';
+            }
+          });
+        };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto animate-in fade-in">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto animate-in fade-in"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handlePrintCreatedNote();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                handleResetForm();
+              }
+            }}
+            tabIndex={0}
+          >
             <div className="relative w-full max-w-4xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden my-4">
               
               {/* Modal Top Control Bar */}
@@ -1101,7 +1130,7 @@ export default function CreditDebitNoteEntry({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => printElement('printable-credit-note-slip', { title: `${isNoteCredit ? 'Credit Note' : 'Debit Note'} - ${createdNote.note_no}` })}
+                    onClick={handlePrintCreatedNote}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs transition-all cursor-pointer ring-1 ring-amber-300"
                     title="Print Document (Enter)"
                   >
@@ -1165,12 +1194,30 @@ export default function CreditDebitNoteEntry({
                         </div>
                         <div className="flex items-center">
                           <span className="w-24 font-bold text-black shrink-0">Note Date:-</span>
-                          <span className="font-medium text-black font-mono">{createdNote.note_date}</span>
+                          <span className="font-medium text-black font-mono">{formatDateDMY(createdNote.note_date || createdNote.created_at)}</span>
                         </div>
                         <div className="flex items-start">
                           <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
                           <span className="font-bold uppercase text-black">{createdNote.party_name}</span>
                         </div>
+                        {partyAddress && (
+                          <div className="flex items-start">
+                            <span className="w-24 font-bold text-black shrink-0">Address:-</span>
+                            <span className="uppercase text-black">{partyAddress}</span>
+                          </div>
+                        )}
+                        {partyPhone && (
+                          <div className="flex items-center">
+                            <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
+                            <span className="font-mono text-black">{partyPhone}</span>
+                          </div>
+                        )}
+                        {partyEmail && (
+                          <div className="flex items-center">
+                            <span className="w-24 font-bold text-black shrink-0">Email:-</span>
+                            <span className="font-mono text-black lowercase">{partyEmail}</span>
+                          </div>
+                        )}
                         {createdNote.original_invoice_no && (
                           <div className="flex items-center">
                             <span className="w-24 font-bold text-black shrink-0">Bill No:-</span>

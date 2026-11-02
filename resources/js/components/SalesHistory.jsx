@@ -15,6 +15,7 @@ import {
   X,
   Filter
 } from 'lucide-react';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function SalesHistory({
   sales,
@@ -191,10 +192,7 @@ export default function SalesHistory({
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
                     <span className="font-semibold text-slate-800 block">
-                      {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : '—'}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      {sale.created_at ? new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      {sale.created_at ? formatDateDMY(sale.created_at) : '—'}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">

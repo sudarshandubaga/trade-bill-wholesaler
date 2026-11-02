@@ -24,15 +24,18 @@ import {
   Phone,
   MapPin,
   Mail,
-  Hash
+  Hash,
+  Edit
 } from 'lucide-react';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function Dashboard({
   stats,
   tenant,
   onNavigate = () => { },
   onOpenSubscriptionModal = () => { },
-  onViewInvoice = () => { }
+  onViewInvoice = () => { },
+  onEditSale = () => { }
 }) {
   const currency = tenant?.currency || '₹';
   const sub = stats?.subscription;
@@ -423,7 +426,7 @@ export default function Dashboard({
                         )}
                       </td>
                       <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
-                        {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'Today'}
+                        {sale.created_at ? formatDateDMY(sale.created_at) : 'Today'}
                       </td>
                       <td className="py-3 px-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
@@ -438,14 +441,27 @@ export default function Dashboard({
                         {currency}{Number(sale.total_amount).toFixed(2)}
                       </td>
                       <td className="py-3 px-3 text-right">
-                        <button
-                          onClick={() => onViewInvoice(sale)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 text-[11px] font-bold transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
-                          title="Print A4 Wholesale Bill"
-                        >
-                          <Printer className="w-3 h-3" />
-                          <span>Print Bill</span>
-                        </button>
+                        <div className="inline-flex items-center gap-1.5 justify-end">
+                          {onEditSale && (
+                            <button
+                              type="button"
+                              onClick={() => onEditSale(sale)}
+                              className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-[11px] font-bold transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                              title="Edit Bill"
+                            >
+                              <Edit className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onViewInvoice(sale)}
+                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 text-[11px] font-bold transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                            title="Print A4 Wholesale Bill"
+                          >
+                            <Printer className="w-3 h-3" />
+                            <span>Print Bill</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

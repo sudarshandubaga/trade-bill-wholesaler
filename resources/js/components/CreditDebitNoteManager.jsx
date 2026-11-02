@@ -19,6 +19,7 @@ import {
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function CreditDebitNoteManager({
   notes = [],
@@ -493,7 +494,7 @@ export default function CreditDebitNoteManager({
                       <div className="font-mono font-bold text-slate-900 text-sm">{n.note_no}</div>
                       <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1 font-mono">
                         <Calendar className="w-3 h-3 text-slate-400" />
-                        <span>{n.note_date}</span>
+                        <span>{formatDateDMY(n.note_date || n.created_at)}</span>
                       </div>
                     </td>
 
@@ -956,11 +957,18 @@ export default function CreditDebitNoteManager({
       {/* View & Print Document Modal (GST-Free Wholesale Note) */}
       {viewingNote && (() => {
         const isNoteCredit = viewingNote.type === 'credit_note';
-        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
-        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
-        const storePhone = tenant?.phone || '9939175603, 9430472515';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC';
-        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+        const storeName = tenant?.name || activeBranch?.name || '';
+        const storeAddress = tenant?.address || activeBranch?.address || '';
+        const storePhone = tenant?.phone || activeBranch?.phone || '';
+        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeEmail = tenant?.email || activeBranch?.email || '';
+
+        const party = isNoteCredit
+          ? customerList.find((c) => String(c.id) === String(viewingNote.party_id))
+          : supplierList.find((s) => String(s.id) === String(viewingNote.party_id));
+        const partyPhone = party?.mobile_no || party?.phone || '';
+        const partyAddress = party?.address || '';
+        const partyEmail = party?.email || '';
 
         const noteItems = viewingNote.items || [];
         const noteTotalQty = noteItems.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
@@ -970,7 +978,10 @@ export default function CreditDebitNoteManager({
 
         const handlePrint = () => {
           printElement('printable-viewing-note-slip', {
-            title: `${isNoteCredit ? 'Credit Note' : 'Debit Note'} - ${viewingNote.note_no}`
+            title: `${isNoteCredit ? 'Credit Note' : 'Debit Note'} - ${viewingNote.note_no}`,
+            onAfterPrint: () => {
+              window.location.href = isNoteCredit ? '/credit-notes' : '/debit-notes';
+            }
           });
         };
 
@@ -1058,12 +1069,30 @@ export default function CreditDebitNoteManager({
                         </div>
                         <div className="flex items-center">
                           <span className="w-24 font-bold text-black shrink-0">Note Date:-</span>
-                          <span className="font-medium text-black font-mono">{viewingNote.note_date}</span>
+                          <span className="font-medium text-black font-mono">{formatDateDMY(viewingNote.note_date || viewingNote.created_at)}</span>
                         </div>
                         <div className="flex items-start">
                           <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
                           <span className="font-bold uppercase text-black">{viewingNote.party_name}</span>
                         </div>
+                        {partyAddress && (
+                          <div className="flex items-start">
+                            <span className="w-24 font-bold text-black shrink-0">Address:-</span>
+                            <span className="uppercase text-black">{partyAddress}</span>
+                          </div>
+                        )}
+                        {partyPhone && (
+                          <div className="flex items-center">
+                            <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
+                            <span className="font-mono text-black">{partyPhone}</span>
+                          </div>
+                        )}
+                        {partyEmail && (
+                          <div className="flex items-center">
+                            <span className="w-24 font-bold text-black shrink-0">Email:-</span>
+                            <span className="font-mono text-black lowercase">{partyEmail}</span>
+                          </div>
+                        )}
                         {viewingNote.original_invoice_no && (
                           <div className="flex items-center">
                             <span className="w-24 font-bold text-black shrink-0">Bill No:-</span>

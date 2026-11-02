@@ -200,4 +200,85 @@ class WholesaleSaleApiTest extends TestCase
         // Inventory should be deducted by exactly 2.50
         $this->assertEquals(97.50, (float)$this->item1->fresh()->stock_quantity);
     }
+
+    public function test_can_update_wholesale_bill_and_reconcile_inventory(): void
+    {
+        $this->actingAs($this->tenant, 'web');
+
+        // 1. Create a bill with 5 units of item1 (stock was 100 -> becomes 95)
+        $createPayload = [
+            'branch_id' => $this->branch->id,
+            'customer_id' => $this->customer->id,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'item_name' => $this->item1->name,
+                    'short_name' => $this->item1->short_name,
+                    'unit_price' => 1000.00,
+                    'quantity' => 5,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
+                    'total_price' => 5000.00,
+                ],
+            ],
+            'subtotal' => 5000.00,
+            'discount_amount' => 0.00,
+            'total_amount' => 5000.00,
+            'payment_method' => 'Cash',
+        ];
+
+        $res = $this->postJson('/api/sales', $createPayload);
+        $res->assertStatus(201);
+        $saleId = $res->json('sale.id');
+        $this->assertEquals(95.00, (float)$this->item1->fresh()->stock_quantity);
+
+        // 2. Update the bill: change quantity of item1 to 2, and add 3 units of item2
+        $updatePayload = [
+            'branch_id' => $this->branch->id,
+            'customer_id' => $this->customer->id,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'item_name' => $this->item1->name,
+                    'short_name' => $this->item1->short_name,
+                    'unit_price' => 1000.00,
+                    'quantity' => 2,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
+                    'total_price' => 2000.00,
+                ],
+                [
+                    'item_id' => $this->item2->id,
+                    'item_name' => $this->item2->name,
+                    'short_name' => $this->item2->short_name,
+                    'unit_price' => 1500.00,
+                    'quantity' => 3,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
+                    'total_price' => 4500.00,
+                ],
+            ],
+            'subtotal' => 6500.00,
+            'discount_amount' => 500.00,
+            'total_amount' => 6000.00,
+            'payment_method' => 'Credit',
+            'notes' => 'Updated order details',
+        ];
+
+        $updateRes = $this->putJson("/api/sales/{$saleId}", $updatePayload);
+        $updateRes->assertStatus(200);
+
+        // Verify sale record updated
+        $updatedSale = $updateRes->json('sale');
+        $this->assertEquals(6500.00, (float)$updatedSale['subtotal']);
+        $this->assertEquals(500.00, (float)$updatedSale['discount_amount']);
+        $this->assertEquals(6000.00, (float)$updatedSale['total_amount']);
+        $this->assertEquals('Credit', $updatedSale['payment_method']);
+
+        // Verify inventory reconciled:
+        // item1 stock: started 100, deducted 5 (95), rolled back (+5 -> 100), new deduction 2 -> 98
+        $this->assertEquals(98.00, (float)$this->item1->fresh()->stock_quantity);
+        // item2 stock: started 50, new deduction 3 -> 47
+        $this->assertEquals(47.00, (float)$this->item2->fresh()->stock_quantity);
+    }
 }

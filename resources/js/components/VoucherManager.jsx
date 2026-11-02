@@ -12,11 +12,13 @@ import {
   Printer,
   Eye,
   CheckCircle2,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function VoucherManager({
   vouchers = [],
@@ -79,6 +81,35 @@ export default function VoucherManager({
   const headBranch = useMemo(() => {
     return branchList.find((b) => b.is_head || b.is_primary) || branchList[0] || null;
   }, [branchList]);
+
+  const handleSendWhatsAppReceipt = (voucher) => {
+    if (!voucher) return;
+    const isReceipt = voucher.type === 'receipt';
+    const party = isReceipt
+      ? customerList.find((c) => String(c.id) === String(voucher.party_id)) || { name: voucher.party_name, mobile_no: voucher.party_phone }
+      : supplierList.find((s) => String(s.id) === String(voucher.party_id)) || { name: voucher.party_name, phone: voucher.party_phone };
+
+    const rawPhone = party?.mobile_no || party?.phone || voucher.party_phone;
+    if (!rawPhone) {
+      alert('Mobile number not available for this party.');
+      return;
+    }
+
+    let cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const storeName = tenant?.name || 'Krishna Book Agency';
+    const partyName = party?.name || voucher.party_name || 'Customer';
+    const amount = Number(voucher.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const voucherDate = formatDateDMY(voucher.voucher_date || voucher.created_at);
+
+    const message = `Dear ${partyName},\n\nWe have received payment of *₹${amount}* on *${voucherDate}* via *${(voucher.payment_mode || 'Cash').toUpperCase()}* against Receipt Voucher *#${voucher.voucher_no}*.\n${voucher.narration ? `Note: ${voucher.narration}\n` : ''}\nThank you for your business!\n*${storeName}*`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const filteredVouchers = useMemo(() => {
     return voucherList.filter((v) => {
@@ -317,7 +348,7 @@ export default function VoucherManager({
                       <div className="font-mono font-bold text-slate-900 text-sm">{v.voucher_no}</div>
                       <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1 font-mono">
                         <Calendar className="w-3 h-3 text-slate-400" />
-                        <span>{v.voucher_date}</span>
+                        <span>{formatDateDMY(v.voucher_date || v.created_at)}</span>
                       </div>
                     </td>
 
@@ -360,7 +391,17 @@ export default function VoucherManager({
                       </div>
                     </td>
 
-                    <td className="px-5 py-3.5 text-right">
+                    <td className="px-5 py-3.5 text-right flex items-center justify-end gap-1.5">
+                      {v.type === 'receipt' && (
+                        <button
+                          type="button"
+                          onClick={() => handleSendWhatsAppReceipt(v)}
+                          title="Send WhatsApp Receipt"
+                          className="no-print p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => setViewingVoucher(v)}
                         className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors"
@@ -501,11 +542,18 @@ export default function VoucherManager({
       {/* View Voucher Slip Modal (Light Theme) */}
       {viewingVoucher && (() => {
         const isReceipt = viewingVoucher.type === 'receipt';
-        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
-        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
-        const storePhone = tenant?.phone || '9939175603, 9430472515';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC';
-        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+        const storeName = tenant?.name || activeBranch?.name || '';
+        const storeAddress = tenant?.address || activeBranch?.address || '';
+        const storePhone = tenant?.phone || activeBranch?.phone || '';
+        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeEmail = tenant?.email || activeBranch?.email || '';
+
+        const party = isReceipt
+          ? customerList.find((c) => String(c.id) === String(viewingVoucher.party_id))
+          : supplierList.find((s) => String(s.id) === String(viewingVoucher.party_id));
+        const partyPhone = party?.mobile_no || party?.phone || viewingVoucher.party_phone || '';
+        const partyAddress = party?.address || '';
+        const partyEmail = party?.email || '';
 
         const voucherAmount = Number(viewingVoucher.amount || 0);
 
@@ -533,6 +581,17 @@ export default function VoucherManager({
                   <span className="font-mono text-xs text-amber-400 font-bold">{viewingVoucher.voucher_no}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  {isReceipt && (
+                    <button
+                      type="button"
+                      onClick={() => handleSendWhatsAppReceipt(viewingVoucher)}
+                      className="no-print flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md cursor-pointer transition-all"
+                      title="Send Receipt Acknowledgement via WhatsApp"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Send WhatsApp</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handlePrint}
@@ -599,12 +658,30 @@ export default function VoucherManager({
                         </div>
                         <div className="flex items-center">
                           <span className="w-28 font-bold text-black shrink-0">Voucher Date:-</span>
-                          <span className="font-medium text-black font-mono">{viewingVoucher.voucher_date}</span>
+                          <span className="font-medium text-black font-mono">{formatDateDMY(viewingVoucher.voucher_date || viewingVoucher.created_at)}</span>
                         </div>
                         <div className="flex items-start">
                           <span className="w-28 font-bold text-black shrink-0">Party / Account:</span>
                           <span className="font-bold uppercase text-black">{viewingVoucher.party_name}</span>
                         </div>
+                        {partyAddress && (
+                          <div className="flex items-start">
+                            <span className="w-28 font-bold text-black shrink-0">Address:-</span>
+                            <span className="uppercase text-black">{partyAddress}</span>
+                          </div>
+                        )}
+                        {partyPhone && (
+                          <div className="flex items-center">
+                            <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
+                            <span className="font-mono text-black">{partyPhone}</span>
+                          </div>
+                        )}
+                        {partyEmail && (
+                          <div className="flex items-center">
+                            <span className="w-28 font-bold text-black shrink-0">Email:-</span>
+                            <span className="font-mono text-black lowercase">{partyEmail}</span>
+                          </div>
+                        )}
                         <div className="flex items-center">
                           <span className="w-28 font-bold text-black shrink-0">Payment Mode:</span>
                           <span className="font-mono font-bold uppercase text-slate-900">{viewingVoucher.payment_mode}</span>

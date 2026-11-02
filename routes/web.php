@@ -155,6 +155,7 @@ Route::prefix('api')->group(function () {
         Route::get('/sales/{id}', [SaleController::class, 'show']);
         Route::middleware(['permission:pos'])->group(function () {
             Route::post('/sales', [SaleController::class, 'store']);
+            Route::put('/sales/{id}', [SaleController::class, 'update']);
         });
 
         // 7. Comprehensive Reports

@@ -17,6 +17,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { printElement } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function DayBook({
   sales,
@@ -169,7 +170,7 @@ export default function DayBook({
             {currency}{dayNetTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <span className="text-[11px] text-slate-500 mt-0.5 block">
-            {daySales.length} {daySales.length === 1 ? 'invoice' : 'invoices'} on {new Date(selectedDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+            {daySales.length} {daySales.length === 1 ? 'invoice' : 'invoices'} on {formatDateDMY(selectedDate)}
           </span>
         </div>
 
@@ -251,7 +252,7 @@ export default function DayBook({
             Day Journal Entries ({daySales.length})
           </h2>
           <span className="text-xs text-slate-500 font-mono">
-            {new Date(selectedDate).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {formatDateDMY(selectedDate)}
           </span>
         </div>
 
@@ -336,7 +337,7 @@ export default function DayBook({
               {daySales.length === 0 && (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400">
-                    No transactions recorded on {new Date(selectedDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}.
+                    No transactions recorded on {formatDateDMY(selectedDate)}.
                   </td>
                 </tr>
               )}

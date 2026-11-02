@@ -21,6 +21,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function CustomerLedger({
   customers,
@@ -357,15 +358,15 @@ export default function CustomerLedger({
                     className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
                   >
                     <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
-                      {tenant?.name || 'KRISHNA BOOK AGENCY'}
+                      {tenant?.name || ''}
                     </h1>
                     <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                      {(tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455') && (
-                        <div>{tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455'}</div>
+                      {tenant?.address && <div>{tenant.address}</div>}
+                      {tenant?.phone && <div>Mobile No: {tenant.phone}</div>}
+                      {(tenant?.tax_number || tenant?.gst_number || tenant?.gstin) && (
+                        <div className="font-mono">GST No. {tenant.tax_number || tenant.gst_number || tenant.gstin}</div>
                       )}
-                      <div>Mobile No: {tenant?.phone || '9939175603, 9430472515'}</div>
-                      <div className="font-mono">GST No. {tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC'}</div>
-                      <div>Email: {tenant?.email || 'krishnabookagency@gmail.com'}</div>
+                      {tenant?.email && <div>Email: {tenant.email}</div>}
                     </div>
                   </td>
 
@@ -378,18 +379,22 @@ export default function CustomerLedger({
                       <span className="w-28 font-bold text-black shrink-0">Party Name:</span>
                       <span className="font-bold uppercase text-black text-sm">{selectedCustomer.name}</span>
                     </div>
-                    <div className="flex items-start">
-                      <span className="w-28 font-bold text-black shrink-0">Address:-</span>
-                      <span className="uppercase text-black">{selectedCustomer.address || '—'}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
-                      <span className="font-mono text-black">{selectedCustomer.mobile_no || '—'}</span>
-                    </div>
+                    {selectedCustomer.address && (
+                      <div className="flex items-start">
+                        <span className="w-28 font-bold text-black shrink-0">Address:-</span>
+                        <span className="uppercase text-black">{selectedCustomer.address}</span>
+                      </div>
+                    )}
+                    {selectedCustomer.mobile_no && (
+                      <div className="flex items-center">
+                        <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
+                        <span className="font-mono text-black">{selectedCustomer.mobile_no}</span>
+                      </div>
+                    )}
                     {selectedCustomer.email && (
                       <div className="flex items-center">
                         <span className="w-28 font-bold text-black shrink-0">Email:-</span>
-                        <span className="text-black">{selectedCustomer.email}</span>
+                        <span className="text-black font-mono lowercase">{selectedCustomer.email}</span>
                       </div>
                     )}
                     <div className="flex items-center">
@@ -399,7 +404,7 @@ export default function CustomerLedger({
                     <div className="flex items-center">
                       <span className="w-28 font-bold text-red-600 shrink-0">Statement Date:-</span>
                       <span className="font-bold text-red-600 font-mono">
-                        {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {formatDateDMY(new Date())}
                       </span>
                     </div>
                   </td>
@@ -431,7 +436,7 @@ export default function CustomerLedger({
                           <tr key={sale.id} className="leading-snug">
                             <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{idx + 1}</td>
                             <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">
-                              {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : '—'}
+                              {sale.created_at ? formatDateDMY(sale.created_at) : '—'}
                             </td>
                             <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center' }} className="border border-black py-0 px-2.5 text-center font-mono font-bold text-amber-700">
                               {sale.invoice_no}

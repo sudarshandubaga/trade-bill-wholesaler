@@ -24,6 +24,9 @@ export default function POS({
   tenant,
   activeBranch,
   onCompleteSale,
+  editingSale = null,
+  onCancelEditSale,
+  onUpdateSale,
   onQuickAddCustomer,
   isProcessingSale,
   preselectedCustomerId,
@@ -134,6 +137,45 @@ export default function POS({
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Credit');
   const [paidAmount, setPaidAmount] = useState('');
+
+  // Load editing sale if present
+  useEffect(() => {
+    if (editingSale) {
+      if (editingSale.customer_id) {
+        setSelectedCustomerId(String(editingSale.customer_id));
+      } else if (editingSale.customer_name) {
+        setSelectedCustomerId('walkin');
+      }
+      if (editingSale.payment_method) {
+        setPaymentMethod(editingSale.payment_method);
+      }
+      if (editingSale.notes) {
+        setNotes(editingSale.notes);
+      }
+      if (editingSale.discount_amount !== undefined) {
+        setDiscountAmount(Number(editingSale.discount_amount) || 0);
+      }
+      if (editingSale.items && Array.isArray(editingSale.items)) {
+        const loadedCart = editingSale.items.map((it) => {
+          const matchedItem = itemList.find((i) => String(i.id) === String(it.item_id)) || {
+            id: it.item_id || `temp-${Math.random()}`,
+            name: it.item_name,
+            short_name: it.short_name,
+            price: it.unit_price,
+            stock_quantity: 9999,
+          };
+          return {
+            item: matchedItem,
+            quantity: Number(it.quantity) || 1,
+            unit_price: Number(it.unit_price) || 0,
+            discount_percent: it.discount_percent !== null && it.discount_percent !== undefined ? String(it.discount_percent) : '',
+            discount_amount: it.discount_amount !== null && it.discount_amount !== undefined ? String(it.discount_amount) : '',
+          };
+        });
+        setCart(loadedCart);
+      }
+    }
+  }, [editingSale, itemList]);
 
   const tableContainerRef = useRef(null);
   const prevCartLengthRef = useRef(0);
@@ -316,6 +358,7 @@ export default function POS({
     setIsClientDropdownOpen(true);
     setHighlightedCustomerIndex(0);
     if (onClearPreselectedCustomer) onClearPreselectedCustomer();
+    if (onCancelEditSale) onCancelEditSale();
     setTimeout(() => {
       customerInputRef.current?.focus();
       customerInputRef.current?.select();
@@ -772,9 +815,15 @@ export default function POS({
       notes,
     };
 
-    onCompleteSale(payload, () => {
-      clearCart();
-    });
+    if (editingSale && onUpdateSale) {
+      onUpdateSale(editingSale.id, payload, () => {
+        clearCart();
+      });
+    } else {
+      onCompleteSale(payload, () => {
+        clearCart();
+      });
+    }
   };
 
   const handleCheckoutRef = useRef();
@@ -816,6 +865,31 @@ export default function POS({
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-2 w-full overflow-hidden font-sans">
+
+      {/* Edit Mode Alert Banner */}
+      {editingSale && (
+        <div className="bg-amber-500/15 border-2 border-amber-500/40 rounded-2xl p-2.5 px-4 flex items-center justify-between shadow-xs shrink-0 animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+            <span className="text-xs font-black text-amber-950 uppercase tracking-wide">
+              Editing Wholesale Bill #{editingSale.invoice_no}
+            </span>
+            <span className="text-[11px] text-amber-800 font-medium hidden sm:inline">
+              (Adjust items, rates, discounts or customer and click Update Bill)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              clearCart();
+              onCancelEditSale?.();
+            }}
+            className="px-3 py-1 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+          >
+            Cancel Edit
+          </button>
+        </div>
+      )}
 
       {/* 1. TOP BAR: CUSTOMER / PARTY SELECTION */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-2 sm:px-3 sm:py-2 shadow-2xs shrink-0">
@@ -1415,7 +1489,12 @@ export default function POS({
             {isProcessingSale ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
-                <span>Generating Wholesale Bill...</span>
+                <span>{editingSale ? 'Updating Bill...' : 'Generating Wholesale Bill...'}</span>
+              </>
+            ) : editingSale ? (
+              <>
+                <Receipt className="w-4 h-4 stroke-[2.5]" />
+                <span>Update Bill #{editingSale.invoice_no} (Enter) &bull; {currency}{grandTotal.toFixed(2)}</span>
               </>
             ) : (
               <>

@@ -12,7 +12,8 @@ import {
   Building2,
   Shield,
   Layers,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';

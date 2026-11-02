@@ -324,7 +324,11 @@ export default function BranchManagerModal({
 
                         {!isActive && (
                           <button
-                            onClick={() => onSelectBranch(b)}
+                            type="button"
+                            onClick={() => {
+                              onSelectBranch(b.id);
+                              onClose();
+                            }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-amber-500 hover:text-slate-950 text-slate-700 border border-slate-200 text-xs font-bold transition-all shadow-2xs cursor-pointer ml-auto"
                           >
                             <ArrowRightCircle className="w-3.5 h-3.5" />

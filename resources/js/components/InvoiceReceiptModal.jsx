@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Printer, X, FileText } from 'lucide-react';
+import { Printer, X, FileText, Edit } from 'lucide-react';
 import { printElement } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 /**
  * Converts numbers into Indian currency words format
@@ -73,7 +74,7 @@ export function numberToWordsIndian(num) {
   return result;
 }
 
-export default function InvoiceReceiptModal({ sale, tenant, customers = [], onClose }) {
+export default function InvoiceReceiptModal({ sale, tenant, customers = [], onClose, onEditSale }) {
   if (!sale) return null;
 
   // Resolve customer info
@@ -83,31 +84,23 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
 
   const customerName = typeof sale.customer === 'string'
     ? sale.customer
-    : (resolvedCustomer?.name || sale.customer_name || (sale.customer_id ? `Customer #${sale.customer_id}` : 'KRISHNA BOOK AGENCY'));
+    : (resolvedCustomer?.name || sale.customer_name || (sale.customer_id ? `Customer #${sale.customer_id}` : 'Walk-in Customer'));
 
-  const customerPhone = resolvedCustomer?.mobile_no || resolvedCustomer?.phone || sale.customer_phone || '9939175603';
-  const customerAddress = [resolvedCustomer?.address, resolvedCustomer?.city, resolvedCustomer?.state].filter(Boolean).join(', ') || 'NARKATIAGANJ';
+  const customerPhone = resolvedCustomer?.mobile_no || resolvedCustomer?.phone || sale.customer_phone || '';
+  const customerAddress = [resolvedCustomer?.address, resolvedCustomer?.city, resolvedCustomer?.state].filter(Boolean).join(', ') || '';
+  const customerEmail = resolvedCustomer?.email || sale.customer_email || '';
 
-  const storeName = tenant?.name || sale.branch?.name || 'KRISHNA BOOK AGENCY';
-  const storeAddress = tenant?.address || sale.branch?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
-  const storePhone = tenant?.phone || sale.branch?.phone || '9939175603, 9430472515';
-  const storeGst = tenant?.gst_number || tenant?.gstin || '10AYSPP3209J1ZC';
-  const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+  const storeName = tenant?.name || sale.branch?.name || '';
+  const storeAddress = tenant?.address || sale.branch?.address || '';
+  const storePhone = tenant?.phone || sale.branch?.phone || '';
+  const storeGst = tenant?.gst_number || tenant?.gstin || '';
+  const storeEmail = tenant?.email || sale.branch?.email || '';
 
   const items = Array.isArray(sale.items) ? sale.items : (sale.items?.data || []);
   const isPrintingRef = useRef(false);
 
-  // Date format: 27-Oct-2026
-  const formatDate = (dateObj) => {
-    const d = dateObj ? new Date(dateObj) : new Date();
-    const day = String(d.getDate()).padStart(2, '0');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = monthNames[d.getMonth()];
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
-
-  const invoiceDateStr = formatDate(sale.created_at);
+  // Strict Date format: DD/MM/YYYY (no time)
+  const invoiceDateStr = formatDateDMY(sale.created_at || sale.invoice_date || sale.date);
 
   // Financial calculations matching image
   let calculatedGross = 0;
@@ -128,6 +121,16 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
     printElement('printable-receipt', {
       title: `Sale Invoice - ${sale.invoice_no}`,
       pageMargin: '8mm 10mm',
+      onAfterPrint: () => {
+        const path = window.location.pathname;
+        if (path.startsWith('/reports')) {
+          window.location.href = '/reports';
+        } else if (path.startsWith('/dashboard')) {
+          window.location.href = '/dashboard';
+        } else {
+          window.location.href = '/pos';
+        }
+      }
     });
   }, [sale]);
 
@@ -170,6 +173,20 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
           </div>
 
           <div className="flex items-center gap-2">
+            {onEditSale && (
+              <button
+                type="button"
+                onClick={() => {
+                  onEditSale(sale);
+                  onClose?.();
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer ring-1 ring-blue-400"
+                title="Edit Bill in POS terminal"
+              >
+                <Edit className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Edit Bill</span>
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-xs transition-all cursor-pointer ring-1 ring-amber-300"
@@ -240,14 +257,24 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
                     <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
                     <span className="font-bold uppercase text-black">{customerName}</span>
                   </div>
-                  <div className="flex items-start">
-                    <span className="w-24 font-bold text-black shrink-0">Address:-</span>
-                    <span className="uppercase text-black">{customerAddress}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
-                    <span className="font-mono text-black">{customerPhone}</span>
-                  </div>
+                  {customerAddress && (
+                    <div className="flex items-start">
+                      <span className="w-24 font-bold text-black shrink-0">Address:-</span>
+                      <span className="uppercase text-black">{customerAddress}</span>
+                    </div>
+                  )}
+                  {customerPhone && (
+                    <div className="flex items-center">
+                      <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
+                      <span className="font-mono text-black">{customerPhone}</span>
+                    </div>
+                  )}
+                  {customerEmail && (
+                    <div className="flex items-center">
+                      <span className="w-24 font-bold text-black shrink-0">Email:-</span>
+                      <span className="font-mono text-black lowercase">{customerEmail}</span>
+                    </div>
+                  )}
                 </td>
               </tr>
 

@@ -20,7 +20,8 @@ import {
   Plus,
   Trash2,
   X,
-  MessageCircle
+  MessageCircle,
+  Edit
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
@@ -28,6 +29,7 @@ import InvoiceReceiptModal from './InvoiceReceiptModal';
 import CreditDebitNoteManager from './CreditDebitNoteManager';
 import InventoryManager from './InventoryManager';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function ReportsHub({
   initialSubTab = 'sale', // 'sale', 'daybook', 'cashbook', 'bank', 'stock', 'ledger', 'credit_notes', 'debit_notes', 'stock_in', 'stock_transfer'
@@ -41,7 +43,8 @@ export default function ReportsHub({
   onDataUpdated = () => {},
   onNavigateTab = () => {},
   addToast = () => { },
-  onViewInvoice
+  onViewInvoice,
+  onEditSale
 }) {
   const currency = tenant?.currency || '₹';
 
@@ -443,22 +446,35 @@ export default function ReportsHub({
                         {s.invoice_no}
                       </button>
                     </td>
-                    <td className="px-5 py-3 text-slate-500">{s.created_at?.split('T')[0]}</td>
+                    <td className="px-5 py-3 text-slate-500">{formatDateDMY(s.created_at)}</td>
                     <td className="px-5 py-3 font-sans font-medium text-slate-900">{s.customer?.name || 'Walk-in'}</td>
                     <td className="px-5 py-3 uppercase text-[10px]">{s.payment_method}</td>
                     <td className="px-5 py-3 text-right">{currency} {Number(s.subtotal).toLocaleString()}</td>
                     <td className="px-5 py-3 text-right text-sky-600">{currency} {Number(s.tax_amount).toLocaleString()}</td>
                     <td className="px-5 py-3 text-right font-black text-emerald-600">{currency} {Number(s.total_amount).toLocaleString()}</td>
                     <td className="px-5 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handlePrintInvoice(s)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
-                        title="Print Wholesale Bill / Invoice"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        <span>Print</span>
-                      </button>
+                      <div className="inline-flex items-center gap-1.5 justify-center">
+                        {onEditSale && (
+                          <button
+                            type="button"
+                            onClick={() => onEditSale(s)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                            title="Edit Sale Bill"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handlePrintInvoice(s)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                          title="Print Wholesale Bill / Invoice"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Print</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -753,12 +769,13 @@ export default function ReportsHub({
         const partyName = selectedParty?.name || selectedParty?.company_name || (ledgerPartyType === 'customer' ? 'Customer Account' : 'Supplier Account');
         const partyPhone = selectedParty?.mobile_no || selectedParty?.phone || '—';
         const partyAddress = selectedParty?.address || '—';
+        const partyEmail = selectedParty?.email || '';
         const partyGst = selectedParty?.gst_in || selectedParty?.gst_number || selectedParty?.tax_number || '';
-        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
-        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
-        const storePhone = tenant?.phone || '9939175603, 9430472515';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC';
-        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+        const storeName = tenant?.name || '';
+        const storeAddress = tenant?.address || '';
+        const storePhone = tenant?.phone || '';
+        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeEmail = tenant?.email || '';
 
         return (
           <div className="space-y-4">
@@ -878,6 +895,12 @@ export default function ReportsHub({
                         <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
                         <span className="font-mono text-black">{partyPhone}</span>
                       </div>
+                      {partyEmail && (
+                        <div className="flex items-center">
+                          <span className="w-28 font-bold text-black shrink-0">Email:-</span>
+                          <span className="font-mono text-black lowercase">{partyEmail}</span>
+                        </div>
+                      )}
                       {partyGst && (
                         <div className="flex items-center">
                           <span className="w-28 font-bold text-black shrink-0">GST No:-</span>
@@ -893,7 +916,7 @@ export default function ReportsHub({
                       <div className="flex items-center">
                         <span className="w-28 font-bold text-red-600 shrink-0">Statement Date:-</span>
                         <span className="font-bold text-red-600 font-mono">
-                          {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {formatDateDMY(new Date())}
                         </span>
                       </div>
                     </td>
@@ -941,7 +964,7 @@ export default function ReportsHub({
                           {ledgerTransactions.map((t, idx) => (
                             <tr key={idx} className="leading-snug">
                               <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{idx + 1}</td>
-                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{t.date}</td>
+                              <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{formatDateDMY(t.date)}</td>
                               <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'left' }} className="border border-black py-0 px-2.5 font-semibold uppercase">{t.type}</td>
                               <td style={{ border: '1px solid black', padding: '0px 10px', textAlign: 'center' }} className="border border-black py-0 px-2.5 text-center font-mono font-bold text-slate-900">{t.ref}</td>
                               <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3">{t.particulars}</td>
@@ -1245,6 +1268,7 @@ export default function ReportsHub({
         tenant={tenant}
         customers={customers}
         onClose={() => setSelectedInvoice(null)}
+        onEditSale={onEditSale}
       />
     </div>
   );

@@ -198,51 +198,7 @@ class SaleController extends Controller
 
                 // Maintain Stock: Deduct from inventory
                 if (! empty($it['item_id'])) {
-                    $itemModel = Item::where('tenant_id', $tenant->id)->find($it['item_id']);
-                    if ($itemModel) {
-                        $soldQty = (float)$it['quantity'];
-
-                        if ($itemModel->type === 'grouped' && ! empty($itemModel->grouped_items)) {
-                            // Deduct inventory for all child items in combo
-                            foreach ($itemModel->grouped_items as $child) {
-                                $childItemId = $child['item_id'] ?? null;
-                                $childQtyPerBundle = (float)($child['quantity'] ?? 1);
-                                $totalDeduct = $soldQty * $childQtyPerBundle;
-
-                                if ($childItemId) {
-                                    $childItem = Item::where('tenant_id', $tenant->id)->find($childItemId);
-                                    if ($childItem) {
-                                        $childItem->stock_quantity = max(0, (float)$childItem->stock_quantity - $totalDeduct);
-                                        $childItem->save();
-
-                                        if ($branchId) {
-                                            $cStock = ItemStock::firstOrNew([
-                                                'tenant_id' => $tenant->id,
-                                                'branch_id' => $branchId,
-                                                'item_id' => $childItem->id,
-                                            ]);
-                                            $cStock->quantity = max(0, (float)($cStock->quantity ?? 0) - $totalDeduct);
-                                            $cStock->save();
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            // Standard general item deduction
-                            $itemModel->stock_quantity = max(0, (float)$itemModel->stock_quantity - $soldQty);
-                            $itemModel->save();
-
-                            if ($branchId) {
-                                $stockRec = ItemStock::firstOrNew([
-                                    'tenant_id' => $tenant->id,
-                                    'branch_id' => $branchId,
-                                    'item_id' => $itemModel->id,
-                                ]);
-                                $stockRec->quantity = max(0, (float)($stockRec->quantity ?? 0) - $soldQty);
-                                $stockRec->save();
-                            }
-                        }
-                    }
+                    $this->deductItemStock($tenant->id, $branchId, $it['item_id'], (float)$it['quantity']);
                 }
             }
 
@@ -253,5 +209,213 @@ class SaleController extends Controller
                 'sale' => $freshSale,
             ], 201);
         });
+    }
+
+    /**
+     * Update existing POS Sale / Bill.
+     */
+    public function update(Request $request, $id): JsonResponse
+    {
+        $tenant = $this->getCurrentTenant();
+
+        $validated = $request->validate([
+            'branch_id' => 'nullable|exists:branches,id',
+            'customer_id' => 'nullable|exists:customers,id',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'nullable|exists:items,id',
+            'items.*.item_name' => 'required|string',
+            'items.*.short_name' => 'nullable|string',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.discount_amount' => 'nullable|numeric|min:0',
+            'items.*.gst_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.tax_amount' => 'nullable|numeric|min:0',
+            'items.*.total_price' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'points_redeemed' => 'nullable|numeric|min:0',
+            'points_discount' => 'nullable|numeric|min:0',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'payment_method' => 'required|string',
+            'paid_amount' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        return DB::transaction(function () use ($tenant, $validated, $id) {
+            $sale = Sale::where('tenant_id', $tenant->id)
+                ->with('items')
+                ->findOrFail($id);
+
+            $oldBranchId = $sale->branch_id;
+            $newBranchId = $validated['branch_id'] ?? $oldBranchId;
+
+            // 1. Revert previous inventory deductions
+            foreach ($sale->items as $oldItem) {
+                if (! empty($oldItem->item_id)) {
+                    $this->revertItemStock($tenant->id, $oldBranchId, $oldItem->item_id, (float)$oldItem->quantity);
+                }
+            }
+
+            // 2. Delete old SaleItems
+            $sale->items()->delete();
+
+            // 3. Calculate new totals
+            $subtotal = 0;
+            foreach ($validated['items'] as $it) {
+                $lineGross = ((float)$it['unit_price'] * (float)$it['quantity']);
+                $lineDiscPct = isset($it['discount_percent']) ? (float)$it['discount_percent'] : 0;
+                $lineDiscAmt = isset($it['discount_amount'])
+                    ? (float)$it['discount_amount']
+                    : round(($lineGross * $lineDiscPct) / 100, 2);
+                $lineNet = max(0, $lineGross - $lineDiscAmt);
+                $subtotal += $lineNet;
+            }
+
+            $manualDiscount = (float) ($validated['discount_amount'] ?? 0);
+            $totalAmount = round(max(0, $subtotal - $manualDiscount), 2);
+
+            // 4. Update Sale record
+            $sale->update([
+                'branch_id' => $newBranchId,
+                'customer_id' => $validated['customer_id'] ?? null,
+                'subtotal' => $subtotal,
+                'discount_amount' => $manualDiscount,
+                'total_amount' => $totalAmount,
+                'payment_method' => $validated['payment_method'],
+                'paid_amount' => $validated['paid_amount'] ?? $totalAmount,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            // 5. Create new SaleItems and deduct new inventory
+            foreach ($validated['items'] as $it) {
+                $lineGross = ((float)$it['unit_price'] * (float)$it['quantity']);
+                $lineDiscPct = isset($it['discount_percent']) ? (float)$it['discount_percent'] : 0;
+                $lineDiscAmt = isset($it['discount_amount'])
+                    ? (float)$it['discount_amount']
+                    : round(($lineGross * $lineDiscPct) / 100, 2);
+                $lineNet = max(0, $lineGross - $lineDiscAmt);
+
+                SaleItem::create([
+                    'sale_id' => $sale->id,
+                    'item_id' => $it['item_id'] ?? null,
+                    'item_name' => $it['item_name'],
+                    'short_name' => $it['short_name'] ?? null,
+                    'unit_price' => $it['unit_price'],
+                    'discount_percent' => $lineDiscPct,
+                    'discount_amount' => $lineDiscAmt,
+                    'quantity' => $it['quantity'],
+                    'gst_percent' => 0.00,
+                    'tax_amount' => 0.00,
+                    'total_price' => $lineNet,
+                ]);
+
+                if (! empty($it['item_id'])) {
+                    $this->deductItemStock($tenant->id, $newBranchId, $it['item_id'], (float)$it['quantity']);
+                }
+            }
+
+            $freshSale = $sale->fresh(['customer', 'branch', 'items', 'tenant']);
+
+            return response()->json([
+                'message' => 'Invoice ' . $sale->invoice_no . ' updated successfully!',
+                'sale' => $freshSale,
+            ]);
+        });
+    }
+
+    /**
+     * Helper: Deduct stock from Item and Branch ItemStock
+     */
+    private function deductItemStock($tenantId, $branchId, $itemId, float $soldQty): void
+    {
+        $itemModel = Item::where('tenant_id', $tenantId)->find($itemId);
+        if (! $itemModel) return;
+
+        if ($itemModel->type === 'grouped' && ! empty($itemModel->grouped_items)) {
+            foreach ($itemModel->grouped_items as $child) {
+                $childItemId = $child['item_id'] ?? null;
+                $childQtyPerBundle = (float)($child['quantity'] ?? 1);
+                $totalDeduct = $soldQty * $childQtyPerBundle;
+
+                if ($childItemId) {
+                    $childItem = Item::where('tenant_id', $tenantId)->find($childItemId);
+                    if ($childItem) {
+                        $childItem->stock_quantity = max(0, (float)$childItem->stock_quantity - $totalDeduct);
+                        $childItem->save();
+
+                        if ($branchId) {
+                            $cStock = ItemStock::firstOrNew([
+                                'tenant_id' => $tenantId,
+                                'branch_id' => $branchId,
+                                'item_id' => $childItem->id,
+                            ]);
+                            $cStock->quantity = max(0, (float)($cStock->quantity ?? 0) - $totalDeduct);
+                            $cStock->save();
+                        }
+                    }
+                }
+            }
+        } else {
+            $itemModel->stock_quantity = max(0, (float)$itemModel->stock_quantity - $soldQty);
+            $itemModel->save();
+
+            if ($branchId) {
+                $stockRec = ItemStock::firstOrNew([
+                    'tenant_id' => $tenantId,
+                    'branch_id' => $branchId,
+                    'item_id' => $itemModel->id,
+                ]);
+                $stockRec->quantity = max(0, (float)($stockRec->quantity ?? 0) - $soldQty);
+                $stockRec->save();
+            }
+        }
+    }
+
+    /**
+     * Helper: Revert stock to Item and Branch ItemStock
+     */
+    private function revertItemStock($tenantId, $branchId, $itemId, float $qty): void
+    {
+        $itemModel = Item::where('tenant_id', $tenantId)->find($itemId);
+        if (! $itemModel) return;
+
+        if ($itemModel->type === 'grouped' && ! empty($itemModel->grouped_items)) {
+            foreach ($itemModel->grouped_items as $child) {
+                $childItemId = $child['item_id'] ?? null;
+                $childQtyPerBundle = (float)($child['quantity'] ?? 1);
+                $totalRevert = $qty * $childQtyPerBundle;
+
+                if ($childItemId) {
+                    $childItem = Item::where('tenant_id', $tenantId)->find($childItemId);
+                    if ($childItem) {
+                        $childItem->stock_quantity = (float)$childItem->stock_quantity + $totalRevert;
+                        $childItem->save();
+
+                        if ($branchId) {
+                            $cStock = ItemStock::firstOrNew([
+                                'tenant_id' => $tenantId,
+                                'branch_id' => $branchId,
+                                'item_id' => $childItem->id,
+                            ]);
+                            $cStock->quantity = (float)($cStock->quantity ?? 0) + $totalRevert;
+                            $cStock->save();
+                        }
+                    }
+                }
+            }
+        } else {
+            $itemModel->stock_quantity = (float)$itemModel->stock_quantity + $qty;
+            $itemModel->save();
+
+            if ($branchId) {
+                $stockRec = ItemStock::firstOrNew([
+                    'tenant_id' => $tenantId,
+                    'branch_id' => $branchId,
+                    'item_id' => $itemModel->id,
+                ]);
+                $stockRec->quantity = (float)($stockRec->quantity ?? 0) + $qty;
+                $stockRec->save();
+            }
+        }
     }
 }

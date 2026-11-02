@@ -38,7 +38,8 @@ import {
   MapPin,
   BellRing,
   Boxes,
-  ArrowRightLeft
+  ArrowRightLeft,
+  CheckCircle2
 } from 'lucide-react';
 import { hasPermission } from '../utils/permissions';
 

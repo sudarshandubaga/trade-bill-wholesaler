@@ -19,6 +19,7 @@ import {
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { formatDateDMY } from '../utils/dateHelper';
 
 export default function PurchaseManager({
   purchases = [],
@@ -332,7 +333,7 @@ export default function PurchaseManager({
                       <div className="font-mono font-bold text-slate-900 text-sm">{p.purchase_no}</div>
                       <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1 font-mono">
                         <Calendar className="w-3 h-3 text-slate-400" />
-                        <span>{p.purchase_date}</span>
+                        <span>{formatDateDMY(p.purchase_date || p.created_at)}</span>
                         {p.supplier_bill_no && <span>&bull; Bill: {p.supplier_bill_no}</span>}
                       </div>
                     </td>
@@ -697,11 +698,16 @@ export default function PurchaseManager({
 
       {/* View Bill Modal */}
       {viewingPurchase && (() => {
-        const storeName = tenant?.name || 'KRISHNA BOOK AGENCY';
-        const storeAddress = tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455';
-        const storePhone = tenant?.phone || '9939175603, 9430472515';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC';
-        const storeEmail = tenant?.email || 'krishnabookagency@gmail.com';
+        const storeName = tenant?.name || activeBranch?.name || '';
+        const storeAddress = tenant?.address || activeBranch?.address || '';
+        const storePhone = tenant?.phone || activeBranch?.phone || '';
+        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeEmail = tenant?.email || activeBranch?.email || '';
+
+        const party = supplierList.find((s) => String(s.id) === String(viewingPurchase.supplier_id)) || viewingPurchase.supplier;
+        const partyPhone = party?.phone || party?.mobile_no || '';
+        const partyAddress = party?.address || '';
+        const partyEmail = party?.email || '';
 
         const purchaseItems = viewingPurchase.items || [];
         const purchaseTotalQty = purchaseItems.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
@@ -799,12 +805,30 @@ export default function PurchaseManager({
                         </div>
                         <div className="flex items-center">
                           <span className="w-28 font-bold text-black shrink-0">Bill Date:-</span>
-                          <span className="font-medium text-black font-mono">{viewingPurchase.purchase_date}</span>
+                          <span className="font-medium text-black font-mono">{formatDateDMY(viewingPurchase.purchase_date || viewingPurchase.created_at)}</span>
                         </div>
                         <div className="flex items-start">
                           <span className="w-28 font-bold text-black shrink-0">Supplier/Pub:</span>
                           <span className="font-bold uppercase text-black">{viewingPurchase.supplier_name}</span>
                         </div>
+                        {partyAddress && (
+                          <div className="flex items-start">
+                            <span className="w-28 font-bold text-black shrink-0">Address:-</span>
+                            <span className="uppercase text-black">{partyAddress}</span>
+                          </div>
+                        )}
+                        {partyPhone && (
+                          <div className="flex items-center">
+                            <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
+                            <span className="font-mono text-black">{partyPhone}</span>
+                          </div>
+                        )}
+                        {partyEmail && (
+                          <div className="flex items-center">
+                            <span className="w-28 font-bold text-black shrink-0">Email:-</span>
+                            <span className="font-mono text-black lowercase">{partyEmail}</span>
+                          </div>
+                        )}
                         {viewingPurchase.supplier_bill_no && (
                           <div className="flex items-center">
                             <span className="w-28 font-bold text-black shrink-0">Supplier Inv:</span>

@@ -190,16 +190,35 @@ export function printElement(elementOrId, options = {}) {
     frameDoc.close();
 
     setTimeout(() => {
+      let afterPrintTriggered = false;
+      const triggerAfterPrint = () => {
+        if (afterPrintTriggered) return;
+        afterPrintTriggered = true;
+        if (typeof onAfterPrint === 'function') {
+          setTimeout(onAfterPrint, 250);
+        }
+      };
+
       try {
+        if (typeof onAfterPrint === 'function') {
+          try {
+            printFrame.contentWindow.onafterprint = triggerAfterPrint;
+            printFrame.contentWindow.addEventListener('afterprint', triggerAfterPrint);
+          } catch (_) {}
+          window.addEventListener('afterprint', triggerAfterPrint, { once: true });
+          window.addEventListener('focus', () => {
+            setTimeout(triggerAfterPrint, 400);
+          }, { once: true });
+        }
+
         printFrame.contentWindow.focus();
         printFrame.contentWindow.print();
-        if (onAfterPrint) {
-          setTimeout(onAfterPrint, 200);
-        }
       } catch (err) {
         console.warn('Iframe print failed, falling back to window.print():', err);
+        if (typeof onAfterPrint === 'function') {
+          window.addEventListener('afterprint', triggerAfterPrint, { once: true });
+        }
         window.print();
-        if (onAfterPrint) onAfterPrint();
       }
     }, 300);
   } catch (e) {
