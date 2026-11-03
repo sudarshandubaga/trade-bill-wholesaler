@@ -141,6 +141,8 @@ class TenantController extends Controller
 
         if (! empty($validated['expires_at'])) {
             $validated['expires_at'] = Carbon::parse($validated['expires_at']);
+        } else {
+            unset($validated['expires_at']);
         }
 
         $tenant->update($validated);

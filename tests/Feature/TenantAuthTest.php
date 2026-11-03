@@ -196,4 +196,54 @@ class TenantAuthTest extends TestCase
             $this->tenant->expires_at->toDateTimeString()
         );
     }
+
+    public function test_updating_store_settings_does_not_change_tenant_expiry_date(): void
+    {
+        $fixedExpiry = Carbon::parse('2029-01-15 14:30:00');
+        $this->tenant->update(['expires_at' => $fixedExpiry]);
+
+        $this->actingAs($this->tenant, 'web');
+
+        $response = $this->putJson('/api/settings', [
+            'name' => 'Updated Wholesale Center',
+            'phone' => '+91 9876543210',
+            'address' => 'Plot 45, Industrial Area, Pune',
+            'currency' => '₹',
+            'point_percentage' => 2.5,
+            'expires_at' => '2035-12-31 23:59:59', // should never override
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->tenant->refresh();
+        $this->assertEquals(
+            '2029-01-15 14:30:00',
+            $this->tenant->expires_at->toDateTimeString()
+        );
+        $this->assertEquals('Updated Wholesale Center', $this->tenant->name);
+    }
+
+    public function test_updating_tenant_without_expires_at_preserves_existing_expiry_date(): void
+    {
+        $fixedExpiry = Carbon::parse('2029-05-20 18:00:00');
+        $this->tenant->update(['expires_at' => $fixedExpiry]);
+
+        $this->actingAs($this->tenant, 'web');
+
+        $response = $this->putJson("/api/tenants/{$this->tenant->id}", [
+            'name' => 'Renamed Wholesale Enterprise',
+            'domain_name' => 'speedywheels',
+            'email' => 'owner@speedywheels.com',
+            'phone' => '+91 9999999999',
+            // expires_at omitted
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->tenant->refresh();
+        $this->assertEquals(
+            '2029-05-20 18:00:00',
+            $this->tenant->expires_at->toDateTimeString()
+        );
+    }
 }

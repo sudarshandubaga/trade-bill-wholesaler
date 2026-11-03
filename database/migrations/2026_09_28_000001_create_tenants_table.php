@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('currency', 10)->default('₹');
             $table->string('subscription_plan')->default('Annual Garage Pro');
             $table->decimal('subscription_price', 10, 2)->default(499.00);
-            $table->timestamp('expires_at');
+            $table->dateTime('expires_at')->nullable();
             $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();
