@@ -140,6 +140,9 @@ class ChallanController extends Controller
                         if ($validated['type'] === 'inward') {
                             // Inward: Add stock to branch
                             $item->stock_quantity = (float)$item->stock_quantity + $q;
+                            if ($r > 0) {
+                                $item->purchase_price = $r;
+                            }
                             $item->save();
 
                             $stock = ItemStock::firstOrNew([

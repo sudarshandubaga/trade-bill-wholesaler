@@ -345,5 +345,27 @@ class CreditDebitNoteAndVoucherApiTest extends TestCase
 
         $this->item->refresh();
         $this->assertEquals($initialStock + 15, (float) $this->item->stock_quantity);
+        $this->assertEquals(1800.00, (float) $this->item->purchase_price);
+    }
+
+    public function test_stock_reports_includes_item_code_and_accurate_valuation(): void
+    {
+        $this->actingAs($this->tenant, 'web');
+
+        $this->item->update([
+            'short_name' => 'WHEAT-50',
+            'stock_quantity' => 20,
+            'purchase_price' => 1500.00,
+            'price' => 2000.00,
+        ]);
+
+        $res = $this->getJson('/api/reports/stock');
+        $res->assertStatus(200);
+        $res->assertJsonFragment([
+            'short_name' => 'WHEAT-50',
+            'current_stock' => 20,
+            'purchase_valuation' => 30000.0,
+            'sale_valuation' => 40000.0,
+        ]);
     }
 }

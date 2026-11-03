@@ -399,20 +399,22 @@ class ReportController extends Controller
             }
 
             $currentStock = $branchId ? $branchStock : $totalStock;
-            $purchaseValuation = $currentStock * (float)$it->purchase_price;
+            $itemCost = (float)$it->purchase_price > 0 ? (float)$it->purchase_price : (float)$it->price;
+            $purchaseValuation = $currentStock * $itemCost;
             $saleValuation = $currentStock * (float)$it->price;
             $isLowStock = $currentStock <= (float)$it->min_stock_alert;
 
             return [
                 'id' => $it->id,
                 'name' => $it->name,
+                'short_name' => $it->short_name,
                 'barcode' => $it->barcode,
                 'category' => $it->category,
                 'brand' => $it->brand,
                 'hsn_sac' => $it->hsn_sac,
                 'unit' => $it->unit,
                 'type' => $it->type,
-                'purchase_price' => (float)$it->purchase_price,
+                'purchase_price' => $itemCost,
                 'sale_price' => (float)$it->price,
                 'current_stock' => $currentStock,
                 'min_stock_alert' => (float)$it->min_stock_alert,

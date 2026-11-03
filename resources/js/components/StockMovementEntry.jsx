@@ -196,8 +196,10 @@ export default function StockMovementEntry({
     setPopupProductSearchQuery(product.name || '');
     setIsPopupDropdownOpen(false);
 
-    const defaultRate = Number(product.purchase_price || product.price || 0);
-    setPopupRate(String(defaultRate));
+    const pPurchase = Number(product.purchase_price ?? 0);
+    const pPrice = Number(product.price ?? 0);
+    const defaultRate = pPurchase > 0 ? pPurchase : (pPrice > 0 ? pPrice : 0);
+    setPopupRate(defaultRate > 0 ? String(defaultRate) : '0');
 
     // Focus Qty
     setTimeout(() => {
@@ -269,9 +271,10 @@ export default function StockMovementEntry({
     const qty = parseFloat(popupQty);
     const validQty = (!isNaN(qty) && qty > 0) ? qty : 1;
     const rate = parseFloat(popupRate);
-    const validRate = (!isNaN(rate) && rate >= 0)
-      ? rate
-      : (Number(popupSelectedProduct.purchase_price || popupSelectedProduct.price || 0));
+    const pPurchase = Number(popupSelectedProduct.purchase_price ?? 0);
+    const pPrice = Number(popupSelectedProduct.price ?? 0);
+    const fallbackRate = pPurchase > 0 ? pPurchase : (pPrice > 0 ? pPrice : 0);
+    const validRate = (!isNaN(rate) && rate >= 0) ? rate : fallbackRate;
 
     const lineTotal = Math.round(validQty * validRate * 100) / 100;
 
@@ -299,7 +302,7 @@ export default function StockMovementEntry({
           {
             item_id: popupSelectedProduct.id,
             item_name: popupSelectedProduct.name,
-            sku: popupSelectedProduct.sku || popupSelectedProduct.code || '',
+            sku: popupSelectedProduct.short_name || popupSelectedProduct.sku || popupSelectedProduct.code || popupSelectedProduct.barcode || '',
             unit: popupSelectedProduct.unit || 'pcs',
             quantity: validQty,
             rate: validRate,
@@ -874,6 +877,12 @@ export default function StockMovementEntry({
                   <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto p-1.5 space-y-0.5 animate-in fade-in">
                     {popupFilteredProducts.map((p, idx) => {
                       const isHighlighted = idx === popupHighlightedIndex;
+                      const pPurchase = Number(p.purchase_price ?? 0);
+                      const pPrice = Number(p.price ?? 0);
+                      const displayPrice = pPurchase > 0 ? pPurchase : (pPrice > 0 ? pPrice : 0);
+                      const currentStock = Number(p.stock_quantity ?? p.stock ?? p.quantity ?? 0);
+                      const itemCode = p.short_name || p.barcode || p.sku || p.code || '';
+
                       return (
                         <div
                           key={p.id}
@@ -889,24 +898,28 @@ export default function StockMovementEntry({
                           <div>
                             <div className="font-bold">{p.name}</div>
                             <div
-                              className={`text-[10px] ${
+                              className={`text-[10px] flex items-center gap-1.5 ${
                                 isHighlighted ? 'text-slate-900/80' : 'text-slate-500'
                               }`}
                             >
-                              SKU: {p.sku || p.code || 'N/A'} &bull; {p.category || 'General'}
+                              {itemCode && (
+                                <span className="font-mono font-bold">
+                                  {itemCode} &bull;
+                                </span>
+                              )}
+                              <span>{p.category || 'General'}</span>
                             </div>
                           </div>
                           <div className="text-right">
                             <div className="font-mono font-bold">
-                              {currency}{' '}
-                              {Number(p.purchase_price || p.price || 0).toFixed(2)}
+                              {currency} {displayPrice.toFixed(2)}
                             </div>
                             <div
-                              className={`text-[10px] ${
-                                isHighlighted ? 'text-slate-900/80' : 'text-slate-500'
+                              className={`text-[10px] font-mono ${
+                                isHighlighted ? 'text-slate-900/90' : 'text-emerald-700 font-semibold'
                               }`}
                             >
-                              Stock: {p.stock ?? p.quantity ?? 0} {p.unit || 'pcs'}
+                              Stock: {currentStock} {p.unit || 'pcs'}
                             </div>
                           </div>
                         </div>
@@ -917,21 +930,34 @@ export default function StockMovementEntry({
               </div>
 
               {/* Selected Product Pill */}
-              {popupSelectedProduct && (
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-bold text-slate-900 block">{popupSelectedProduct.name}</span>
-                    <span className="text-[11px] text-slate-500">
-                      Standard Cost: {currency}{' '}
-                      {Number(popupSelectedProduct.purchase_price || popupSelectedProduct.price || 0).toFixed(2)}{' '}
-                      &bull; Available: {popupSelectedProduct.stock ?? popupSelectedProduct.quantity ?? 0} {popupSelectedProduct.unit || 'pcs'}
+              {popupSelectedProduct && (() => {
+                const selPurchase = Number(popupSelectedProduct.purchase_price ?? 0);
+                const selPrice = Number(popupSelectedProduct.price ?? 0);
+                const selDisplayPrice = selPurchase > 0 ? selPurchase : (selPrice > 0 ? selPrice : 0);
+                const selStock = Number(popupSelectedProduct.stock_quantity ?? popupSelectedProduct.stock ?? popupSelectedProduct.quantity ?? 0);
+                const selCode = popupSelectedProduct.short_name || popupSelectedProduct.barcode || popupSelectedProduct.sku || popupSelectedProduct.code || '';
+
+                return (
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-900 block">{popupSelectedProduct.name}</span>
+                        {selCode && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-bold">
+                            {selCode}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-600 font-mono mt-0.5 block">
+                        Item Price / Rate: <strong className="text-slate-900 font-bold">{currency} {selDisplayPrice.toFixed(2)}</strong> &bull; Current Available Stock: <strong className={selStock > 0 ? 'text-emerald-700 font-bold' : 'text-slate-500'}>{selStock} {popupSelectedProduct.unit || 'pcs'}</strong>
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold text-[10px]">
+                      Selected
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold text-[10px]">
-                    Selected
-                  </span>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Qty & Rate Fields */}
               <div className="grid grid-cols-2 gap-3">
@@ -961,7 +987,7 @@ export default function StockMovementEntry({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Unit Rate / Cost ({currency}) *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Unit Rate / Price ({currency}) *</label>
                   <input
                     ref={popupRateInputRef}
                     type="number"
@@ -982,6 +1008,23 @@ export default function StockMovementEntry({
                     }}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold text-xs focus:bg-white focus:border-amber-400 outline-none text-right"
                   />
+                </div>
+              </div>
+
+              {/* Live Calculated Stock Value */}
+              <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
+                    Calculated Inward Stock Value
+                  </span>
+                  <div className="text-[11px] text-slate-600 font-mono">
+                    {parseFloat(popupQty) || 0} {popupSelectedProduct?.unit || 'units'} &times; {currency} {(parseFloat(popupRate) || 0).toFixed(2)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-base font-black text-amber-950">
+                    {currency} {Math.max(0, Math.round((parseFloat(popupQty) || 0) * (parseFloat(popupRate) || 0) * 100) / 100).toFixed(2)}
+                  </span>
                 </div>
               </div>
 

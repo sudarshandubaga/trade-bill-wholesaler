@@ -83,6 +83,7 @@ export default function ReportsHub({
   const [ledgerData, setLedgerData] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [saleSearchTerm, setSaleSearchTerm] = useState('');
+  const [stockSearchTerm, setStockSearchTerm] = useState('');
 
   const handlePrintInvoice = (sale) => {
     if (onViewInvoice) {
@@ -145,13 +146,33 @@ export default function ReportsHub({
     });
   }, [saleReportData?.sales, saleSearchTerm]);
 
+  const filteredStockItems = React.useMemo(() => {
+    const list = stockData?.items || [];
+    const term = stockSearchTerm.toLowerCase().trim();
+    if (!term) return list;
+    return list.filter((it) => {
+      const name = String(it.name || '').toLowerCase();
+      const code = String(it.short_name || it.barcode || '').toLowerCase();
+      const cat = String(it.category || '').toLowerCase();
+      const brand = String(it.brand || '').toLowerCase();
+      const hsn = String(it.hsn_sac || '').toLowerCase();
+      return (
+        name.includes(term) ||
+        code.includes(term) ||
+        cat.includes(term) ||
+        brand.includes(term) ||
+        hsn.includes(term)
+      );
+    });
+  }, [stockData?.items, stockSearchTerm]);
+
   // Pagination hooks for report tables
   const purchasePagination = usePagination(purchaseReportData?.purchases || [], 25, [startDate, endDate]);
   const salePagination = usePagination(filteredSales, 25, [saleSearchTerm, startDate, endDate]);
   const daybookPagination = usePagination(daybookData?.entries || [], 25, [selectedDate]);
   const cashbookPagination = usePagination(cashbookData?.transactions || [], 25, [startDate, endDate]);
   const bankPagination = usePagination(bankData?.entries || [], 25, [startDate, endDate]);
-  const stockPagination = usePagination(stockData?.items || [], 25);
+  const stockPagination = usePagination(filteredStockItems, 25, [stockSearchTerm]);
 
   // Ledger party selection
   const [ledgerPartyType, setLedgerPartyType] = useState('customer'); // 'customer' or 'supplier'
@@ -838,13 +859,35 @@ export default function ReportsHub({
             <div className="text-xs text-slate-500 font-semibold">
               Live inventory valuation across all stores and warehouses
             </div>
-            <button
-              onClick={() => setIsDumpModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold cursor-pointer transition-all shadow-xs"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Record Stock Dump / Wastage / Damage</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-64 sm:w-80">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={stockSearchTerm}
+                  onChange={(e) => setStockSearchTerm(e.target.value)}
+                  placeholder="Search product name, code, category..."
+                  className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs focus:border-amber-400 outline-none transition-colors shadow-2xs"
+                />
+                {stockSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setStockSearchTerm('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => setIsDumpModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold cursor-pointer transition-all shadow-xs"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Record Stock Dump / Wastage / Damage</span>
+              </button>
+            </div>
           </div>
 
           {stockData?.summary && (
@@ -877,6 +920,14 @@ export default function ReportsHub({
           )}
 
           <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-xs">
+            {stockSearchTerm && (
+              <div className="px-5 py-2.5 bg-amber-50/70 border-b border-amber-200/60 flex items-center justify-between text-xs font-semibold text-amber-900">
+                <span>Showing matching stock items for "<strong>{stockSearchTerm}</strong>"</span>
+                <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded-md border border-amber-300 font-bold">
+                  {filteredStockItems.length} of {(stockData?.items || []).length} items
+                </span>
+              </div>
+            )}
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase font-mono tracking-wider border-b border-slate-200">
                 <tr>
@@ -920,7 +971,9 @@ export default function ReportsHub({
                 {stockPagination.totalItems === 0 && (
                   <tr>
                     <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
-                      No stock items found.
+                      {stockSearchTerm
+                        ? `No stock items match search query "${stockSearchTerm}".`
+                        : 'No stock items found.'}
                     </td>
                   </tr>
                 )}

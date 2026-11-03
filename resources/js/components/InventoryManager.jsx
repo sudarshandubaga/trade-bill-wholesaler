@@ -175,12 +175,15 @@ export default function InventoryManager({
       transport_name: '',
       notes: '',
       status: 'completed',
-      items: itemList.slice(0, 1).map((i) => ({
-        item_id: i.id,
-        item_name: i.name,
-        quantity: 10,
-        rate: i.price || i.wholesale_price || 100
-      }))
+      items: itemList.slice(0, 1).map((i) => {
+        const itemPrice = Number(i.purchase_price) > 0 ? Number(i.purchase_price) : Number(i.price ?? 0);
+        return {
+          item_id: i.id,
+          item_name: i.name,
+          quantity: 10,
+          rate: itemPrice
+        };
+      })
     });
     setIsModalOpen(true);
   };
@@ -190,6 +193,7 @@ export default function InventoryManager({
     const it = items.find((i) => String(i.id) === String(itemId));
     if (!it) return;
 
+    const itemPrice = Number(it.purchase_price) > 0 ? Number(it.purchase_price) : Number(it.price ?? 0);
     setFormData((prev) => ({
       ...prev,
       items: [
@@ -198,7 +202,7 @@ export default function InventoryManager({
           item_id: it.id,
           item_name: it.name,
           quantity: 1,
-          rate: it.price || it.wholesale_price || 100
+          rate: itemPrice
         }
       ]
     }));
@@ -684,15 +688,16 @@ export default function InventoryManager({
                       <tr>
                         <th className="px-3 py-2 w-8">#</th>
                         <th className="px-3 py-2">Item Name</th>
-                        <th className="px-3 py-2 text-center w-32">Movement Qty</th>
-                        <th className="px-3 py-2 text-right w-32">Rate ({currency})</th>
+                        <th className="px-3 py-2 text-center w-28">Movement Qty</th>
+                        <th className="px-3 py-2 text-right w-28">Rate ({currency})</th>
+                        <th className="px-3 py-2 text-right w-28">Stock Value ({currency})</th>
                         <th className="px-3 py-2 text-center w-12">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 text-slate-800">
                       {formData.items.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-3 py-6 text-center text-slate-400">
+                          <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
                             No items added yet. Search and select above.
                           </td>
                         </tr>
@@ -721,6 +726,9 @@ export default function InventoryManager({
                                 onChange={(e) => updateItemLine(idx, 'rate', e.target.value)}
                                 className="w-24 px-2 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-right font-mono font-bold focus:bg-white"
                               />
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono font-bold text-slate-900">
+                              {(Number(it.quantity || 0) * Number(it.rate || 0)).toFixed(2)}
                             </td>
                             <td className="px-3 py-2 text-center">
                               <button
