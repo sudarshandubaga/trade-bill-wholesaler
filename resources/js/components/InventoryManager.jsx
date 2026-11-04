@@ -31,10 +31,10 @@ export default function InventoryManager({
   suppliers = [],
   items = [],
   tenant,
-  onStockUpdated = () => {},
-  onChallanUpdated = () => {},
+  onStockUpdated = () => { },
+  onChallanUpdated = () => { },
   onOpenAdd = null,
-  addToast = () => {}
+  addToast = () => { }
 }) {
   const currency = tenant?.currency || '₹';
 
@@ -306,7 +306,7 @@ export default function InventoryManager({
 
   return (
     <div className="space-y-6">
-      
+
       {/* Top Banner Card (Light Theme) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200/90 p-5 rounded-3xl shadow-xs">
         <div className="flex items-center gap-3">
@@ -360,32 +360,29 @@ export default function InventoryManager({
           <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-full sm:w-auto shadow-2xs gap-1">
             <button
               onClick={() => setActiveType('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'all'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'all'
                   ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               All Movements
             </button>
             <button
               onClick={() => setActiveType('inward')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'inward'
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'inward'
                   ? 'bg-emerald-600 text-white font-black shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <ArrowDownLeft className="w-3.5 h-3.5" />
               <span>Stock In</span>
             </button>
             <button
               onClick={() => setActiveType('transfer')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'transfer'
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'transfer'
                   ? 'bg-indigo-600 text-white font-black shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <ArrowRightLeft className="w-3.5 h-3.5" />
               <span>Transfers</span>
@@ -797,10 +794,10 @@ export default function InventoryManager({
         const targetBranchName = viewingMovement.target_branch?.name || 'Destination Branch';
 
         const movementPages = paginateInvoiceItems(movementItems, {
-          singlePageMax: 12,
-          firstPageMax: 10,
-          middlePageMax: 14,
-          lastPageMax: 10,
+          singlePageMax: 38,
+          firstPageMax: 38,
+          middlePageMax: 38,
+          lastPageMax: 38,
           qtyKey: 'quantity',
           rateKey: 'rate',
         });
@@ -895,8 +892,8 @@ export default function InventoryManager({
                           {isStockIn
                             ? 'STOCK INWARD RECEIPT (CONSIGNMENT)'
                             : isTransfer
-                            ? 'STOCK TRANSFER CHALLAN (INTER-BRANCH)'
-                            : 'STOCK ISSUE CHALLAN'}
+                              ? 'STOCK TRANSFER CHALLAN (INTER-BRANCH)'
+                              : 'STOCK ISSUE CHALLAN'}
                           {isMulti ? ` (PAGE ${page.pageNumber} OF ${page.totalPages})` : ''}
                         </div>
 

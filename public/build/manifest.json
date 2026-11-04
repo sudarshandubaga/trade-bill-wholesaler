@@ -46,7 +46,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-CtQJAxR6.js",
+    "file": "assets/app-CiBg8W4h.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -166,7 +166,7 @@
     ]
   },
   "resources/js/components/ChallanManager.jsx": {
-    "file": "assets/ChallanManager-DyB4-J5A.js",
+    "file": "assets/ChallanManager-D28vRcRE.js",
     "name": "ChallanManager",
     "src": "resources/js/components/ChallanManager.jsx",
     "isDynamicEntry": true,
@@ -236,7 +236,7 @@
     ]
   },
   "resources/js/components/InventoryManager.jsx": {
-    "file": "assets/InventoryManager-DWPpuVOV.js",
+    "file": "assets/InventoryManager-CA7XCJDJ.js",
     "name": "InventoryManager",
     "src": "resources/js/components/InventoryManager.jsx",
     "isDynamicEntry": true,
@@ -336,7 +336,7 @@
     ]
   },
   "resources/js/components/ReportsHub.jsx": {
-    "file": "assets/ReportsHub-CvmJcNrp.js",
+    "file": "assets/ReportsHub-FrgqKyXa.js",
     "name": "ReportsHub",
     "src": "resources/js/components/ReportsHub.jsx",
     "isDynamicEntry": true,
