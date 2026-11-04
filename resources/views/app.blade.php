@@ -138,6 +138,18 @@
                 color: #000000 !important;
                 overflow: visible !important;
             }
+
+            .invoice-page {
+                page-break-after: always !important;
+                break-after: page !important;
+                display: block !important;
+                width: 100% !important;
+            }
+
+            .invoice-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+            }
         }
     </style>
 

@@ -76,6 +76,145 @@ export function numberToWordsIndian(num) {
   return result;
 }
 
+/**
+ * Paginates an array of line items across A4 printed sheets with
+ * running Carried Forward (C/F) and Brought Forward (B/F) totals.
+ *
+ * @param {Array} items - List of items (with quantity, rate/unit_price, line total)
+ * @param {Object} options - Thresholds for single, first, middle, and last page capacities
+ * @returns {Array} List of page objects
+ */
+export function paginateInvoiceItems(items = [], options = {}) {
+  const {
+    singlePageMax = 12,
+    firstPageMax = 10,
+    middlePageMax = 14,
+    lastPageMax = 10,
+    qtyKey = 'quantity',
+    rateKey = 'unit_price',
+  } = options;
+
+  const list = Array.isArray(items) ? items : [];
+  const totalItems = list.length;
+
+  // Single page bill
+  if (totalItems <= singlePageMax) {
+    let runningQty = 0;
+    let runningAmt = 0;
+    const pageItems = list.map((it, idx) => {
+      const q = Number(it[qtyKey] ?? it.quantity ?? 0);
+      const r = Number(it[rateKey] ?? it.rate ?? it.purchase_price ?? it.price ?? 0);
+      const amt = Number(it.line_total ?? it.total_price ?? (q * r));
+      runningQty += q;
+      runningAmt += amt;
+      return {
+        ...it,
+        originalIndex: idx + 1,
+        resolvedQty: q,
+        resolvedRate: r,
+        resolvedAmount: amt,
+      };
+    });
+
+    return [{
+      pageNumber: 1,
+      totalPages: 1,
+      isFirstPage: true,
+      isLastPage: true,
+      hasBroughtForward: false,
+      hasCarriedForward: false,
+      broughtForwardQty: 0,
+      broughtForwardAmt: 0,
+      pageSubtotalQty: runningQty,
+      pageSubtotalAmt: runningAmt,
+      carriedForwardQty: runningQty,
+      carriedForwardAmt: runningAmt,
+      items: pageItems,
+    }];
+  }
+
+  // Multi-page bill with Carried Forward & Brought Forward
+  const pages = [];
+  let currentIndex = 0;
+  let runningQty = 0;
+  let runningAmt = 0;
+
+  while (currentIndex < totalItems) {
+    const isFirst = pages.length === 0;
+    const rem = totalItems - currentIndex;
+
+    let size;
+    if (isFirst) {
+      size = firstPageMax;
+      if (rem - size === 1) {
+        size = firstPageMax - 1;
+      }
+    } else {
+      if (rem <= lastPageMax) {
+        size = rem;
+      } else {
+        const potRem = rem - middlePageMax;
+        if (potRem > 0 && potRem < 3) {
+          size = Math.ceil(rem / 2);
+        } else {
+          size = middlePageMax;
+        }
+      }
+    }
+
+    const pageSlice = list.slice(currentIndex, currentIndex + size);
+    const bfQty = runningQty;
+    const bfAmt = runningAmt;
+
+    let pageSubtotalQty = 0;
+    let pageSubtotalAmt = 0;
+
+    const pageItems = pageSlice.map((it, i) => {
+      const globalIdx = currentIndex + i + 1;
+      const q = Number(it[qtyKey] ?? it.quantity ?? 0);
+      const r = Number(it[rateKey] ?? it.rate ?? it.purchase_price ?? it.price ?? 0);
+      const amt = Number(it.line_total ?? it.total_price ?? (q * r));
+      runningQty += q;
+      runningAmt += amt;
+      pageSubtotalQty += q;
+      pageSubtotalAmt += amt;
+      return {
+        ...it,
+        originalIndex: globalIdx,
+        resolvedQty: q,
+        resolvedRate: r,
+        resolvedAmount: amt,
+      };
+    });
+
+    currentIndex += pageSlice.length;
+    const isLast = currentIndex >= totalItems;
+
+    pages.push({
+      pageNumber: pages.length + 1,
+      totalPages: 0,
+      isFirstPage: isFirst,
+      isLastPage: isLast,
+      hasBroughtForward: !isFirst,
+      hasCarriedForward: !isLast,
+      broughtForwardQty: bfQty,
+      broughtForwardAmt: bfAmt,
+      pageSubtotalQty,
+      pageSubtotalAmt,
+      carriedForwardQty: runningQty,
+      carriedForwardAmt: runningAmt,
+      items: pageItems,
+    });
+  }
+
+  const totalPages = pages.length;
+  pages.forEach((p) => {
+    p.totalPages = totalPages;
+  });
+
+  return pages;
+}
+
 export function printElement(elementOrId, options = {}) {
   const {
     title = 'Document Print',
@@ -217,6 +356,16 @@ export function printElement(elementOrId, options = {}) {
             .print-header-cell {
               padding-top: 8px !important;
               padding-bottom: 8px !important;
+            }
+            .invoice-page {
+              page-break-after: always !important;
+              break-after: page !important;
+              display: block !important;
+              width: 100% !important;
+            }
+            .invoice-page:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
             }
             tr {
               page-break-inside: avoid !important;

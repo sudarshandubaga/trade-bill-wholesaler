@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
-import { printElement, numberToWordsIndian } from '../utils/printHelper';
+import { printElement, numberToWordsIndian, paginateInvoiceItems } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
 import PaginationControls from './PaginationControls';
 import { usePagination } from '../utils/usePagination';
@@ -737,6 +737,15 @@ export default function PurchaseManager({
         const purchaseFinal = Number(viewingPurchase.total_amount || purchaseGross);
         const purchaseDiscount = Math.max(0, purchaseGross - purchaseFinal);
 
+        const purchasePages = paginateInvoiceItems(purchaseItems, {
+          singlePageMax: 12,
+          firstPageMax: 10,
+          middlePageMax: 14,
+          lastPageMax: 10,
+          qtyKey: 'quantity',
+          rateKey: 'purchase_price',
+        });
+
         const handlePrint = () => {
           printElement('printable-purchase-bill-slip', {
             title: `Purchase Bill - ${viewingPurchase.purchase_no}`
@@ -787,225 +796,313 @@ export default function PurchaseManager({
                 id="printable-purchase-bill-slip"
                 className="p-6 sm:p-8 text-black bg-white max-w-full font-sans print:p-0 print:m-0"
               >
-                {/* Header Title Centered above the box */}
-                <div
-                  style={{
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    paddingBottom: '6px',
-                    color: '#000000',
-                    width: '100%',
-                    display: 'block'
-                  }}
-                  className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black"
-                >
-                  PURCHASE - INWARD INVOICE
-                </div>
+                {purchasePages.map((page, pageIdx) => {
+                  const isLast = page.isLastPage;
+                  const isMulti = purchasePages.length > 1;
 
-                {/* Main Master Table with Black Border */}
-                <table
-                  className="w-full border-collapse border-2 border-black"
-                  style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}
-                >
-                  <tbody>
-                    {/* Row 1: Header (Store Info Left & Bill Meta Right) */}
-                    <tr>
-                      {/* Left Store Info */}
-                      <td
-                        style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderRight: '2px solid black', borderBottom: '2px solid black' }}
-                        className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
+                  return (
+                    <React.Fragment key={page.pageNumber}>
+                      {pageIdx > 0 && (
+                        <div className="no-print my-6 py-2 px-4 border-y-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-500 rounded">
+                          <span>✂ Page Break</span>
+                          <span>Page {page.pageNumber} of {page.totalPages}</span>
+                        </div>
+                      )}
+
+                      <div
+                        className="invoice-page"
+                        style={{
+                          pageBreakAfter: isLast ? 'auto' : 'always',
+                          breakAfter: isLast ? 'auto' : 'page',
+                          display: 'block',
+                          width: '100%',
+                        }}
                       >
-                        <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
-                          {storeName}
-                        </h1>
-                        <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                          {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }} />}
-                          {storePhone && <div>Mobile No: {storePhone}</div>}
-                          {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
-                          {storeEmail && <div>Email: {storeEmail}</div>}
-                        </div>
-                      </td>
-
-                      {/* Right Bill Meta */}
-                      <td
-                        style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderBottom: '2px solid black' }}
-                        className="w-1/2 p-3 sm:p-4 align-top border-b-2 border-black text-xs space-y-1 print-header-cell"
-                      >
-                        <div className="flex items-center">
-                          <span className="w-28 text-red-600 font-bold shrink-0">Purchase No:-</span>
-                          <span className="font-bold text-red-600 font-mono text-sm">{viewingPurchase.purchase_no}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-28 font-bold text-black shrink-0">Bill Date:-</span>
-                          <span className="font-medium text-black font-mono">{formatDateDMY(viewingPurchase.purchase_date || viewingPurchase.created_at)}</span>
-                        </div>
-                        <div className="flex items-start">
-                          <span className="w-28 font-bold text-black shrink-0">Supplier/Pub:</span>
-                          <span className="font-bold uppercase text-black">{viewingPurchase.supplier_name}</span>
-                        </div>
-                        {partyAddress && (
-                          <div className="flex items-start">
-                            <span className="w-28 font-bold text-black shrink-0">Address:-</span>
-                            <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: partyAddress }} />
-                          </div>
-                        )}
-                        {partyPhone && (
-                          <div className="flex items-center">
-                            <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
-                            <span className="font-mono text-black">{partyPhone}</span>
-                          </div>
-                        )}
-                        {partyGst && (
-                          <div className="flex items-center">
-                            <span className="w-28 font-bold text-black shrink-0">GST No:-</span>
-                            <span className="font-mono text-black">{partyGst}</span>
-                          </div>
-                        )}
-                        {partyEmail && (
-                          <div className="flex items-center">
-                            <span className="w-28 font-bold text-black shrink-0">Email:-</span>
-                            <span className="font-mono text-black lowercase">{partyEmail}</span>
-                          </div>
-                        )}
-                        {viewingPurchase.supplier_bill_no && (
-                          <div className="flex items-center">
-                            <span className="w-28 font-bold text-black shrink-0">Supplier Inv:</span>
-                            <span className="font-mono text-slate-900 font-bold">{viewingPurchase.supplier_bill_no}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center">
-                          <span className="w-28 font-bold text-slate-600 shrink-0">Godown:-</span>
-                          <span className="text-slate-800">{viewingPurchase.branch?.name || 'Main Godown'}</span>
-                        </div>
-                      </td>
-                    </tr>
-
-                    {/* Row 2: Items Table with Full Borders */}
-                    <tr>
-                      <td colSpan={2} style={{ padding: 0, borderBottom: '2px solid black' }} className="p-0 border-b-2 border-black">
-                        <table
-                          className="w-full text-left border-collapse invoice-table"
-                          style={{ width: '100%', borderCollapse: 'collapse' }}
+                        {/* Header Title Centered above the box */}
+                        <div
+                          style={{
+                            textAlign: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '14px',
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            paddingBottom: '6px',
+                            color: '#000000',
+                            width: '100%',
+                            display: 'block'
+                          }}
+                          className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black"
                         >
-                          <thead>
-                            <tr className="bg-white text-black font-bold uppercase text-xs">
-                              <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '48px' }} className="border border-black py-0 px-2 text-center w-12">SN</th>
-                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Book Title / Item Description</th>
-                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '96px' }} className="border border-black py-0 px-3 text-right w-24">Rate</th>
-                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center', width: '80px' }} className="border border-black py-0 px-3 text-center w-20">Qty</th>
-                              <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '128px' }} className="border border-black py-0 px-3 text-right w-32">Amount</th>
+                          PURCHASE - INWARD INVOICE{isMulti ? ` (PAGE ${page.pageNumber} OF ${page.totalPages})` : ''}
+                        </div>
+
+                        {/* Main Master Table with Black Border */}
+                        <table
+                          className="w-full border-collapse border-2 border-black"
+                          style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}
+                        >
+                          <tbody>
+                            {/* Row 1: Header (Store Info Left & Bill Meta Right) */}
+                            <tr>
+                              {/* Left Store Info */}
+                              <td
+                                style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderRight: '2px solid black', borderBottom: '2px solid black' }}
+                                className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
+                              >
+                                <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
+                                  {storeName}
+                                </h1>
+                                <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
+                                  {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }} />}
+                                  {storePhone && <div>Mobile No: {storePhone}</div>}
+                                  {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
+                                  {storeEmail && <div>Email: {storeEmail}</div>}
+                                </div>
+                              </td>
+
+                              {/* Right Bill Meta */}
+                              <td
+                                style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderBottom: '2px solid black' }}
+                                className="w-1/2 p-3 sm:p-4 align-top border-b-2 border-black text-xs space-y-1 print-header-cell"
+                              >
+                                <div className="flex items-center">
+                                  <span className="w-28 text-red-600 font-bold shrink-0">Purchase No:-</span>
+                                  <span className="font-bold text-red-600 font-mono text-sm">{viewingPurchase.purchase_no}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="w-28 font-bold text-black shrink-0">Bill Date:-</span>
+                                  <span className="font-medium text-black font-mono">{formatDateDMY(viewingPurchase.purchase_date || viewingPurchase.created_at)}</span>
+                                </div>
+                                {isMulti && (
+                                  <div className="flex items-center">
+                                    <span className="w-28 font-bold text-black shrink-0">Page No:-</span>
+                                    <span className="font-bold text-black font-mono">{page.pageNumber} of {page.totalPages}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-start">
+                                  <span className="w-28 font-bold text-black shrink-0">Supplier/Pub:</span>
+                                  <span className="font-bold uppercase text-black">{viewingPurchase.supplier_name}</span>
+                                </div>
+                                {partyAddress && (
+                                  <div className="flex items-start">
+                                    <span className="w-28 font-bold text-black shrink-0">Address:-</span>
+                                    <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: partyAddress }} />
+                                  </div>
+                                )}
+                                {partyPhone && (
+                                  <div className="flex items-center">
+                                    <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
+                                    <span className="font-mono text-black">{partyPhone}</span>
+                                  </div>
+                                )}
+                                {partyGst && (
+                                  <div className="flex items-center">
+                                    <span className="w-28 font-bold text-black shrink-0">GST No:-</span>
+                                    <span className="font-mono text-black">{partyGst}</span>
+                                  </div>
+                                )}
+                                {partyEmail && (
+                                  <div className="flex items-center">
+                                    <span className="w-28 font-bold text-black shrink-0">Email:-</span>
+                                    <span className="font-mono text-black lowercase">{partyEmail}</span>
+                                  </div>
+                                )}
+                                {viewingPurchase.supplier_bill_no && (
+                                  <div className="flex items-center">
+                                    <span className="w-28 font-bold text-black shrink-0">Supplier Inv:</span>
+                                    <span className="font-mono text-slate-900 font-bold">{viewingPurchase.supplier_bill_no}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center">
+                                  <span className="w-28 font-bold text-slate-600 shrink-0">Godown:-</span>
+                                  <span className="text-slate-800">{viewingPurchase.branch?.name || 'Main Godown'}</span>
+                                </div>
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="text-xs text-black">
-                            {purchaseItems.map((item, idx) => {
-                              const rate = Number(item.purchase_price || 0);
-                              const qty = Number(item.quantity || 0);
-                              const lineAmt = Number(item.total_price || (qty * rate));
 
-                              return (
-                                <tr key={idx} className="leading-snug">
-                                  <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{idx + 1}</td>
-                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-semibold uppercase">{item.item_name}</td>
-                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">{rate.toFixed(2)}</td>
-                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono">{qty}</td>
-                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
-                                    {lineAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </td>
-                                </tr>
-                              );
-                            })}
+                            {/* Row 2: Items Table with Full Borders */}
+                            <tr>
+                              <td
+                                colSpan={2}
+                                style={{
+                                  padding: 0,
+                                  borderBottom: isLast ? '2px solid black' : 'none'
+                                }}
+                                className={`p-0 ${isLast ? 'border-b-2 border-black' : ''}`}
+                              >
+                                <table
+                                  className="w-full text-left border-collapse invoice-table"
+                                  style={{ width: '100%', borderCollapse: 'collapse' }}
+                                >
+                                  <thead>
+                                    <tr className="bg-white text-black font-bold uppercase text-xs">
+                                      <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '48px' }} className="border border-black py-0 px-2 text-center w-12">SN</th>
+                                      <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Book Title / Item Description</th>
+                                      <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '96px' }} className="border border-black py-0 px-3 text-right w-24">Rate</th>
+                                      <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center', width: '80px' }} className="border border-black py-0 px-3 text-center w-20">Qty</th>
+                                      <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '128px' }} className="border border-black py-0 px-3 text-right w-32">Amount</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="text-xs text-black">
+                                    {/* Brought Forward (B/F) Row */}
+                                    {page.hasBroughtForward && (
+                                      <tr className="bg-slate-50 print:bg-transparent font-bold text-xs">
+                                        <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono"></td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-bold uppercase tracking-wider text-slate-800">
+                                          « Balance Brought Forward (B / F)
+                                        </td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">
+                                          {page.broughtForwardQty}
+                                        </td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                                          {page.broughtForwardAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                    )}
 
-                            {purchaseItems.length === 0 && (
+                                    {page.items.map((item, idx) => {
+                                      const rate = Number(item.resolvedRate ?? item.purchase_price ?? 0);
+                                      const qty = Number(item.resolvedQty ?? item.quantity ?? 0);
+                                      const lineAmt = Number(item.resolvedAmount ?? (item.total_price || (qty * rate)));
+                                      const serialNo = item.originalIndex || (idx + 1);
+
+                                      return (
+                                        <tr key={serialNo} className="leading-snug">
+                                          <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">{serialNo}</td>
+                                          <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-semibold uppercase">{item.item_name}</td>
+                                          <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">{rate.toFixed(2)}</td>
+                                          <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono">{qty}</td>
+                                          <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
+                                            {lineAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+
+                                    {purchaseItems.length === 0 && (
+                                      <tr>
+                                        <td colSpan={5} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
+                                          No items recorded on this purchase.
+                                        </td>
+                                      </tr>
+                                    )}
+
+                                    {/* Carried Forward (C/F) Row */}
+                                    {page.hasCarriedForward && (
+                                      <tr className="bg-slate-50 print:bg-transparent font-bold text-xs">
+                                        <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-bold uppercase tracking-wider text-slate-800">
+                                          Total Carried Forward (C / F) »
+                                        </td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">
+                                          {page.carriedForwardQty}
+                                        </td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                                          {page.carriedForwardAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                    )}
+
+                                    {/* Total Row (Only on Last Page) */}
+                                    {isLast && (
+                                      <tr className="font-bold text-xs bg-white">
+                                        <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-bold uppercase tracking-wider">Total</td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">{purchaseTotalQty}</td>
+                                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                                          {purchaseGross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+
+                            {/* Row 3: Bottom Summary Section (Only on Last Page) */}
+                            {isLast && (
                               <tr>
-                                <td colSpan={5} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
-                                  No items recorded on this purchase.
+                                {/* Amount in Words (Left Side - 58%) */}
+                                <td
+                                  style={{ width: '58%', verticalAlign: 'top', padding: 0, borderRight: '2px solid black' }}
+                                  className="w-[58%] align-top p-0 border-r-2 border-black"
+                                >
+                                  <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse' }} className="w-full h-full border-collapse">
+                                    <tbody>
+                                      <tr>
+                                        <td
+                                          style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase' }}
+                                          className="border-b border-black px-3 py-0 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent"
+                                        >
+                                          Amount in Words
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td
+                                          style={{ padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', lineHeight: '1.4' }}
+                                          className="px-3 py-2 font-bold text-xs uppercase leading-relaxed text-black"
+                                        >
+                                          {numberToWordsIndian(purchaseFinal)}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </td>
+
+                                {/* Financial Summary Table (Right Side - 42%) */}
+                                <td
+                                  style={{ width: '42%', verticalAlign: 'top', padding: 0 }}
+                                  className="w-[42%] align-top p-0"
+                                >
+                                  <table style={{ width: '100%', borderCollapse: 'collapse' }} className="w-full text-xs border-collapse">
+                                    <tbody>
+                                      <tr>
+                                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Gross Amount</td>
+                                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                                          {purchaseGross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Discount</td>
+                                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                                          {purchaseDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <td style={{ padding: '0px 12px', fontWeight: '900', color: '#dc2626' }} className="px-3 py-0 font-black text-red-600">Final Amount</td>
+                                        <td style={{ padding: '0px 12px', fontWeight: '900', textAlign: 'right', color: '#dc2626', fontSize: '14px' }} className="px-3 py-0 font-black font-mono text-right text-red-600 text-sm">
+                                          {purchaseFinal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
                                 </td>
                               </tr>
                             )}
-
-                            {/* Total Row */}
-                            <tr className="font-bold text-xs bg-white">
-                              <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
-                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-bold uppercase tracking-wider">Total</td>
-                              <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
-                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">{purchaseTotalQty}</td>
-                              <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
-                                {purchaseGross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
                           </tbody>
                         </table>
-                      </td>
-                    </tr>
 
-                    {/* Row 3: Bottom Summary Section */}
-                    <tr>
-                      {/* Amount in Words (Left Side - 58%) */}
-                      <td
-                        style={{ width: '58%', verticalAlign: 'top', padding: 0, borderRight: '2px solid black' }}
-                        className="w-[58%] align-top p-0 border-r-2 border-black"
-                      >
-                        <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse' }} className="w-full h-full border-collapse">
-                          <tbody>
-                            <tr>
-                              <td
-                                style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase' }}
-                                className="border-b border-black px-3 py-0 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent"
-                              >
-                                Amount in Words
-                              </td>
-                            </tr>
-                            <tr>
-                              <td
-                                style={{ padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', lineHeight: '1.4' }}
-                                className="px-3 py-2 font-bold text-xs uppercase leading-relaxed text-black"
-                              >
-                                {numberToWordsIndian(purchaseFinal)}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </td>
-
-                      {/* Financial Summary Table (Right Side - 42%) */}
-                      <td
-                        style={{ width: '42%', verticalAlign: 'top', padding: 0 }}
-                        className="w-[42%] align-top p-0"
-                      >
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }} className="w-full text-xs border-collapse">
-                          <tbody>
-                            <tr>
-                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Gross Amount</td>
-                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
-                                {purchaseGross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Discount</td>
-                              <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
-                                {purchaseDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style={{ padding: '0px 12px', fontWeight: '900', color: '#dc2626' }} className="px-3 py-0 font-black text-red-600">Final Amount</td>
-                              <td style={{ padding: '0px 12px', fontWeight: '900', textAlign: 'right', color: '#dc2626', fontSize: '14px' }} className="px-3 py-0 font-black font-mono text-right text-red-600 text-sm">
-                                {purchaseFinal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                {/* Footer */}
-                <div className="flex justify-end items-center pt-2 px-1 text-[11px] text-slate-700 font-medium">
-                  <span className="text-red-600 font-black text-sm tracking-wider">TAX FREE</span>
-                </div>
+                        {/* Footer */}
+                        <div className="flex justify-between items-center pt-2 px-1 text-[11px] text-slate-700 font-medium">
+                          <div>
+                            {isMulti && (
+                              <span className="font-semibold text-slate-900">Page {page.pageNumber} of {page.totalPages}</span>
+                            )}
+                            {!isLast && (
+                              <span className="ml-2 italic font-semibold text-slate-600">[Continued on Page {page.pageNumber + 1}]</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-red-600 font-black text-sm tracking-wider">TAX FREE</span>
+                          </div>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
               </div>
             </div>
           </div>

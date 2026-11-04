@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { Printer, X, FileText, Edit, MessageCircle } from 'lucide-react';
-import { printElement } from '../utils/printHelper';
+import { printElement, paginateInvoiceItems } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
 
 /**
@@ -118,6 +118,17 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
   const finalAmount = Number(sale.total_amount || (grossAmount - Number(sale.discount_amount || 0)));
   const totalDiscount = Math.max(0, Math.round((grossAmount - finalAmount) * 100) / 100);
 
+  const pages = useMemo(() => {
+    return paginateInvoiceItems(items, {
+      singlePageMax: 12,
+      firstPageMax: 10,
+      middlePageMax: 14,
+      lastPageMax: 10,
+      qtyKey: 'quantity',
+      rateKey: 'unit_price',
+    });
+  }, [items]);
+
   const handlePrint = useCallback(() => {
     printElement('printable-receipt', {
       title: `Sale Invoice - ${sale.invoice_no}`,
@@ -192,6 +203,11 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
                 <span className="text-xs text-amber-300 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
                   {customerName}
                 </span>
+                {pages.length > 1 && (
+                  <span className="text-xs text-blue-300 font-bold bg-blue-500/20 px-2 py-0.5 rounded border border-blue-400/30">
+                    {pages.length} Pages (A4)
+                  </span>
+                )}
               </div>
               <span className="text-[11px] text-slate-400">Official Wholesale Invoice Preview</span>
             </div>
@@ -245,230 +261,317 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
           id="printable-receipt"
           className="p-6 sm:p-8 text-black bg-white max-w-full font-sans print:p-0 print:m-0"
         >
-          {/* Header Title Centered above the box */}
-          <div
-            style={{
-              textAlign: 'center',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              paddingBottom: '6px',
-              color: '#000000',
-              width: '100%',
-              display: 'block'
-            }}
-            className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black"
-          >
-            SALE - INVOICE
-          </div>
+          {pages.map((page, pageIdx) => {
+            const isLast = page.isLastPage;
+            const isMulti = pages.length > 1;
 
-          {/* Main Master Table with Black Border */}
-          <table
-            className="w-full border-collapse border-2 border-black"
-            style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}
-          >
-            <tbody>
-              {/* Row 1: Header (Store Info Left & Bill Meta Right) */}
-              <tr>
-                {/* Left Column: Store Details */}
-                <td
-                  style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderRight: '2px solid black', borderBottom: '2px solid black' }}
-                  className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
+            return (
+              <React.Fragment key={page.pageNumber}>
+                {/* On-screen visual page break indicator (hidden in print) */}
+                {pageIdx > 0 && (
+                  <div className="no-print my-6 py-2 px-4 border-y-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-500 rounded">
+                    <span>✂ Page Break</span>
+                    <span>Page {page.pageNumber} of {page.totalPages}</span>
+                  </div>
+                )}
+
+                <div
+                  className="invoice-page"
+                  style={{
+                    pageBreakAfter: isLast ? 'auto' : 'always',
+                    breakAfter: isLast ? 'auto' : 'page',
+                    display: 'block',
+                    width: '100%',
+                  }}
                 >
-                  <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
-                    {storeName}
-                  </h1>
-                  <div className="space-y-0.5 text-[14px] text-slate-800 text-center font-medium">
-                    {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }}></div>}
-                    {storePhone && <div>Mobile No: {storePhone}</div>}
-                    {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
-                    {storeEmail && <div>Email: {storeEmail}</div>}
-                  </div>
-                </td>
-
-                {/* Right Column: Bill Meta & Customer Info */}
-                <td
-                  style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderBottom: '2px solid black' }}
-                  className="w-1/2 p-3 sm:p-4 align-top border-b-2 border-black text-xs space-y-1 print-header-cell"
-                >
-                  <div className="flex items-center">
-                    <span className="w-24 text-red-600 font-bold shrink-0">Bill No:-</span>
-                    <span className="font-bold text-red-600 font-mono text-sm">{sale.invoice_no}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-24 font-bold text-black shrink-0">Bill Date:-</span>
-                    <span className="font-medium text-black font-mono">{invoiceDateStr}</span>
-                  </div>
-                  <div className="flex items-start">
-                    <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
-                    <span className="font-bold uppercase text-black">{customerName}</span>
-                  </div>
-                  {customerAddress && (
-                    <div className="flex items-start">
-                      <span className="w-24 font-bold text-black shrink-0">Address:-</span>
-                      <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: customerAddress }} />
-                    </div>
-                  )}
-                  {customerPhone && (
-                    <div className="flex items-center">
-                      <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
-                      <span className="font-mono text-black">{customerPhone}</span>
-                    </div>
-                  )}
-                  {customerGst && (
-                    <div className="flex items-center">
-                      <span className="w-24 font-bold text-black shrink-0">GST No:-</span>
-                      <span className="font-mono text-black">{customerGst}</span>
-                    </div>
-                  )}
-                  {customerEmail && (
-                    <div className="flex items-center">
-                      <span className="w-24 font-bold text-black shrink-0">Email:-</span>
-                      <span className="font-mono text-black lowercase">{customerEmail}</span>
-                    </div>
-                  )}
-                </td>
-              </tr>
-
-              {/* Row 2: Line Items Table (full width spanning 2 columns) */}
-              <tr>
-                <td colSpan={2} style={{ padding: 0, borderBottom: '2px solid black' }} className="p-0 border-b-2 border-black">
-                  <table
-                    className="w-full text-left border-collapse invoice-table"
-                    style={{ width: '100%', borderCollapse: 'collapse' }}
+                  {/* Header Title Centered above the box */}
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      paddingBottom: '6px',
+                      color: '#000000',
+                      width: '100%',
+                      display: 'block'
+                    }}
+                    className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black"
                   >
-                    <thead>
-                      <tr className="bg-white text-black font-bold uppercase text-xs">
-                        <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '48px' }} className="border border-black py-0 px-2 text-center w-12">SN</th>
-                        <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Book Name</th>
-                        <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '96px' }} className="border border-black py-0 px-3 text-right w-24">Rate</th>
-                        <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center', width: '80px' }} className="border border-black py-0 px-3 text-center w-20">Qty</th>
-                        <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '128px' }} className="border border-black py-0 px-3 text-right w-32">Amount</th>
+                    SALE - INVOICE{isMulti ? ` (PAGE ${page.pageNumber} OF ${page.totalPages})` : ''}
+                  </div>
+
+                  {/* Main Master Table with Black Border */}
+                  <table
+                    className="w-full border-collapse border-2 border-black"
+                    style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}
+                  >
+                    <tbody>
+                      {/* Row 1: Header (Store Info Left & Bill Meta Right) */}
+                      <tr>
+                        {/* Left Column: Store Details */}
+                        <td
+                          style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderRight: '2px solid black', borderBottom: '2px solid black' }}
+                          className="w-1/2 p-3 sm:p-4 align-top border-r-2 border-b-2 border-black text-center sm:text-left print-header-cell"
+                        >
+                          <h1 className="text-xl sm:text-2xl font-black uppercase text-[#1e3a8a] tracking-tight mb-1 text-center">
+                            {storeName}
+                          </h1>
+                          <div className="space-y-0.5 text-[14px] text-slate-800 text-center font-medium">
+                            {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }}></div>}
+                            {storePhone && <div>Mobile No: {storePhone}</div>}
+                            {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
+                            {storeEmail && <div>Email: {storeEmail}</div>}
+                          </div>
+                        </td>
+
+                        {/* Right Column: Bill Meta & Customer Info */}
+                        <td
+                          style={{ width: '50%', verticalAlign: 'top', padding: '12px 14px', borderBottom: '2px solid black' }}
+                          className="w-1/2 p-3 sm:p-4 align-top border-b-2 border-black text-xs space-y-1 print-header-cell"
+                        >
+                          <div className="flex items-center">
+                            <span className="w-24 text-red-600 font-bold shrink-0">Bill No:-</span>
+                            <span className="font-bold text-red-600 font-mono text-sm">{sale.invoice_no}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="w-24 font-bold text-black shrink-0">Bill Date:-</span>
+                            <span className="font-medium text-black font-mono">{invoiceDateStr}</span>
+                          </div>
+                          {isMulti && (
+                            <div className="flex items-center">
+                              <span className="w-24 font-bold text-black shrink-0">Page No:-</span>
+                              <span className="font-bold text-black font-mono">{page.pageNumber} of {page.totalPages}</span>
+                            </div>
+                          )}
+                          <div className="flex items-start">
+                            <span className="w-24 font-bold text-black shrink-0">Party Name:</span>
+                            <span className="font-bold uppercase text-black">{customerName}</span>
+                          </div>
+                          {customerAddress && (
+                            <div className="flex items-start">
+                              <span className="w-24 font-bold text-black shrink-0">Address:-</span>
+                              <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: customerAddress }} />
+                            </div>
+                          )}
+                          {customerPhone && (
+                            <div className="flex items-center">
+                              <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
+                              <span className="font-mono text-black">{customerPhone}</span>
+                            </div>
+                          )}
+                          {customerGst && (
+                            <div className="flex items-center">
+                              <span className="w-24 font-bold text-black shrink-0">GST No:-</span>
+                              <span className="font-mono text-black">{customerGst}</span>
+                            </div>
+                          )}
+                          {customerEmail && (
+                            <div className="flex items-center">
+                              <span className="w-24 font-bold text-black shrink-0">Email:-</span>
+                              <span className="font-mono text-black lowercase">{customerEmail}</span>
+                            </div>
+                          )}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="text-xs text-black">
-                      {items.map((item, idx) => {
-                        const rate = Number(item.unit_price || 0);
-                        const qty = Number(item.quantity || 0);
-                        const lineAmount = qty * rate;
 
-                        return (
-                          <tr key={idx} className="leading-snug">
-                            <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">
-                              {idx + 1}
-                            </td>
-                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-semibold uppercase">
-                              {item.item_name}
-                            </td>
-                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
-                              {rate.toFixed(2)}
-                            </td>
-                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono">
-                              {qty}
-                            </td>
-                            <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
-                              {lineAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {/* Row 2: Line Items Table (full width spanning 2 columns) */}
+                      <tr>
+                        <td
+                          colSpan={2}
+                          style={{
+                            padding: 0,
+                            borderBottom: isLast ? '2px solid black' : 'none'
+                          }}
+                          className={`p-0 ${isLast ? 'border-b-2 border-black' : ''}`}
+                        >
+                          <table
+                            className="w-full text-left border-collapse invoice-table"
+                            style={{ width: '100%', borderCollapse: 'collapse' }}
+                          >
+                            <thead>
+                              <tr className="bg-white text-black font-bold uppercase text-xs">
+                                <th style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center', width: '48px' }} className="border border-black py-0 px-2 text-center w-12">SN</th>
+                                <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 text-left">Book Name</th>
+                                <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '96px' }} className="border border-black py-0 px-3 text-right w-24">Rate</th>
+                                <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center', width: '80px' }} className="border border-black py-0 px-3 text-center w-20">Qty</th>
+                                <th style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right', width: '128px' }} className="border border-black py-0 px-3 text-right w-32">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody className="text-xs text-black">
+                              {/* Balance Brought Forward (B/F) Row */}
+                              {page.hasBroughtForward && (
+                                <tr className="bg-slate-50 print:bg-transparent font-bold text-xs">
+                                  <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono"></td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-bold uppercase tracking-wider text-slate-800">
+                                    « Balance Brought Forward (B / F)
+                                  </td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">
+                                    {page.broughtForwardQty}
+                                  </td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                                    {page.broughtForwardAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              )}
 
-                      {items.length === 0 && (
+                              {/* Page Items */}
+                              {page.items.map((item, idx) => {
+                                const rate = Number(item.resolvedRate ?? item.unit_price ?? 0);
+                                const qty = Number(item.resolvedQty ?? item.quantity ?? 0);
+                                const lineAmount = Number(item.resolvedAmount ?? (qty * rate));
+                                const serialNo = item.originalIndex || (idx + 1);
+
+                                return (
+                                  <tr key={serialNo} className="leading-snug">
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', textAlign: 'center' }} className="border border-black py-0 px-2 text-center font-mono">
+                                      {serialNo}
+                                    </td>
+                                    <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'left' }} className="border border-black py-0 px-3 font-semibold uppercase">
+                                      {item.item_name}
+                                    </td>
+                                    <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
+                                      {rate.toFixed(2)}
+                                    </td>
+                                    <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono">
+                                      {qty}
+                                    </td>
+                                    <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono">
+                                      {lineAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+
+                              {items.length === 0 && (
+                                <tr>
+                                  <td colSpan={5} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
+                                    No products listed on this invoice.
+                                  </td>
+                                </tr>
+                              )}
+
+                              {/* Total Carried Forward (C/F) Row */}
+                              {page.hasCarriedForward && (
+                                <tr className="bg-slate-50 print:bg-transparent font-bold text-xs">
+                                  <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-bold uppercase tracking-wider text-slate-800">
+                                    Total Carried Forward (C / F) »
+                                  </td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">
+                                    {page.carriedForwardQty}
+                                  </td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                                    {page.carriedForwardAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              )}
+
+                              {/* Grand Total Row (Only on Last Page) */}
+                              {isLast && (
+                                <tr className="font-bold text-xs bg-white">
+                                  <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-bold uppercase tracking-wider">
+                                    Total
+                                  </td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">
+                                    {totalQty}
+                                  </td>
+                                  <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
+                                    {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+
+                      {/* Row 3: Bottom Section (Amount in Words Left & Financial Summary Right) - Only on Last Page */}
+                      {isLast && (
                         <tr>
-                          <td colSpan={5} style={{ border: '1px solid black', padding: '8px', textAlign: 'center' }} className="border border-black py-2 text-center text-slate-400 text-xs">
-                            No products listed on this invoice.
+                          {/* Amount in Words (Left Side - 58%) */}
+                          <td
+                            style={{ width: '58%', verticalAlign: 'top', padding: 0, borderRight: '2px solid black' }}
+                            className="w-[58%] align-top p-0 border-r-2 border-black"
+                          >
+                            <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse' }} className="w-full h-full border-collapse">
+                              <tbody>
+                                <tr>
+                                  <td
+                                    style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase' }}
+                                    className="border-b border-black px-3 py-0 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent"
+                                  >
+                                    Amount in Words
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td
+                                    style={{ padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', lineHeight: '1.4' }}
+                                    className="px-3 py-2 font-bold text-xs uppercase leading-relaxed text-black"
+                                  >
+                                    {numberToWordsIndian(finalAmount)}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+
+                          {/* Gross Amount, Discount & Final Amount (Right Side - 42%) */}
+                          <td
+                            style={{ width: '42%', verticalAlign: 'top', padding: 0 }}
+                            className="w-[42%] align-top p-0"
+                          >
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }} className="w-full text-xs border-collapse">
+                              <tbody>
+                                <tr>
+                                  <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Gross Amount</td>
+                                  <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                                    {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Discount</td>
+                                  <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
+                                    {totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: '0px 12px', fontWeight: '900', color: '#dc2626' }} className="px-3 py-0 font-black text-red-600">Final Amount</td>
+                                  <td style={{ padding: '0px 12px', fontWeight: '900', textAlign: 'right', color: '#dc2626', fontSize: '14px' }} className="px-3 py-0 font-black font-mono text-right text-red-600 text-sm">
+                                    {finalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </td>
                         </tr>
                       )}
-
-                      {/* Total Row */}
-                      <tr className="font-bold text-xs bg-white">
-                        <td style={{ border: '1px solid black', padding: '0px 8px' }} className="border border-black py-0 px-2"></td>
-                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-bold uppercase tracking-wider">
-                          Total
-                        </td>
-                        <td style={{ border: '1px solid black', padding: '0px 12px' }} className="border border-black py-0 px-3"></td>
-                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'center' }} className="border border-black py-0 px-3 text-center font-mono font-bold">
-                          {totalQty}
-                        </td>
-                        <td style={{ border: '1px solid black', padding: '0px 12px', textAlign: 'right' }} className="border border-black py-0 px-3 text-right font-mono font-bold">
-                          {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                      </tr>
                     </tbody>
                   </table>
-                </td>
-              </tr>
 
-              {/* Row 3: Bottom Section (Amount in Words Left & Financial Summary Right) */}
-              <tr>
-                {/* Amount in Words (Left Side - 58%) */}
-                <td
-                  style={{ width: '58%', verticalAlign: 'top', padding: 0, borderRight: '2px solid black' }}
-                  className="w-[58%] align-top p-0 border-r-2 border-black"
-                >
-                  <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse' }} className="w-full h-full border-collapse">
-                    <tbody>
-                      <tr>
-                        <td
-                          style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase' }}
-                          className="border-b border-black px-3 py-0 font-bold text-xs uppercase text-black bg-slate-50 print:bg-transparent"
-                        >
-                          Amount in Words
-                        </td>
-                      </tr>
-                      <tr>
-                        <td
-                          style={{ padding: '8px 12px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', lineHeight: '1.4' }}
-                          className="px-3 py-2 font-bold text-xs uppercase leading-relaxed text-black"
-                        >
-                          {numberToWordsIndian(finalAmount)}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </td>
-
-                {/* Gross Amount, Discount & Final Amount (Right Side - 42%) */}
-                <td
-                  style={{ width: '42%', verticalAlign: 'top', padding: 0 }}
-                  className="w-[42%] align-top p-0"
-                >
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }} className="w-full text-xs border-collapse">
-                    <tbody>
-                      <tr>
-                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Gross Amount</td>
-                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
-                          {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold' }} className="border-b border-black px-3 py-0 font-bold text-black">Discount</td>
-                        <td style={{ borderBottom: '1px solid black', padding: '0px 12px', fontWeight: 'bold', textAlign: 'right' }} className="border-b border-black px-3 py-0 font-bold font-mono text-right text-black">
-                          {totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style={{ padding: '0px 12px', fontWeight: '900', color: '#dc2626' }} className="px-3 py-0 font-black text-red-600">Final Amount</td>
-                        <td style={{ padding: '0px 12px', fontWeight: '900', textAlign: 'right', color: '#dc2626', fontSize: '14px' }} className="px-3 py-0 font-black font-mono text-right text-red-600 text-sm">
-                          {finalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* Footer below the box */}
-          <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center pt-2 px-1 text-[11px] text-slate-700 font-medium gap-1">
-            <div className="sm:text-right">
-              <span className="text-red-600 font-black text-sm tracking-wider">TAX FREE</span>
-            </div>
-          </div>
-
+                  {/* Footer below the box */}
+                  <div className="flex justify-between items-center pt-2 px-1 text-[11px] text-slate-700 font-medium">
+                    <div>
+                      {isMulti && (
+                        <span className="font-semibold text-slate-900">Page {page.pageNumber} of {page.totalPages}</span>
+                      )}
+                      {!isLast && (
+                        <span className="ml-2 italic font-semibold text-slate-600">[Continued on Page {page.pageNumber + 1}]</span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-red-600 font-black text-sm tracking-wider">TAX FREE</span>
+                    </div>
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })}
         </div>
 
       </div>
