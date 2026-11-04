@@ -8,7 +8,10 @@ import { useState, useMemo, useEffect } from 'react';
  * @param {Array} resetDeps - Additional dependencies that should reset page to 1
  */
 export function usePagination(items = [], defaultPageSize = 25, resetDeps = []) {
-  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const initialSize = typeof defaultPageSize === 'object' && defaultPageSize !== null
+    ? (defaultPageSize.initialPageSize || defaultPageSize.pageSize || defaultPageSize.defaultPageSize || 25)
+    : (Number(defaultPageSize) || 25);
+  const [pageSize, setPageSize] = useState(initialSize);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Auto-reset to page 1 whenever items length drastically changes or resetDeps change

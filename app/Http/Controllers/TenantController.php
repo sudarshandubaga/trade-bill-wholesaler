@@ -37,6 +37,7 @@ class TenantController extends Controller
             'password' => 'required|string|min:6',
             'phone' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:500',
+            'gst_number' => 'nullable|string|max:50',
             'currency' => 'nullable|string|max:10',
             'subscription_plan' => 'nullable|string|max:100',
             'subscription_price' => 'nullable|numeric|min:0',
@@ -101,6 +102,7 @@ class TenantController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:500',
+            'gst_number' => 'nullable|string|max:50',
             'currency' => 'nullable|string|max:10',
             'point_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
@@ -109,6 +111,7 @@ class TenantController extends Controller
             'name' => $validated['name'],
             'phone' => $validated['phone'] ?? null,
             'address' => $validated['address'] ?? null,
+            'gst_number' => !empty($validated['gst_number']) ? strtoupper(trim($validated['gst_number'])) : null,
             'currency' => $validated['currency'] ?? '₹',
             'point_percentage' => isset($validated['point_percentage']) ? (float)$validated['point_percentage'] : 0.00,
         ]);
@@ -130,6 +133,7 @@ class TenantController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('tenants')->ignore($tenant->id)],
             'phone' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:500',
+            'gst_number' => 'nullable|string|max:50',
             'currency' => 'nullable|string|max:10',
             'point_percentage' => 'nullable|numeric|min:0|max:100',
             'subscription_plan' => 'nullable|string|max:100',

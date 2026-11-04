@@ -201,8 +201,7 @@ export default function CreditDebitNoteEntry({
       if (it.is_active === false) return false;
       const matchName = String(it.name || '').toLowerCase().includes(q);
       const matchSku = String(it.short_name || it.sku || it.code || '').toLowerCase().includes(q);
-      const matchCat = String(it.category || '').toLowerCase().includes(q);
-      return matchName || matchSku || matchCat;
+      return matchName || matchSku;
     }).slice(0, 35);
   }, [itemList, popupProductSearchQuery]);
 
@@ -962,7 +961,7 @@ export default function CreditDebitNoteEntry({
                                 isHighlighted ? 'text-slate-900/80' : 'text-slate-500'
                               }`}
                             >
-                              SKU: {p.sku || p.code || 'N/A'} &bull; {p.category || 'General'}
+                              SKU: {p.sku || p.code || p.short_name || 'N/A'}
                             </div>
                           </div>
                           <div className="text-right">
@@ -1103,6 +1102,7 @@ export default function CreditDebitNoteEntry({
         const partyPhone = party?.mobile_no || party?.phone || '';
         const partyAddress = party?.address || '';
         const partyEmail = party?.email || '';
+        const partyGst = party?.gstin || party?.gst_in || party?.tax_number || '';
 
         const handlePrintCreatedNote = () => {
           printElement('printable-credit-note-slip', {
@@ -1227,7 +1227,7 @@ export default function CreditDebitNoteEntry({
                           {storeName}
                         </h1>
                         <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                          {storeAddress && <div>{storeAddress}</div>}
+                          {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }} />}
                           {storePhone && <div>Mobile No: {storePhone}</div>}
                           {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
                           {storeEmail && <div>Email: {storeEmail}</div>}
@@ -1254,13 +1254,19 @@ export default function CreditDebitNoteEntry({
                         {partyAddress && (
                           <div className="flex items-start">
                             <span className="w-24 font-bold text-black shrink-0">Address:-</span>
-                            <span className="uppercase text-black">{partyAddress}</span>
+                            <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: partyAddress }} />
                           </div>
                         )}
                         {partyPhone && (
                           <div className="flex items-center">
                             <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
                             <span className="font-mono text-black">{partyPhone}</span>
+                          </div>
+                        )}
+                        {partyGst && (
+                          <div className="flex items-center">
+                            <span className="w-24 font-bold text-black shrink-0">GST No:-</span>
+                            <span className="font-mono text-black">{partyGst}</span>
                           </div>
                         )}
                         {partyEmail && (

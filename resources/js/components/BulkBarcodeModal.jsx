@@ -164,7 +164,6 @@ export default function BulkBarcodeModal({
             <thead className="bg-slate-50 text-slate-500 uppercase font-mono tracking-wider sticky top-0 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3">Item Name</th>
-                <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Barcode (Scan or Type)</th>
                 <th className="px-4 py-3 text-right">Quick Gen</th>
               </tr>
@@ -174,9 +173,6 @@ export default function BulkBarcodeModal({
                 <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                   <td className="px-4 py-2.5 font-bold text-slate-900">
                     {item.name}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-500">
-                    {item.category || 'General'}
                   </td>
                   <td className="px-4 py-2.5">
                     <input

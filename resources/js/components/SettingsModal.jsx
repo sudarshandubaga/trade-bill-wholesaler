@@ -26,6 +26,7 @@ export default function SettingsModal({
     name: '',
     phone: '',
     address: '',
+    gst_number: '',
     currency: '₹',
   });
   const nameInputRef = useRef(null);
@@ -42,6 +43,7 @@ export default function SettingsModal({
         name: tenant.name || '',
         phone: tenant.phone || '',
         address: tenant.address || '',
+        gst_number: tenant.gst_number || tenant.tax_number || tenant.gstin || '',
         currency: tenant.currency || '₹',
       });
     }
@@ -105,7 +107,7 @@ export default function SettingsModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-slate-700 block mb-1 font-bold text-[11px]">
                   Contact Phone
@@ -121,7 +123,20 @@ export default function SettingsModal({
 
               <div>
                 <label className="text-slate-700 block mb-1 font-bold text-[11px]">
-                  Billing Currency Symbol
+                  Store GSTIN / Tax No
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 10AYSPP3209J1ZC"
+                  value={formData.gst_number}
+                  onChange={(e) => setFormData({ ...formData, gst_number: e.target.value.toUpperCase() })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white font-mono uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-700 block mb-1 font-bold text-[11px]">
+                  Currency Symbol
                 </label>
                 <input
                   type="text"
@@ -134,12 +149,15 @@ export default function SettingsModal({
             </div>
 
             <div>
-              <label className="text-slate-700 block mb-1 font-bold text-[11px]">
-                Workshop Address
-              </label>
-              <input
-                type="text"
-                placeholder="Shop No., Street, City, State, PIN"
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-slate-700 block font-bold text-[11px]">
+                  Store Address
+                </label>
+                <span className="text-[10px] text-slate-500 font-mono">Supports &lt;br /&gt; and &lt;strong&gt;</span>
+              </div>
+              <textarea
+                rows={2}
+                placeholder="Shop No., Street, City, State, PIN (Use <br /> for new line)"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white text-xs"

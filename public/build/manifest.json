@@ -1,6 +1,43 @@
 {
+  "_SearchableSelect-A8RmAKyo.js": {
+    "file": "assets/SearchableSelect-A8RmAKyo.js",
+    "name": "SearchableSelect",
+    "imports": [
+      "_vendor-react-CZsXRJxG.js"
+    ]
+  },
+  "_dateHelper-XnaH8f0u.js": {
+    "file": "assets/dateHelper-XnaH8f0u.js",
+    "name": "dateHelper"
+  },
+  "_printHelper-CZi5g3ev.js": {
+    "file": "assets/printHelper-CZi5g3ev.js",
+    "name": "printHelper"
+  },
+  "_usePagination-9KQ7yjf1.js": {
+    "file": "assets/usePagination-9KQ7yjf1.js",
+    "name": "usePagination",
+    "imports": [
+      "_vendor-react-CZsXRJxG.js"
+    ]
+  },
+  "_vendor-7OC5HNn7.js": {
+    "file": "assets/vendor-7OC5HNn7.js",
+    "name": "vendor"
+  },
+  "_vendor-axios-BCn5QfZZ.js": {
+    "file": "assets/vendor-axios-BCn5QfZZ.js",
+    "name": "vendor-axios"
+  },
+  "_vendor-react-CZsXRJxG.js": {
+    "file": "assets/vendor-react-CZsXRJxG.js",
+    "name": "vendor-react",
+    "imports": [
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
   "resources/css/app.css": {
-    "file": "assets/app-55I3T6LP.css",
+    "file": "assets/app-dKQob9EZ.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,9 +46,387 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-ihN34hDO.js",
+    "file": "assets/app-D18DApDZ.js",
     "name": "app",
     "src": "resources/js/app.jsx",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_vendor-7OC5HNn7.js"
+    ],
+    "dynamicImports": [
+      "resources/js/components/Dashboard.jsx",
+      "resources/js/components/POS.jsx",
+      "resources/js/components/ItemsServices.jsx",
+      "resources/js/components/CategoryManager.jsx",
+      "resources/js/components/AccountManager.jsx",
+      "resources/js/components/BrandManager.jsx",
+      "resources/js/components/HsnManager.jsx",
+      "resources/js/components/ChallanManager.jsx",
+      "resources/js/components/InventoryManager.jsx",
+      "resources/js/components/VoucherManager.jsx",
+      "resources/js/components/CreditDebitNoteManager.jsx",
+      "resources/js/components/CreditDebitNoteEntry.jsx",
+      "resources/js/components/StockMovementEntry.jsx",
+      "resources/js/components/PurchaseManager.jsx",
+      "resources/js/components/PurchaseEntry.jsx",
+      "resources/js/components/ReportsHub.jsx",
+      "resources/js/components/PaymentReminders.jsx",
+      "resources/js/components/BranchManagerModal.jsx",
+      "resources/js/components/UserManagerModal.jsx",
+      "resources/js/components/BarcodePrintingModal.jsx",
+      "resources/js/components/BulkBarcodeModal.jsx",
+      "resources/js/components/InvoiceReceiptModal.jsx",
+      "resources/js/components/SubscriptionModal.jsx",
+      "resources/js/components/SubscriptionLockScreen.jsx",
+      "resources/js/components/LoginScreen.jsx",
+      "resources/js/components/SettingsModal.jsx",
+      "resources/js/components/AuthModals.jsx"
+    ]
+  },
+  "resources/js/components/AccountManager.jsx": {
+    "file": "assets/AccountManager-CzrCCknl.js",
+    "name": "AccountManager",
+    "src": "resources/js/components/AccountManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/AuthModals.jsx": {
+    "file": "assets/AuthModals-wgNLREwe.js",
+    "name": "AuthModals",
+    "src": "resources/js/components/AuthModals.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/BarcodePrintingModal.jsx": {
+    "file": "assets/BarcodePrintingModal--E88rDdV.js",
+    "name": "BarcodePrintingModal",
+    "src": "resources/js/components/BarcodePrintingModal.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/BranchManagerModal.jsx": {
+    "file": "assets/BranchManagerModal-B-K4O1Ef.js",
+    "name": "BranchManagerModal",
+    "src": "resources/js/components/BranchManagerModal.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/BrandManager.jsx": {
+    "file": "assets/BrandManager-BGevAJaf.js",
+    "name": "BrandManager",
+    "src": "resources/js/components/BrandManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/BulkBarcodeModal.jsx": {
+    "file": "assets/BulkBarcodeModal-DfIji3N9.js",
+    "name": "BulkBarcodeModal",
+    "src": "resources/js/components/BulkBarcodeModal.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/CategoryManager.jsx": {
+    "file": "assets/CategoryManager-McQyd1Jz.js",
+    "name": "CategoryManager",
+    "src": "resources/js/components/CategoryManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/ChallanManager.jsx": {
+    "file": "assets/ChallanManager-B6XfR7-o.js",
+    "name": "ChallanManager",
+    "src": "resources/js/components/ChallanManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "resources/js/components/InventoryManager.jsx",
+      "_vendor-7OC5HNn7.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_usePagination-9KQ7yjf1.js"
+    ]
+  },
+  "resources/js/components/CreditDebitNoteEntry.jsx": {
+    "file": "assets/CreditDebitNoteEntry-DarI8Cbq.js",
+    "name": "CreditDebitNoteEntry",
+    "src": "resources/js/components/CreditDebitNoteEntry.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/CreditDebitNoteManager.jsx": {
+    "file": "assets/CreditDebitNoteManager-09MPRHgI.js",
+    "name": "CreditDebitNoteManager",
+    "src": "resources/js/components/CreditDebitNoteManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/Dashboard.jsx": {
+    "file": "assets/Dashboard-BiGSdtVf.js",
+    "name": "Dashboard",
+    "src": "resources/js/components/Dashboard.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/HsnManager.jsx": {
+    "file": "assets/HsnManager-oaquomBC.js",
+    "name": "HsnManager",
+    "src": "resources/js/components/HsnManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/InventoryManager.jsx": {
+    "file": "assets/InventoryManager-DlEy_Nnk.js",
+    "name": "InventoryManager",
+    "src": "resources/js/components/InventoryManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/InvoiceReceiptModal.jsx": {
+    "file": "assets/InvoiceReceiptModal-CKzdBEJC.js",
+    "name": "InvoiceReceiptModal",
+    "src": "resources/js/components/InvoiceReceiptModal.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/ItemsServices.jsx": {
+    "file": "assets/ItemsServices-DLJ42ARR.js",
+    "name": "ItemsServices",
+    "src": "resources/js/components/ItemsServices.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/LoginScreen.jsx": {
+    "file": "assets/LoginScreen-FtM3ofeI.js",
+    "name": "LoginScreen",
+    "src": "resources/js/components/LoginScreen.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/POS.jsx": {
+    "file": "assets/POS-DVFT6nlT.js",
+    "name": "POS",
+    "src": "resources/js/components/POS.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/PaymentReminders.jsx": {
+    "file": "assets/PaymentReminders-DIBZe4sy.js",
+    "name": "PaymentReminders",
+    "src": "resources/js/components/PaymentReminders.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/PurchaseEntry.jsx": {
+    "file": "assets/PurchaseEntry-Y0EE6RCk.js",
+    "name": "PurchaseEntry",
+    "src": "resources/js/components/PurchaseEntry.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/PurchaseManager.jsx": {
+    "file": "assets/PurchaseManager-CP7R8tRx.js",
+    "name": "PurchaseManager",
+    "src": "resources/js/components/PurchaseManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/ReportsHub.jsx": {
+    "file": "assets/ReportsHub-Dsd_r5wH.js",
+    "name": "ReportsHub",
+    "src": "resources/js/components/ReportsHub.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ],
+    "dynamicImports": [
+      "resources/js/components/InvoiceReceiptModal.jsx",
+      "resources/js/components/CreditDebitNoteManager.jsx",
+      "resources/js/components/InventoryManager.jsx"
+    ]
+  },
+  "resources/js/components/SettingsModal.jsx": {
+    "file": "assets/SettingsModal-CP9J--PT.js",
+    "name": "SettingsModal",
+    "src": "resources/js/components/SettingsModal.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/StockMovementEntry.jsx": {
+    "file": "assets/StockMovementEntry-PIl1nswb.js",
+    "name": "StockMovementEntry",
+    "src": "resources/js/components/StockMovementEntry.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/SubscriptionLockScreen.jsx": {
+    "file": "assets/SubscriptionLockScreen-DquWTbiP.js",
+    "name": "SubscriptionLockScreen",
+    "src": "resources/js/components/SubscriptionLockScreen.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/SubscriptionModal.jsx": {
+    "file": "assets/SubscriptionModal-BvjuBY0L.js",
+    "name": "SubscriptionModal",
+    "src": "resources/js/components/SubscriptionModal.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/UserManagerModal.jsx": {
+    "file": "assets/UserManagerModal-C7sH5YXK.js",
+    "name": "UserManagerModal",
+    "src": "resources/js/components/UserManagerModal.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
+  },
+  "resources/js/components/VoucherManager.jsx": {
+    "file": "assets/VoucherManager-BCkfuL5K.js",
+    "name": "VoucherManager",
+    "src": "resources/js/components/VoucherManager.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-react-CZsXRJxG.js",
+      "_vendor-axios-BCn5QfZZ.js",
+      "_SearchableSelect-A8RmAKyo.js",
+      "_printHelper-CZi5g3ev.js",
+      "_dateHelper-XnaH8f0u.js",
+      "_usePagination-9KQ7yjf1.js",
+      "_vendor-7OC5HNn7.js"
+    ]
   }
 }

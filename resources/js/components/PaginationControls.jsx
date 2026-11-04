@@ -2,14 +2,21 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 export default function PaginationControls({
-  currentPage = 1,
-  pageSize = 25,
-  totalItems = 0,
-  onPageChange = () => { },
-  onPageSizeChange = () => { },
+  pagination = null,
+  currentPage: propCurrentPage,
+  pageSize: propPageSize,
+  totalItems: propTotalItems,
+  onPageChange: propOnPageChange,
+  onPageSizeChange: propOnPageSizeChange,
   pageSizeOptions = [10, 25, 50, 100, 999999],
   className = ''
 }) {
+  const currentPage = pagination ? pagination.currentPage : (propCurrentPage ?? 1);
+  const pageSize = pagination ? pagination.pageSize : (propPageSize ?? 25);
+  const totalItems = pagination ? pagination.totalItems : (propTotalItems ?? 0);
+  const onPageChange = pagination ? pagination.setCurrentPage : (propOnPageChange || (() => { }));
+  const onPageSizeChange = pagination ? pagination.setPageSize : (propOnPageSizeChange || (() => { }));
+
   if (totalItems <= 0) return null;
 
   const isAll = pageSize >= 999999;

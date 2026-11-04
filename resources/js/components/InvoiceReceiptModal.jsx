@@ -89,11 +89,12 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
   const customerPhone = resolvedCustomer?.mobile_no || resolvedCustomer?.phone || sale.customer_phone || '';
   const customerAddress = [resolvedCustomer?.address, resolvedCustomer?.city, resolvedCustomer?.state].filter(Boolean).join(', ') || '';
   const customerEmail = resolvedCustomer?.email || sale.customer_email || '';
+  const customerGst = resolvedCustomer?.gstin || resolvedCustomer?.gst_in || resolvedCustomer?.tax_number || sale.customer_gstin || '';
 
   const storeName = tenant?.name || sale.branch?.name || '';
   const storeAddress = tenant?.address || sale.branch?.address || '';
   const storePhone = tenant?.phone || sale.branch?.phone || '';
-  const storeGst = tenant?.gst_number || tenant?.gstin || '';
+  const storeGst = tenant?.gst_number || tenant?.tax_number || tenant?.gstin || '';
   const storeEmail = tenant?.email || sale.branch?.email || '';
 
   const items = Array.isArray(sale.items) ? sale.items : (sale.items?.data || []);
@@ -293,13 +294,19 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
                   {customerAddress && (
                     <div className="flex items-start">
                       <span className="w-24 font-bold text-black shrink-0">Address:-</span>
-                      <span className="uppercase text-black">{customerAddress}</span>
+                      <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: customerAddress }} />
                     </div>
                   )}
                   {customerPhone && (
                     <div className="flex items-center">
                       <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
                       <span className="font-mono text-black">{customerPhone}</span>
+                    </div>
+                  )}
+                  {customerGst && (
+                    <div className="flex items-center">
+                      <span className="w-24 font-bold text-black shrink-0">GST No:-</span>
+                      <span className="font-mono text-black">{customerGst}</span>
                     </div>
                   )}
                   {customerEmail && (

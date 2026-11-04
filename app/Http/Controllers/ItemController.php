@@ -30,13 +30,7 @@ class ItemController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->query('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('short_name', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%")
-                  ->orWhere('brand', 'like', "%{$search}%")
-                  ->orWhere('category', 'like', "%{$search}%");
-            });
+            $query->where('short_name', 'like', "%{$search}%");
         }
 
         if ($request->filled('category') && $request->query('category') !== 'All') {

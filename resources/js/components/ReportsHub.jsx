@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   BarChart3,
   Calendar,
@@ -25,13 +25,16 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
-import InvoiceReceiptModal from './InvoiceReceiptModal';
-import CreditDebitNoteManager from './CreditDebitNoteManager';
-import InventoryManager from './InventoryManager';
 import { printElement, numberToWordsIndian } from '../utils/printHelper';
 import { formatDateDMY } from '../utils/dateHelper';
 import PaginationControls from './PaginationControls';
 import { usePagination } from '../utils/usePagination';
+import { TabLoadingSkeleton, ModalLoadingSkeleton } from './LoadingFallback';
+
+// Lazily loaded sub-modules in Reports
+const InvoiceReceiptModal = lazy(() => import('./InvoiceReceiptModal'));
+const CreditDebitNoteManager = lazy(() => import('./CreditDebitNoteManager'));
+const InventoryManager = lazy(() => import('./InventoryManager'));
 
 export default function ReportsHub({
   initialSubTab = 'sale', // 'sale', 'daybook', 'cashbook', 'bank', 'stock', 'ledger', 'credit_notes', 'debit_notes', 'stock_in', 'stock_transfer'
@@ -84,6 +87,7 @@ export default function ReportsHub({
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [saleSearchTerm, setSaleSearchTerm] = useState('');
   const [stockSearchTerm, setStockSearchTerm] = useState('');
+  const [ledgerSearchTerm, setLedgerSearchTerm] = useState('');
 
   const handlePrintInvoice = (sale) => {
     if (onViewInvoice) {
@@ -153,13 +157,11 @@ export default function ReportsHub({
     return list.filter((it) => {
       const name = String(it.name || '').toLowerCase();
       const code = String(it.short_name || it.barcode || '').toLowerCase();
-      const cat = String(it.category || '').toLowerCase();
       const brand = String(it.brand || '').toLowerCase();
       const hsn = String(it.hsn_sac || '').toLowerCase();
       return (
         name.includes(term) ||
         code.includes(term) ||
-        cat.includes(term) ||
         brand.includes(term) ||
         hsn.includes(term)
       );
@@ -420,11 +422,14 @@ export default function ReportsHub({
         {activeTab !== 'ledger' && (
           <div className="hidden print:block border-2 border-black p-4 mb-3">
             <div className="text-center">
-              <h1 className="text-2xl font-black uppercase text-[#1e3a8a]">{tenant?.name || 'KRISHNA BOOK AGENCY'}</h1>
-              <div className="text-xs text-slate-800 font-medium">
-                {tenant?.address || 'Prakash Nagar, Narkatiyaganj (Bihar) - 845455'} • Mobile: {tenant?.phone || '9939175603'}
+              <h1 className="text-2xl font-black uppercase text-[#1e3a8a]">{tenant?.name || ''}</h1>
+              <div className="text-xs text-slate-800 font-medium space-y-0.5">
+                {tenant?.address && <div dangerouslySetInnerHTML={{ __html: tenant.address }} />}
+                {tenant?.phone && <div>Mobile: {tenant.phone}</div>}
               </div>
-              <div className="text-xs font-mono font-bold mt-0.5">GST No. {tenant?.tax_number || tenant?.gst_number || '10AYSPP3209J1ZC'}</div>
+              {(tenant?.gst_number || tenant?.tax_number || tenant?.gstin) && (
+                <div className="text-xs font-mono font-bold mt-0.5">GST No. {tenant?.gst_number || tenant?.tax_number || tenant?.gstin}</div>
+              )}
               <div className="text-sm font-black uppercase tracking-wider mt-2 border-t border-black pt-1">
                 {activeTab.replace('_', ' ').toUpperCase()} AUDIT STATEMENT
               </div>
@@ -933,7 +938,6 @@ export default function ReportsHub({
                 <tr>
                   <th className="px-5 py-3">Product Name</th>
                   <th className="px-5 py-3">Item Code</th>
-                  <th className="px-5 py-3">Category</th>
                   <th className="px-5 py-3 text-center">Available Stock</th>
                   <th className="px-5 py-3 text-right">Cost Value</th>
                   <th className="px-5 py-3 text-right">Value</th>
@@ -945,7 +949,6 @@ export default function ReportsHub({
                   <tr key={it.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-3 font-bold text-slate-900">{it.name}</td>
                     <td className="px-5 py-3 font-mono text-[11px] text-amber-700 font-bold">{it.short_name || '-'}</td>
-                    <td className="px-5 py-3 text-slate-500">{it.category}</td>
                     <td className="px-5 py-3 text-center font-mono font-bold">
                       <span className={it.is_low_stock ? 'text-red-600 font-black' : 'text-emerald-700 font-black'}>
                         {it.current_stock} {it.unit}
@@ -992,7 +995,16 @@ export default function ReportsHub({
 
       {/* 7. PARTY LEDGER */}
       {activeTab === 'ledger' && (() => {
-        const ledgerTransactions = ledgerData?.transactions || [];
+        const rawTransactions = ledgerData?.transactions || [];
+        const ledgerTransactions = rawTransactions.filter((t) => {
+          if (!ledgerSearchTerm.trim()) return true;
+          const q = ledgerSearchTerm.toLowerCase().trim();
+          const matchSn = (t.short_names || []).some((sn) => String(sn).toLowerCase().includes(q));
+          const matchRef = String(t.ref || '').toLowerCase().includes(q);
+          const matchPart = String(t.particulars || '').toLowerCase().includes(q);
+          return matchSn || matchRef || matchPart;
+        });
+
         const ledgerOpeningBal = Number(ledgerData?.opening_balance || 0);
         const ledgerClosingBal = Number(ledgerData?.closing_balance || 0);
         const ledgerTotalDebit = ledgerTransactions.reduce((acc, t) => acc + Number(t.debit || 0), 0);
@@ -1006,11 +1018,11 @@ export default function ReportsHub({
         const partyPhone = selectedParty?.mobile_no || selectedParty?.phone || '—';
         const partyAddress = selectedParty?.address || '—';
         const partyEmail = selectedParty?.email || '';
-        const partyGst = selectedParty?.gst_in || selectedParty?.gst_number || selectedParty?.tax_number || '';
+        const partyGst = selectedParty?.gst_in || selectedParty?.gst_number || selectedParty?.tax_number || selectedParty?.gstin || '';
         const storeName = tenant?.name || '';
         const storeAddress = tenant?.address || '';
         const storePhone = tenant?.phone || '';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeGst = tenant?.gst_number || tenant?.tax_number || tenant?.gstin || '';
         const storeEmail = tenant?.email || '';
 
         return (
@@ -1062,6 +1074,31 @@ export default function ReportsHub({
                 />
               </div>
 
+              <div className="w-56">
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Search by Short Name / Ref
+                </label>
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by short name..."
+                    value={ledgerSearchTerm}
+                    onChange={(e) => setLedgerSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-7 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:bg-white focus:border-amber-400 outline-none"
+                  />
+                  {ledgerSearchTerm && (
+                    <button
+                      onClick={() => setLedgerSearchTerm('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {ledgerData && (
                 <div className="ml-auto flex items-center gap-4 font-mono text-xs">
                   <div className="text-slate-600">Opening Balance: <span className="font-bold text-slate-900">{currency} {ledgerOpeningBal.toFixed(2)}</span></div>
@@ -1107,7 +1144,7 @@ export default function ReportsHub({
                         {storeName}
                       </h1>
                       <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                        {storeAddress && <div>{storeAddress}</div>}
+                        {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }} />}
                         {storePhone && <div>Mobile No: {storePhone}</div>}
                         {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
                         {storeEmail && <div>Email: {storeEmail}</div>}
@@ -1125,7 +1162,7 @@ export default function ReportsHub({
                       </div>
                       <div className="flex items-start">
                         <span className="w-28 font-bold text-black shrink-0">Address:-</span>
-                        <span className="uppercase text-black">{partyAddress}</span>
+                        <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: partyAddress }} />
                       </div>
                       <div className="flex items-center">
                         <span className="w-28 font-bold text-black shrink-0">Mobile No:-</span>
@@ -1434,75 +1471,87 @@ export default function ReportsHub({
 
       {/* 8. CREDIT NOTES REGISTER REPORT */}
       {activeTab === 'credit_notes' && (
-        <CreditDebitNoteManager
-          fixedType="credit_note"
-          notes={creditDebitNotes}
-          customers={customers}
-          suppliers={suppliers}
-          branches={branches}
-          items={items}
-          tenant={tenant}
-          onNoteUpdated={onDataUpdated}
-          onOpenAdd={() => onNavigateTab('credit_note_entry')}
-          addToast={addToast}
-        />
+        <Suspense fallback={<TabLoadingSkeleton />}>
+          <CreditDebitNoteManager
+            fixedType="credit_note"
+            notes={creditDebitNotes}
+            customers={customers}
+            suppliers={suppliers}
+            branches={branches}
+            items={items}
+            tenant={tenant}
+            onNoteUpdated={onDataUpdated}
+            onOpenAdd={() => onNavigateTab('credit_note_entry')}
+            addToast={addToast}
+          />
+        </Suspense>
       )}
 
       {/* 9. DEBIT NOTES REGISTER REPORT */}
       {activeTab === 'debit_notes' && (
-        <CreditDebitNoteManager
-          fixedType="debit_note"
-          notes={creditDebitNotes}
-          customers={customers}
-          suppliers={suppliers}
-          branches={branches}
-          items={items}
-          tenant={tenant}
-          onNoteUpdated={onDataUpdated}
-          onOpenAdd={() => onNavigateTab('debit_note_entry')}
-          addToast={addToast}
-        />
+        <Suspense fallback={<TabLoadingSkeleton />}>
+          <CreditDebitNoteManager
+            fixedType="debit_note"
+            notes={creditDebitNotes}
+            customers={customers}
+            suppliers={suppliers}
+            branches={branches}
+            items={items}
+            tenant={tenant}
+            onNoteUpdated={onDataUpdated}
+            onOpenAdd={() => onNavigateTab('debit_note_entry')}
+            addToast={addToast}
+          />
+        </Suspense>
       )}
 
       {/* 10. STOCK IN REGISTER REPORT */}
       {activeTab === 'stock_in' && (
-        <InventoryManager
-          fixedType="stock_in"
-          challans={challans}
-          branches={branches}
-          suppliers={suppliers}
-          items={items}
-          tenant={tenant}
-          onChallanUpdated={onDataUpdated}
-          onOpenAdd={() => onNavigateTab('stock_in_entry')}
-          addToast={addToast}
-        />
+        <Suspense fallback={<TabLoadingSkeleton />}>
+          <InventoryManager
+            fixedType="stock_in"
+            challans={challans}
+            branches={branches}
+            suppliers={suppliers}
+            items={items}
+            tenant={tenant}
+            onChallanUpdated={onDataUpdated}
+            onOpenAdd={() => onNavigateTab('stock_in_entry')}
+            addToast={addToast}
+          />
+        </Suspense>
       )}
 
       {/* 11. STOCK TRANSFER REGISTER REPORT */}
       {activeTab === 'stock_transfer' && (
-        <InventoryManager
-          fixedType="stock_transfer"
-          challans={challans}
-          branches={branches}
-          suppliers={suppliers}
-          items={items}
-          tenant={tenant}
-          onChallanUpdated={onDataUpdated}
-          onOpenAdd={() => onNavigateTab('stock_transfer_entry')}
-          addToast={addToast}
-        />
+        <Suspense fallback={<TabLoadingSkeleton />}>
+          <InventoryManager
+            fixedType="stock_transfer"
+            challans={challans}
+            branches={branches}
+            suppliers={suppliers}
+            items={items}
+            tenant={tenant}
+            onChallanUpdated={onDataUpdated}
+            onOpenAdd={() => onNavigateTab('stock_transfer_entry')}
+            addToast={addToast}
+          />
+        </Suspense>
       )}
       </div>
 
       {/* Printable Invoice Modal Fallback */}
-      <InvoiceReceiptModal
-        sale={selectedInvoice}
-        tenant={tenant}
-        customers={customers}
-        onClose={() => setSelectedInvoice(null)}
-        onEditSale={onEditSale}
-      />
+      {selectedInvoice && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <InvoiceReceiptModal
+            sale={selectedInvoice}
+            tenant={tenant}
+            customers={customers}
+            onClose={() => setSelectedInvoice(null)}
+            onEditSale={onEditSale}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

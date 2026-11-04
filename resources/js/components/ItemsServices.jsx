@@ -117,27 +117,24 @@ export default function ItemsServices({
   // Filter items
   const filteredItems = useMemo(() => {
     return itemList.filter((it) => {
-      const matchCat = selectedCategory === 'All' || it.category === selectedCategory;
       const term = searchTerm.toLowerCase().trim();
       const matchSearch =
         !term ||
-        it.name?.toLowerCase().includes(term) ||
-        (it.short_name && it.short_name.toLowerCase().includes(term)) ||
-        (it.category && it.category.toLowerCase().includes(term));
+        (it.short_name && it.short_name.toLowerCase().includes(term));
 
       const matchStatus =
         statusFilter === 'all' ||
         (statusFilter === 'active' && it.is_active !== false) ||
         (statusFilter === 'inactive' && it.is_active === false);
 
-      return matchCat && matchSearch && matchStatus;
+      return matchSearch && matchStatus;
     });
-  }, [itemList, selectedCategory, searchTerm, statusFilter]);
+  }, [itemList, searchTerm, statusFilter]);
 
-  // Reset page when search, category, status or page size changes
+  // Reset page when search, status or page size changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, statusFilter, pageSize]);
+  }, [searchTerm, statusFilter, pageSize]);
 
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
@@ -322,28 +319,15 @@ export default function ItemsServices({
       {/* Filters Bar */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-xs">
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Search */}
-          <div className="relative w-full sm:w-64">
+          {/* Search by Short Name */}
+          <div className="relative w-full sm:w-72">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search products by name, code, category..."
+              placeholder="Search by short name / item code..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-amber-400 outline-none transition-colors"
-            />
-          </div>
-
-          {/* Category Filter */}
-          <div className="w-48">
-            <SearchableSelect
-              options={['All', ...categoryOptions]}
-              value={selectedCategory}
-              onChange={(val) => setSelectedCategory(val || 'All')}
-              placeholder="All Categories"
-              searchPlaceholder="Filter category..."
-              size="sm"
-              theme="light"
             />
           </div>
 
@@ -449,7 +433,6 @@ export default function ItemsServices({
                 <tr>
                   <th className="px-4 py-3.5 w-12 text-center">#</th>
                   <th className="px-4 py-3.5">Product & Code</th>
-                  <th className="px-4 py-3.5">Category</th>
                   <th className="px-4 py-3.5">Rate</th>
                   <th className="px-4 py-3.5">Current Stock</th>
                   <th className="px-4 py-3.5 text-center w-28">Status</th>
@@ -459,7 +442,7 @@ export default function ItemsServices({
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {paginatedItems.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
+                    <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
                       <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                       <p className="font-semibold text-slate-600">No wholesale products found</p>
                       <p className="text-[11px] text-slate-400 mt-0.5">Try adjusting search filters or add a new item.</p>
@@ -491,12 +474,6 @@ export default function ItemsServices({
                               )}
                             </div>
                           </div>
-                        </td>
-
-                        <td className="px-4 py-3">
-                          <span className="px-2.5 py-1 rounded-lg font-semibold text-[11px] bg-slate-100 text-slate-700 border border-slate-200">
-                            {it.category || 'General'}
-                          </span>
                         </td>
 
                         <td className="px-4 py-3">
@@ -617,9 +594,6 @@ export default function ItemsServices({
                           </>
                         )}
                       </button>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                        {it.category || 'General'}
-                      </span>
                     </div>
                   </div>
 
@@ -871,47 +845,24 @@ export default function ItemsServices({
                 />
               </div>
 
-              {/* SKU & Category */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Item Code / SKU</label>
-                  <input
-                    ref={skuInputRef}
-                    type="text"
-                    placeholder="e.g. BR-25KG, PEN-BL-10"
-                    value={formData.short_name}
-                    onChange={(e) => setFormData({ ...formData, short_name: e.target.value.toUpperCase() })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        categoryTriggerRef.current?.focus();
-                        categoryTriggerRef.current?.click();
-                      }
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono uppercase focus:bg-white focus:border-amber-400 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
-                  <SearchableSelect
-                    triggerRef={categoryTriggerRef}
-                    onSelectNext={() => {
+              {/* Item Code / Short Name */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Item Short Name / Code</label>
+                <input
+                  ref={skuInputRef}
+                  type="text"
+                  placeholder="e.g. BR-25KG, PEN-BL-10 (Searched exclusively in Catalog & Ledger)"
+                  value={formData.short_name}
+                  onChange={(e) => setFormData({ ...formData, short_name: e.target.value.toUpperCase() })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
                       priceInputRef.current?.focus();
                       priceInputRef.current?.select?.();
-                    }}
-                    options={categoryOptions.map((c) => ({
-                      value: c,
-                      label: c
-                    }))}
-                    value={formData.category || ''}
-                    onChange={(val) => setFormData({ ...formData, category: val || 'General' })}
-                    placeholder="-- Select Category --"
-                    searchPlaceholder="Search category..."
-                    allowClear
-                    theme="light"
-                  />
-                </div>
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono uppercase focus:bg-white focus:border-amber-400 outline-none"
+                />
               </div>
 
               {/* Selling Rate & Unit */}

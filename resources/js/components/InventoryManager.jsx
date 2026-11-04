@@ -786,7 +786,7 @@ export default function InventoryManager({
         const storeName = tenant?.name || activeBranch?.name || '';
         const storeAddress = tenant?.address || activeBranch?.address || '';
         const storePhone = tenant?.phone || activeBranch?.phone || '';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeGst = tenant?.gst_number || tenant?.tax_number || tenant?.gstin || '';
         const storeEmail = tenant?.email || activeBranch?.email || '';
 
         const movementItems = viewingMovement.items || [];
@@ -872,7 +872,7 @@ export default function InventoryManager({
                           {storeName}
                         </h1>
                         <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                          {storeAddress && <div>{storeAddress}</div>}
+                          {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }} />}
                           {storePhone && <div>Mobile No: {storePhone}</div>}
                           {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
                           {storeEmail && <div>Email: {storeEmail}</div>}

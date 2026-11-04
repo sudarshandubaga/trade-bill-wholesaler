@@ -83,17 +83,21 @@ class PurchaseController extends Controller
 
         $validated = $request->validate([
             'branch_id' => 'nullable|exists:branches,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
+            'supplier_id' => 'required|exists:suppliers,id',
             'supplier_name' => 'nullable|string|max:255',
             'supplier_bill_no' => 'nullable|string|max:100',
+            'purchase_invoice_no' => 'nullable|string|max:100',
             'purchase_date' => 'required|date',
-            'purchase_type' => 'required|in:intra_state,inter_state,unregistered',
-            'payment_status' => 'required|in:Paid,Partial,Unpaid',
-            'payment_method' => 'required|string',
+            'purchase_type' => 'nullable|in:intra_state,inter_state,unregistered',
+            'payment_status' => 'nullable|in:Paid,Partial,Unpaid',
+            'payment_method' => 'nullable|string',
             'paid_amount' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
+            'amount' => 'nullable|numeric|min:0',
+            'total_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
-            'items' => 'required|array|min:1',
+            'remarks' => 'nullable|string|max:1000',
+            'items' => 'nullable|array',
             'items.*.item_id' => 'nullable|exists:items,id',
             'items.*.item_name' => 'required|string',
             'items.*.barcode' => 'nullable|string',
@@ -105,33 +109,44 @@ class PurchaseController extends Controller
         return DB::transaction(function () use ($tenant, $validated) {
             $branchId = $validated['branch_id'] ?? Branch::where('tenant_id', $tenant->id)->first()?->id;
 
+            $hasItems = !empty($validated['items']) && is_array($validated['items']) && count($validated['items']) > 0;
+            $supplierBillNo = $validated['supplier_bill_no'] ?? $validated['purchase_invoice_no'] ?? null;
+            $notes = $validated['notes'] ?? $validated['remarks'] ?? null;
+            $purchaseType = $validated['purchase_type'] ?? 'intra_state';
+            $paymentStatus = $validated['payment_status'] ?? 'Unpaid';
+            $paymentMethod = $validated['payment_method'] ?? 'Credit';
+
             $subtotal = 0;
             $totalTax = 0;
             $cgst = 0;
             $sgst = 0;
             $igst = 0;
 
-            $purchaseType = $validated['purchase_type'];
+            if ($hasItems) {
+                foreach ($validated['items'] as $it) {
+                    $lineSubtotal = (float)$it['quantity'] * (float)$it['purchase_price'];
+                    $subtotal += $lineSubtotal;
 
-            foreach ($validated['items'] as $it) {
-                $lineSubtotal = (float)$it['quantity'] * (float)$it['purchase_price'];
-                $subtotal += $lineSubtotal;
+                    $gstRate = ($purchaseType === 'unregistered') ? 0.00 : (float)($it['gst_percent'] ?? 0);
+                    $lineTax = ($lineSubtotal * $gstRate) / 100;
+                    $totalTax += $lineTax;
 
-                $gstRate = ($purchaseType === 'unregistered') ? 0.00 : (float)($it['gst_percent'] ?? 0);
-                $lineTax = ($lineSubtotal * $gstRate) / 100;
-                $totalTax += $lineTax;
-
-                if ($purchaseType === 'intra_state') {
-                    $cgst += ($lineTax / 2);
-                    $sgst += ($lineTax / 2);
-                } elseif ($purchaseType === 'inter_state') {
-                    $igst += $lineTax;
+                    if ($purchaseType === 'intra_state') {
+                        $cgst += ($lineTax / 2);
+                        $sgst += ($lineTax / 2);
+                    } elseif ($purchaseType === 'inter_state') {
+                        $igst += $lineTax;
+                    }
                 }
+                $discount = (float)($validated['discount_amount'] ?? 0);
+                $totalAmount = max(0, round($subtotal - $discount + $totalTax, 2));
+                $paidAmount = isset($validated['paid_amount']) ? (float)$validated['paid_amount'] : ($paymentStatus === 'Paid' ? $totalAmount : 0);
+            } else {
+                $subtotal = (float)($validated['amount'] ?? $validated['total_amount'] ?? 0);
+                $discount = (float)($validated['discount_amount'] ?? 0);
+                $totalAmount = max(0, round($subtotal - $discount, 2));
+                $paidAmount = isset($validated['paid_amount']) ? (float)$validated['paid_amount'] : ($paymentStatus === 'Paid' ? $totalAmount : 0);
             }
-
-            $discount = (float)($validated['discount_amount'] ?? 0);
-            $totalAmount = max(0, round($subtotal - $discount + $totalTax, 2));
-            $paidAmount = isset($validated['paid_amount']) ? (float)$validated['paid_amount'] : ($validated['payment_status'] === 'Paid' ? $totalAmount : 0);
 
             // Generate sequence purchase number: PUR-YYYYMM-XXXX
             $datePrefix = Carbon::now()->format('Ym');
@@ -159,7 +174,7 @@ class PurchaseController extends Controller
                 'supplier_id' => $validated['supplier_id'] ?? null,
                 'supplier_name' => $supplierName,
                 'purchase_no' => $purchaseNo,
-                'supplier_bill_no' => $validated['supplier_bill_no'] ?? null,
+                'supplier_bill_no' => $supplierBillNo,
                 'purchase_date' => $validated['purchase_date'],
                 'purchase_type' => $purchaseType,
                 'subtotal' => $subtotal,
@@ -170,48 +185,48 @@ class PurchaseController extends Controller
                 'discount_amount' => $discount,
                 'total_amount' => $totalAmount,
                 'paid_amount' => $paidAmount,
-                'payment_status' => $validated['payment_status'],
-                'payment_method' => $validated['payment_method'],
-                'notes' => $validated['notes'] ?? null,
+                'payment_status' => $paymentStatus,
+                'payment_method' => $paymentMethod,
+                'notes' => $notes,
                 'created_by' => $createdByName,
             ]);
 
-            // Save line items & INCREMENT STOCK
-            foreach ($validated['items'] as $it) {
-                $lineSubtotal = (float)$it['quantity'] * (float)$it['purchase_price'];
-                $gstRate = ($purchaseType === 'unregistered') ? 0.00 : (float)($it['gst_percent'] ?? 0);
-                $lineTax = ($lineSubtotal * $gstRate) / 100;
+            // Save line items & INCREMENT STOCK only if items provided
+            if ($hasItems) {
+                foreach ($validated['items'] as $it) {
+                    $lineSubtotal = (float)$it['quantity'] * (float)$it['purchase_price'];
+                    $gstRate = ($purchaseType === 'unregistered') ? 0.00 : (float)($it['gst_percent'] ?? 0);
+                    $lineTax = ($lineSubtotal * $gstRate) / 100;
 
-                PurchaseItem::create([
-                    'purchase_id' => $purchase->id,
-                    'item_id' => $it['item_id'] ?? null,
-                    'item_name' => $it['item_name'],
-                    'barcode' => $it['barcode'] ?? null,
-                    'quantity' => $it['quantity'],
-                    'purchase_price' => $it['purchase_price'],
-                    'gst_percent' => $gstRate,
-                    'tax_amount' => round($lineTax, 2),
-                    'total_price' => round($lineSubtotal + $lineTax, 2),
-                ]);
+                    PurchaseItem::create([
+                        'purchase_id' => $purchase->id,
+                        'item_id' => $it['item_id'] ?? null,
+                        'item_name' => $it['item_name'],
+                        'barcode' => $it['barcode'] ?? null,
+                        'quantity' => $it['quantity'],
+                        'purchase_price' => $it['purchase_price'],
+                        'gst_percent' => $gstRate,
+                        'tax_amount' => round($lineTax, 2),
+                        'total_price' => round($lineSubtotal + $lineTax, 2),
+                    ]);
 
-                // Maintain Stock: Increase item stock
-                if (! empty($it['item_id'])) {
-                    $itemModel = Item::where('tenant_id', $tenant->id)->find($it['item_id']);
-                    if ($itemModel) {
-                        $itemModel->stock_quantity = (float)$itemModel->stock_quantity + (float)$it['quantity'];
-                        // Also update purchase price if newer
-                        $itemModel->purchase_price = (float)$it['purchase_price'];
-                        $itemModel->save();
+                    // Maintain Stock: Increase item stock
+                    if (! empty($it['item_id'])) {
+                        $itemModel = Item::where('tenant_id', $tenant->id)->find($it['item_id']);
+                        if ($itemModel) {
+                            $itemModel->stock_quantity = (float)$itemModel->stock_quantity + (float)$it['quantity'];
+                            $itemModel->purchase_price = (float)$it['purchase_price'];
+                            $itemModel->save();
 
-                        // Update branch stock in item_stocks
-                        if ($branchId) {
-                            $stockRec = ItemStock::firstOrNew([
-                                'tenant_id' => $tenant->id,
-                                'branch_id' => $branchId,
-                                'item_id' => $itemModel->id,
-                            ]);
-                            $stockRec->quantity = (float)($stockRec->quantity ?? 0) + (float)$it['quantity'];
-                            $stockRec->save();
+                            if ($branchId) {
+                                $stockRec = ItemStock::firstOrNew([
+                                    'tenant_id' => $tenant->id,
+                                    'branch_id' => $branchId,
+                                    'item_id' => $itemModel->id,
+                                ]);
+                                $stockRec->quantity = (float)($stockRec->quantity ?? 0) + (float)$it['quantity'];
+                                $stockRec->save();
+                            }
                         }
                     }
                 }

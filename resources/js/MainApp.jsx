@@ -1,37 +1,41 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './components/Navbar';
-import Dashboard from './components/Dashboard';
-import POS from './components/POS';
-import ItemsServices from './components/ItemsServices';
-import CategoryManager from './components/CategoryManager';
-import AccountManager from './components/AccountManager';
-import BrandManager from './components/BrandManager';
-import HsnManager from './components/HsnManager';
-import ChallanManager from './components/ChallanManager';
-import InventoryManager from './components/InventoryManager';
-import VoucherManager from './components/VoucherManager';
-import CreditDebitNoteManager from './components/CreditDebitNoteManager';
-import CreditDebitNoteEntry from './components/CreditDebitNoteEntry';
-import StockMovementEntry from './components/StockMovementEntry';
-import PurchaseManager from './components/PurchaseManager';
-import ReportsHub from './components/ReportsHub';
-import PaymentReminders from './components/PaymentReminders';
+import Toast from './components/Toast';
+import { TabLoadingSkeleton, ModalLoadingSkeleton, ScreenLoadingSkeleton } from './components/LoadingFallback';
 import { hasPermission } from './utils/permissions';
 
-// Modals
-import BranchManagerModal from './components/BranchManagerModal';
-import UserManagerModal from './components/UserManagerModal';
-import BarcodePrintingModal from './components/BarcodePrintingModal';
-import BulkBarcodeModal from './components/BulkBarcodeModal';
-import InvoiceReceiptModal from './components/InvoiceReceiptModal';
-import SubscriptionModal from './components/SubscriptionModal';
-import SubscriptionLockScreen from './components/SubscriptionLockScreen';
-import LoginScreen from './components/LoginScreen';
-import SettingsModal from './components/SettingsModal';
-import AuthModals from './components/AuthModals';
-import Toast from './components/Toast';
+// Lazy-loaded Views & Route Modules
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const POS = lazy(() => import('./components/POS'));
+const ItemsServices = lazy(() => import('./components/ItemsServices'));
+const CategoryManager = lazy(() => import('./components/CategoryManager'));
+const AccountManager = lazy(() => import('./components/AccountManager'));
+const BrandManager = lazy(() => import('./components/BrandManager'));
+const HsnManager = lazy(() => import('./components/HsnManager'));
+const ChallanManager = lazy(() => import('./components/ChallanManager'));
+const InventoryManager = lazy(() => import('./components/InventoryManager'));
+const VoucherManager = lazy(() => import('./components/VoucherManager'));
+const CreditDebitNoteManager = lazy(() => import('./components/CreditDebitNoteManager'));
+const CreditDebitNoteEntry = lazy(() => import('./components/CreditDebitNoteEntry'));
+const StockMovementEntry = lazy(() => import('./components/StockMovementEntry'));
+const PurchaseManager = lazy(() => import('./components/PurchaseManager'));
+const PurchaseEntry = lazy(() => import('./components/PurchaseEntry'));
+const ReportsHub = lazy(() => import('./components/ReportsHub'));
+const PaymentReminders = lazy(() => import('./components/PaymentReminders'));
+
+// Lazy-loaded Modals & Fullscreen Screens
+const BranchManagerModal = lazy(() => import('./components/BranchManagerModal'));
+const UserManagerModal = lazy(() => import('./components/UserManagerModal'));
+const BarcodePrintingModal = lazy(() => import('./components/BarcodePrintingModal'));
+const BulkBarcodeModal = lazy(() => import('./components/BulkBarcodeModal'));
+const InvoiceReceiptModal = lazy(() => import('./components/InvoiceReceiptModal'));
+const SubscriptionModal = lazy(() => import('./components/SubscriptionModal'));
+const SubscriptionLockScreen = lazy(() => import('./components/SubscriptionLockScreen'));
+const LoginScreen = lazy(() => import('./components/LoginScreen'));
+const SettingsModal = lazy(() => import('./components/SettingsModal'));
+const AuthModals = lazy(() => import('./components/AuthModals'));
 
 import {
   RefreshCw,
@@ -84,6 +88,7 @@ const TAB_TO_PATH = {
   receipt_vouchers: '/receipt-vouchers',
   payment_vouchers: '/payment-vouchers',
   payment_reminders: '/payment-reminders',
+  purchase_entry: '/purchase-entry',
   purchases: '/purchases',
   reports: '/reports',
 };
@@ -116,6 +121,9 @@ const PATH_TO_TAB = {
   '/receipt-vouchers': 'receipt_vouchers',
   '/payment-vouchers': 'payment_vouchers',
   '/payment-reminders': 'payment_reminders',
+  '/purchase-entry': 'purchase_entry',
+  '/purchase_entry': 'purchase_entry',
+  '/purchases/new': 'purchase_entry',
   '/purchases': 'purchases',
   '/reports': 'reports',
 };
@@ -397,6 +405,11 @@ export default function MainApp() {
             e.preventDefault();
             e.stopPropagation();
             setCurrentTab('stock_in_entry');
+            return;
+          } else if (code === 'KeyP') {
+            e.preventDefault();
+            e.stopPropagation();
+            setCurrentTab('purchase_entry');
             return;
           }
         }
@@ -809,12 +822,14 @@ export default function MainApp() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-950 font-sans">
-        <LoginScreen
-          onLogin={handleLogin}
-          onForgotPassword={handleForgotPassword}
-          onResetPassword={handleResetPassword}
-          domainInfo={domainInfo}
-        />
+        <Suspense fallback={<ScreenLoadingSkeleton />}>
+          <LoginScreen
+            onLogin={handleLogin}
+            onForgotPassword={handleForgotPassword}
+            onResetPassword={handleResetPassword}
+            domainInfo={domainInfo}
+          />
+        </Suspense>
         <Toast toasts={toasts} onDismiss={dismissToast} />
       </div>
     );
@@ -824,12 +839,14 @@ export default function MainApp() {
   if (tenant?.is_expired) {
     return (
       <div className="min-h-screen bg-slate-50 font-sans">
-        <SubscriptionLockScreen
-          tenant={tenant}
-          onRefresh={fetchData}
-          onLogout={handleLogout}
-          addToast={addToast}
-        />
+        <Suspense fallback={<ScreenLoadingSkeleton />}>
+          <SubscriptionLockScreen
+            tenant={tenant}
+            onRefresh={fetchData}
+            onLogout={handleLogout}
+            addToast={addToast}
+          />
+        </Suspense>
         <Toast toasts={toasts} onDismiss={dismissToast} />
       </div>
     );
@@ -1003,7 +1020,7 @@ export default function MainApp() {
             </button>
           </div>
         ) : (
-          <>
+          <Suspense fallback={<TabLoadingSkeleton />}>
             {/* 1. POS Billing Terminal */}
             {currentTab === 'pos' && (
               <POS
@@ -1313,6 +1330,18 @@ export default function MainApp() {
               />
             )}
 
+            {/* Purchase Entry Module (Under Inventory Menu) */}
+            {currentTab === 'purchase_entry' && (
+              <PurchaseEntry
+                purchases={purchases}
+                suppliers={suppliers}
+                branches={branches}
+                tenant={tenant}
+                onPurchaseAdded={fetchData}
+                addToast={addToast}
+              />
+            )}
+
             {/* 12. Reports Hub (Purchases, Sales, Daybook, Cashbook, Bank Entry, Stock, Ledger, Credit/Debit Notes, Stock In/Transfer Registers) */}
             {currentTab === 'reports' && (
               <ReportsHub
@@ -1331,89 +1360,121 @@ export default function MainApp() {
                 onEditSale={handleStartEditSale}
               />
             )}
-          </>
+          </Suspense>
         )}
 
       </main>
 
       {/* MODAL: Printable Bill / Invoice Receipt */}
-      <InvoiceReceiptModal
-        sale={activeInvoice}
-        tenant={tenant}
-        customers={customers}
-        onClose={() => setActiveInvoice(null)}
-        onEditSale={handleStartEditSale}
-      />
+      {activeInvoice && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <InvoiceReceiptModal
+            sale={activeInvoice}
+            tenant={tenant}
+            customers={customers}
+            onClose={() => setActiveInvoice(null)}
+            onEditSale={handleStartEditSale}
+          />
+        </Suspense>
+      )}
 
       {/* MODAL: Branch / Store / Warehouse Manager */}
-      <BranchManagerModal
-        isOpen={branchModalOpen}
-        onClose={() => setBranchModalOpen(false)}
-        branches={branches}
-        activeBranch={activeBranch}
-        onBranchUpdated={fetchData}
-        onSelectBranch={handleSwitchBranch}
-        addToast={addToast}
-      />
+      {branchModalOpen && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <BranchManagerModal
+            isOpen={branchModalOpen}
+            onClose={() => setBranchModalOpen(false)}
+            branches={branches}
+            activeBranch={activeBranch}
+            onBranchUpdated={fetchData}
+            onSelectBranch={handleSwitchBranch}
+            addToast={addToast}
+          />
+        </Suspense>
+      )}
 
       {/* MODAL: Users, Roles & Permissions Matrix */}
-      <UserManagerModal
-        isOpen={userModalOpen}
-        onClose={() => setUserModalOpen(false)}
-        branches={branches}
-        addToast={addToast}
-      />
+      {userModalOpen && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <UserManagerModal
+            isOpen={userModalOpen}
+            onClose={() => setUserModalOpen(false)}
+            branches={branches}
+            addToast={addToast}
+          />
+        </Suspense>
+      )}
 
       {/* MODAL: Barcode Thermal & Sheet Label Printing */}
-      <BarcodePrintingModal
-        isOpen={barcodePrintModalOpen}
-        onClose={() => setBarcodePrintModalOpen(false)}
-        items={items}
-        tenant={tenant}
-      />
+      {barcodePrintModalOpen && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <BarcodePrintingModal
+            isOpen={barcodePrintModalOpen}
+            onClose={() => setBarcodePrintModalOpen(false)}
+            items={items}
+            tenant={tenant}
+          />
+        </Suspense>
+      )}
 
       {/* MODAL: Bulk Barcode Updates & Auto EAN Generation */}
-      <BulkBarcodeModal
-        isOpen={bulkBarcodeModalOpen}
-        onClose={() => setBulkBarcodeModalOpen(false)}
-        items={items}
-        onItemsUpdated={fetchData}
-        addToast={addToast}
-      />
+      {bulkBarcodeModalOpen && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <BulkBarcodeModal
+            isOpen={bulkBarcodeModalOpen}
+            onClose={() => setBulkBarcodeModalOpen(false)}
+            items={items}
+            onItemsUpdated={fetchData}
+            addToast={addToast}
+          />
+        </Suspense>
+      )}
 
       {/* MODAL: Subscription Details & Plan Status */}
-      <SubscriptionModal
-        isOpen={subscriptionModalOpen}
-        onClose={() => setSubscriptionModalOpen(false)}
-        tenant={tenant}
-        stats={stats}
-      />
+      {subscriptionModalOpen && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <SubscriptionModal
+            isOpen={subscriptionModalOpen}
+            onClose={() => setSubscriptionModalOpen(false)}
+            tenant={tenant}
+            stats={stats}
+          />
+        </Suspense>
+      )}
 
       {/* MODAL: Store Settings & Points */}
-      <SettingsModal
-        isOpen={settingsModalOpen}
-        onClose={() => setSettingsModalOpen(false)}
-        tenant={tenant}
-        onSaveSettings={handleSaveSettings}
-        isSaving={isSavingSettings}
-      />
+      {settingsModalOpen && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <SettingsModal
+            isOpen={settingsModalOpen}
+            onClose={() => setSettingsModalOpen(false)}
+            tenant={tenant}
+            onSaveSettings={handleSaveSettings}
+            isSaving={isSavingSettings}
+          />
+        </Suspense>
+      )}
 
       {/* MODAL: Change Password */}
-      <AuthModals
-        loginOpen={false}
-        changePasswordOpen={changePasswordModalOpen}
-        forgotPasswordOpen={forgotPasswordModalOpen}
-        onCloseAll={() => {
-          setLoginModalOpen(false);
-          setChangePasswordModalOpen(false);
-          setForgotPasswordModalOpen(false);
-        }}
-        onLogin={handleLogin}
-        onChangePassword={handleChangePassword}
-        onForgotPassword={handleForgotPassword}
-        onResetPassword={handleResetPassword}
-        activeTenant={tenant}
-      />
+      {(changePasswordModalOpen || forgotPasswordModalOpen) && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <AuthModals
+            loginOpen={false}
+            changePasswordOpen={changePasswordModalOpen}
+            forgotPasswordOpen={forgotPasswordModalOpen}
+            onCloseAll={() => {
+              setLoginModalOpen(false);
+              setChangePasswordModalOpen(false);
+              setForgotPasswordModalOpen(false);
+            }}
+            onLogin={handleLogin}
+            onChangePassword={handleChangePassword}
+            onForgotPassword={handleForgotPassword}
+            onResetPassword={handleResetPassword}
+            activeTenant={tenant}
+          />
+        </Suspense>
+      )}
 
       {/* Toast Notifications Container */}
       <Toast toasts={toasts} onDismiss={dismissToast} />

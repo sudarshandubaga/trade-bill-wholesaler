@@ -608,8 +608,7 @@ export default function POS({
       if (it.is_active === false) return false;
       const matchName = String(it.name || '').toLowerCase().includes(q);
       const matchSku = String(it.short_name || it.sku || it.code || '').toLowerCase().includes(q);
-      const matchCat = String(it.category || '').toLowerCase().includes(q);
-      return matchName || matchSku || matchCat;
+      return matchName || matchSku;
     }).slice(0, 40);
   }, [itemList, popupProductSearchQuery]);
 
@@ -1834,7 +1833,7 @@ export default function POS({
                       setIsPopupProductDropdownOpen(true);
                     }}
                     onKeyDown={handlePopupProductKeyDown}
-                    placeholder="Search product by name, SKU, code, category..."
+                    placeholder="Search product by name, SKU, code..."
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-9 py-2 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-1 focus:ring-amber-500/20"
                   />
                   {popupProductSearchQuery && (
@@ -1891,11 +1890,6 @@ export default function POS({
                               {(p.short_name || p.sku || p.code) && (
                                 <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
                                   {p.short_name || p.sku || p.code}
-                                </span>
-                              )}
-                              {p.category && (
-                                <span className="text-[10px] bg-amber-50 text-amber-800 px-1.5 rounded">
-                                  {p.category}
                                 </span>
                               )}
                               {isOutOfStock ? (

@@ -19,6 +19,7 @@ class Tenant extends Authenticatable
         'password',
         'phone',
         'address',
+        'gst_number',
         'currency',
         'point_percentage',
         'subscription_plan',

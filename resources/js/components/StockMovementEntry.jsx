@@ -185,8 +185,7 @@ export default function StockMovementEntry({
       if (it.is_active === false) return false;
       const matchName = String(it.name || '').toLowerCase().includes(q);
       const matchSku = String(it.short_name || it.sku || it.code || '').toLowerCase().includes(q);
-      const matchCat = String(it.category || '').toLowerCase().includes(q);
-      return matchName || matchSku || matchCat;
+      return matchName || matchSku;
     }).slice(0, 35);
   }, [itemList, popupProductSearchQuery]);
 
@@ -410,7 +409,7 @@ export default function StockMovementEntry({
       };
 
       const res = await axios.post('/api/challans', payload);
-      const savedChallan = res.data;
+      const savedChallan = res.data?.challan || res.data;
 
       addToast(
         isStockIn
@@ -904,10 +903,9 @@ export default function StockMovementEntry({
                             >
                               {itemCode && (
                                 <span className="font-mono font-bold">
-                                  {itemCode} &bull;
+                                  {itemCode}
                                 </span>
                               )}
-                              <span>{p.category || 'General'}</span>
                             </div>
                           </div>
                           <div className="text-right">
@@ -1060,10 +1058,12 @@ export default function StockMovementEntry({
         const storeName = tenant?.name || activeBranch?.name || '';
         const storeAddress = tenant?.address || activeBranch?.address || '';
         const storePhone = tenant?.phone || activeBranch?.phone || '';
-        const storeGst = tenant?.tax_number || tenant?.gst_number || tenant?.gstin || '';
+        const storeGst = tenant?.gst_number || tenant?.tax_number || tenant?.gstin || '';
         const storeEmail = tenant?.email || activeBranch?.email || '';
 
-        const challanItems = createdChallan.items || [];
+        const challanItems = (createdChallan.items && createdChallan.items.length > 0)
+          ? createdChallan.items
+          : (formData.items || []);
         const challanTotalQty = challanItems.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
         const challanValuation = Number(createdChallan.total_value || challanItems.reduce((acc, it) => acc + (Number(it.quantity || 0) * Number(it.rate || 0)), 0));
 
@@ -1142,7 +1142,7 @@ export default function StockMovementEntry({
                           {storeName}
                         </h1>
                         <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                          {storeAddress && <div>{storeAddress}</div>}
+                          {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }} />}
                           {storePhone && <div>Mobile No: {storePhone}</div>}
                           {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
                           {storeEmail && <div>Email: {storeEmail}</div>}

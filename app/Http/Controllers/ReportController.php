@@ -474,12 +474,14 @@ class ReportController extends Controller
             // Invoices (Debit to customer)
             $invoices = Sale::where('tenant_id', $tenant->id)
                 ->where('customer_id', $customer->id)
+                ->with('items')
                 ->get()
                 ->map(fn($s) => [
                     'date' => $s->created_at->format('Y-m-d'),
                     'type' => 'Sale Invoice',
                     'ref' => $s->invoice_no,
                     'particulars' => 'POS Bill (' . count($s->items ?? []) . ' items)',
+                    'short_names' => ($s->items ?? [])->pluck('short_name')->filter()->values()->all(),
                     'debit' => (float)$s->total_amount,
                     'credit' => 0.00,
                 ]);

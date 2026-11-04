@@ -1036,6 +1036,7 @@ export default function CreditDebitNoteManager({
         const partyPhone = party?.mobile_no || party?.phone || '';
         const partyAddress = party?.address || '';
         const partyEmail = party?.email || '';
+        const partyGst = party?.gstin || party?.gst_in || party?.tax_number || '';
 
         const noteItems = viewingNote.items || [];
         const noteTotalQty = noteItems.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
@@ -1127,7 +1128,7 @@ export default function CreditDebitNoteManager({
                           {storeName}
                         </h1>
                         <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                          {storeAddress && <div>{storeAddress}</div>}
+                          {storeAddress && <div dangerouslySetInnerHTML={{ __html: storeAddress }} />}
                           {storePhone && <div>Mobile No: {storePhone}</div>}
                           {storeGst && <div className="font-mono">GST No. {storeGst}</div>}
                           {storeEmail && <div>Email: {storeEmail}</div>}
@@ -1154,13 +1155,19 @@ export default function CreditDebitNoteManager({
                         {partyAddress && (
                           <div className="flex items-start">
                             <span className="w-24 font-bold text-black shrink-0">Address:-</span>
-                            <span className="uppercase text-black">{partyAddress}</span>
+                            <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: partyAddress }} />
                           </div>
                         )}
                         {partyPhone && (
                           <div className="flex items-center">
                             <span className="w-24 font-bold text-black shrink-0">Mobile No:-</span>
                             <span className="font-mono text-black">{partyPhone}</span>
+                          </div>
+                        )}
+                        {partyGst && (
+                          <div className="flex items-center">
+                            <span className="w-24 font-bold text-black shrink-0">GST No:-</span>
+                            <span className="font-mono text-black">{partyGst}</span>
                           </div>
                         )}
                         {partyEmail && (

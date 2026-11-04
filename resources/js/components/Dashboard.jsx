@@ -511,7 +511,7 @@ export default function Dashboard({
                 <Hash className="w-3 h-3 text-slate-400" />
                 <span>GSTIN / Tax Registration</span>
               </div>
-              <span className="font-mono text-slate-900 font-bold">{tenant?.gst_number || tenant?.gstin || '10AYSPP3209J1ZC'}</span>
+              <span className="font-mono text-slate-900 font-bold">{tenant?.gst_number || tenant?.tax_number || tenant?.gstin || 'Not Configured'}</span>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
@@ -519,7 +519,7 @@ export default function Dashboard({
                 <Phone className="w-3 h-3 text-slate-400" />
                 <span>Mobile Contact</span>
               </div>
-              <span className="font-mono text-slate-800 font-medium">{tenant?.phone || '9939175603, 9430472515'}</span>
+              <span className="font-mono text-slate-800 font-medium">{tenant?.phone || 'Not Configured'}</span>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">

@@ -361,10 +361,10 @@ export default function CustomerLedger({
                       {tenant?.name || ''}
                     </h1>
                     <div className="space-y-0.5 text-[11px] sm:text-xs text-slate-800 text-center font-medium">
-                      {tenant?.address && <div>{tenant.address}</div>}
+                      {tenant?.address && <div dangerouslySetInnerHTML={{ __html: tenant.address }} />}
                       {tenant?.phone && <div>Mobile No: {tenant.phone}</div>}
-                      {(tenant?.tax_number || tenant?.gst_number || tenant?.gstin) && (
-                        <div className="font-mono">GST No. {tenant.tax_number || tenant.gst_number || tenant.gstin}</div>
+                      {(tenant?.gst_number || tenant?.tax_number || tenant?.gstin) && (
+                        <div className="font-mono">GST No. {tenant.gst_number || tenant.tax_number || tenant.gstin}</div>
                       )}
                       {tenant?.email && <div>Email: {tenant.email}</div>}
                     </div>
@@ -382,7 +382,7 @@ export default function CustomerLedger({
                     {selectedCustomer.address && (
                       <div className="flex items-start">
                         <span className="w-28 font-bold text-black shrink-0">Address:-</span>
-                        <span className="uppercase text-black">{selectedCustomer.address}</span>
+                        <span className="uppercase text-black" dangerouslySetInnerHTML={{ __html: selectedCustomer.address }} />
                       </div>
                     )}
                     {selectedCustomer.mobile_no && (

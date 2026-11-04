@@ -39,7 +39,8 @@ import {
   BellRing,
   Boxes,
   ArrowRightLeft,
-  CheckCircle2
+  CheckCircle2,
+  ShoppingBag
 } from 'lucide-react';
 import { hasPermission } from '../utils/permissions';
 
@@ -162,7 +163,7 @@ export default function Navbar({
   const can = (perm) => hasPermission(currentUser, perm);
   const canAccessMaster = can(['customers', 'suppliers', 'categories', 'items']);
   const canAccessVoucher = can(['vouchers', 'payment_reminders', 'credit_debit_note', 'stock_dump']);
-  const canAccessInventory = can(['items', 'challan', 'stock_in', 'stock_transfer', 'inventory']);
+  const canAccessInventory = can(['items', 'challan', 'stock_in', 'stock_transfer', 'inventory', 'purchase']);
   const canAccessReports = can(['reports', 'sale_reports', 'daybook']);
 
   // Active check helpers
@@ -179,7 +180,7 @@ export default function Navbar({
     'debit_note_entry',
     'adjustments'
   ].includes(currentTab);
-  const isInventoryActive = ['stock_in', 'stock_transfer', 'stock_in_entry', 'stock_transfer_entry', 'inventory', 'challans'].includes(currentTab);
+  const isInventoryActive = ['stock_in', 'stock_transfer', 'stock_in_entry', 'stock_transfer_entry', 'inventory', 'challans', 'purchase_entry', 'purchases'].includes(currentTab);
   const isReportsActive = currentTab === 'reports' || ['sales_history', 'cashbook', 'daybook', 'ledger'].includes(currentTab);
 
   const getBranchIcon = (type) => {
@@ -398,7 +399,7 @@ export default function Navbar({
                       ? 'bg-slate-800 text-white'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                     }`}
-                  title="Master Menu (Alt+M) — Customer (Alt+C), Supplier (Alt+S), Category (Alt+K), Items (Alt+I)"
+                  title="Master Menu (Alt+M) — Customer (Alt+C), Supplier (Alt+S), Items (Alt+I)"
                 >
                   <Layers className={`w-3.5 h-3.5 ${isMasterActive ? 'text-amber-400' : 'text-slate-400'}`} />
                   <span>Master</span>
@@ -473,25 +474,6 @@ export default function Navbar({
                           <span className="text-[9px] text-slate-500 font-sans normal-case">Keyboard Shortcuts</span>
                         </div>
                         <div className="space-y-0.5">
-                          {can('categories') && (
-                            <button
-                              onClick={() => {
-                                setCurrentTab('categories');
-                                setActiveMenu(null);
-                              }}
-                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'categories' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                                }`}
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <Grid className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                <div>
-                                  <div className="font-bold">Category</div>
-                                  <div className="text-[10px] text-slate-400">Departments & merchandise groups</div>
-                                </div>
-                              </div>
-                              <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono font-bold border border-slate-700">Alt+K</kbd>
-                            </button>
-                          )}
                           {can('items') && (
                             <button
                               onClick={() => {
@@ -748,6 +730,23 @@ export default function Navbar({
                           </div>
                         </div>
                         <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono font-bold border border-slate-700">Alt+T</kbd>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCurrentTab('purchase_entry');
+                          setActiveMenu(null);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${currentTab === 'purchase_entry' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <ShoppingBag className="w-4 h-4 text-amber-400 shrink-0" />
+                          <div>
+                            <div className="font-bold">Purchase Entry</div>
+                            <div className="text-[10px] text-slate-400">Supplier invoice, amount, date & bill ref</div>
+                          </div>
+                        </div>
+                        <kbd className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold border border-slate-700">Alt+Shift+P</kbd>
                       </button>
                       <button
                         onClick={() => {
@@ -1282,14 +1281,6 @@ export default function Navbar({
                   Supplier
                 </button>
               )}
-              {can('categories') && (
-                <button
-                  onClick={() => { setCurrentTab('categories'); setMobileMenuOpen(null); }}
-                  className="p-2 rounded-xl bg-slate-900 text-xs text-left text-slate-200 font-semibold hover:bg-slate-800"
-                >
-                  Category
-                </button>
-              )}
               {can('items') && (
                 <button
                   onClick={() => { setCurrentTab('items'); setMobileMenuOpen(null); }}
@@ -1362,6 +1353,12 @@ export default function Navbar({
                 className="p-2 rounded-xl bg-slate-900 text-xs text-left text-cyan-300 font-semibold hover:bg-slate-800"
               >
                 Stock Transfer
+              </button>
+              <button
+                onClick={() => { setCurrentTab('purchase_entry'); setMobileMenuOpen(null); }}
+                className="p-2 rounded-xl bg-slate-900 text-xs text-left text-amber-300 font-semibold hover:bg-slate-800"
+              >
+                Purchase Entry
               </button>
               <button
                 onClick={() => { setReportSubTab('stock'); setCurrentTab('reports'); setMobileMenuOpen(null); }}
