@@ -1,6 +1,6 @@
 /**
  * Universal High-Fidelity Printing Utility for TradeBill ERP
- * 
+ *
  * Creates an isolated, clean A4 print iframe, injects exact styles,
  * and triggers window.print() on the isolated frame without page clutter.
  */
@@ -10,70 +10,98 @@
  * e.g., 47194.05 -> "FORTY-SEVEN THOUSAND ONE HUNDRED NINETY-FOUR RUPEES ONLY"
  */
 export function numberToWordsIndian(num) {
-  if (num === null || num === undefined || isNaN(num)) return '';
-  num = Math.round(Number(num) * 100) / 100;
-  if (num === 0) return 'ZERO RUPEES ONLY';
+    if (num === null || num === undefined || isNaN(num)) return "";
+    num = Math.round(Number(num) * 100) / 100;
+    if (num === 0) return "ZERO RUPEES ONLY";
 
-  const a = [
-    '', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE',
-    'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN',
-    'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'
-  ];
-  const b = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+    const a = [
+        "",
+        "ONE",
+        "TWO",
+        "THREE",
+        "FOUR",
+        "FIVE",
+        "SIX",
+        "SEVEN",
+        "EIGHT",
+        "NINE",
+        "TEN",
+        "ELEVEN",
+        "TWELVE",
+        "THIRTEEN",
+        "FOURTEEN",
+        "FIFTEEN",
+        "SIXTEEN",
+        "SEVENTEEN",
+        "EIGHTEEN",
+        "NINETEEN",
+    ];
+    const b = [
+        "",
+        "",
+        "TWENTY",
+        "THIRTY",
+        "FORTY",
+        "FIFTY",
+        "SIXTY",
+        "SEVENTY",
+        "EIGHTY",
+        "NINETY",
+    ];
 
-  const convertTwoDigits = (n) => {
-    if (n < 20) return a[n];
-    const tens = b[Math.floor(n / 10)];
-    const ones = a[n % 10];
-    return tens + (ones ? '-' + ones : '');
-  };
+    const convertTwoDigits = (n) => {
+        if (n < 20) return a[n];
+        const tens = b[Math.floor(n / 10)];
+        const ones = a[n % 10];
+        return tens + (ones ? "-" + ones : "");
+    };
 
-  const convertThreeDigits = (n) => {
-    let str = '';
-    const hundred = Math.floor(n / 100);
-    const rem = n % 100;
+    const convertThreeDigits = (n) => {
+        let str = "";
+        const hundred = Math.floor(n / 100);
+        const rem = n % 100;
+        if (hundred > 0) {
+            str += a[hundred] + " HUNDRED";
+            if (rem > 0) str += " ";
+        }
+        if (rem > 0) {
+            str += convertTwoDigits(rem);
+        }
+        return str;
+    };
+
+    const whole = Math.floor(num);
+    const paise = Math.round((num - whole) * 100);
+
+    let result = "";
+    const crore = Math.floor(whole / 10000000);
+    let rem = whole % 10000000;
+    const lakh = Math.floor(rem / 100000);
+    rem = rem % 100000;
+    const thousand = Math.floor(rem / 1000);
+    const hundred = rem % 1000;
+
+    if (crore > 0) {
+        result += convertThreeDigits(crore) + " CRORE ";
+    }
+    if (lakh > 0) {
+        result += convertTwoDigits(lakh) + " LAKH ";
+    }
+    if (thousand > 0) {
+        result += convertTwoDigits(thousand) + " THOUSAND ";
+    }
     if (hundred > 0) {
-      str += a[hundred] + ' HUNDRED';
-      if (rem > 0) str += ' ';
+        result += convertThreeDigits(hundred) + " ";
     }
-    if (rem > 0) {
-      str += convertTwoDigits(rem);
+
+    result = result.trim() + " RUPEES";
+
+    if (paise > 0) {
+        result += " AND " + convertTwoDigits(paise) + " PAISE";
     }
-    return str;
-  };
 
-  const whole = Math.floor(num);
-  const paise = Math.round((num - whole) * 100);
-
-  let result = '';
-  const crore = Math.floor(whole / 10000000);
-  let rem = whole % 10000000;
-  const lakh = Math.floor(rem / 100000);
-  rem = rem % 100000;
-  const thousand = Math.floor(rem / 1000);
-  const hundred = rem % 1000;
-
-  if (crore > 0) {
-    result += convertThreeDigits(crore) + ' CRORE ';
-  }
-  if (lakh > 0) {
-    result += convertTwoDigits(lakh) + ' LAKH ';
-  }
-  if (thousand > 0) {
-    result += convertTwoDigits(thousand) + ' THOUSAND ';
-  }
-  if (hundred > 0) {
-    result += convertThreeDigits(hundred) + ' ';
-  }
-
-  result = result.trim() + ' RUPEES';
-
-  if (paise > 0) {
-    result += ' AND ' + convertTwoDigits(paise) + ' PAISE';
-  }
-
-  result += ' ONLY';
-  return result;
+    result += " ONLY";
+    return result;
 }
 
 /**
@@ -85,196 +113,207 @@ export function numberToWordsIndian(num) {
  * @returns {Array} List of page objects
  */
 export function paginateInvoiceItems(items = [], options = {}) {
-  const {
-    singlePageMax = 12,
-    firstPageMax = 10,
-    middlePageMax = 14,
-    lastPageMax = 10,
-    qtyKey = 'quantity',
-    rateKey = 'unit_price',
-  } = options;
+    const {
+        singlePageMax = 38,
+        firstPageMax = 38,
+        middlePageMax = 38,
+        lastPageMax = 38,
+        qtyKey = "quantity",
+        rateKey = "unit_price",
+    } = options;
 
-  const list = Array.isArray(items) ? items : [];
-  const totalItems = list.length;
+    const list = Array.isArray(items) ? items : [];
+    const totalItems = list.length;
 
-  // Single page bill
-  if (totalItems <= singlePageMax) {
-    let runningQty = 0;
-    let runningAmt = 0;
-    const pageItems = list.map((it, idx) => {
-      const q = Number(it[qtyKey] ?? it.quantity ?? 0);
-      const r = Number(it[rateKey] ?? it.rate ?? it.purchase_price ?? it.price ?? 0);
-      const amt = Number(it.line_total ?? it.total_price ?? (q * r));
-      runningQty += q;
-      runningAmt += amt;
-      return {
-        ...it,
-        originalIndex: idx + 1,
-        resolvedQty: q,
-        resolvedRate: r,
-        resolvedAmount: amt,
-      };
-    });
+    // Single page bill
+    if (totalItems <= singlePageMax) {
+        let runningQty = 0;
+        let runningAmt = 0;
+        const pageItems = list.map((it, idx) => {
+            const q = Number(it[qtyKey] ?? it.quantity ?? 0);
+            const r = Number(
+                it[rateKey] ?? it.rate ?? it.purchase_price ?? it.price ?? 0,
+            );
+            const amt = Number(it.line_total ?? it.total_price ?? q * r);
+            runningQty += q;
+            runningAmt += amt;
+            return {
+                ...it,
+                originalIndex: idx + 1,
+                resolvedQty: q,
+                resolvedRate: r,
+                resolvedAmount: amt,
+            };
+        });
 
-    return [{
-      pageNumber: 1,
-      totalPages: 1,
-      isFirstPage: true,
-      isLastPage: true,
-      hasBroughtForward: false,
-      hasCarriedForward: false,
-      broughtForwardQty: 0,
-      broughtForwardAmt: 0,
-      pageSubtotalQty: runningQty,
-      pageSubtotalAmt: runningAmt,
-      carriedForwardQty: runningQty,
-      carriedForwardAmt: runningAmt,
-      items: pageItems,
-    }];
-  }
-
-  // Multi-page bill with Carried Forward & Brought Forward
-  const pages = [];
-  let currentIndex = 0;
-  let runningQty = 0;
-  let runningAmt = 0;
-
-  while (currentIndex < totalItems) {
-    const isFirst = pages.length === 0;
-    const rem = totalItems - currentIndex;
-
-    let size;
-    if (isFirst) {
-      size = firstPageMax;
-      if (rem - size === 1) {
-        size = firstPageMax - 1;
-      }
-    } else {
-      if (rem <= lastPageMax) {
-        size = rem;
-      } else {
-        const potRem = rem - middlePageMax;
-        if (potRem > 0 && potRem < 3) {
-          size = Math.ceil(rem / 2);
-        } else {
-          size = middlePageMax;
-        }
-      }
+        return [
+            {
+                pageNumber: 1,
+                totalPages: 1,
+                isFirstPage: true,
+                isLastPage: true,
+                hasBroughtForward: false,
+                hasCarriedForward: false,
+                broughtForwardQty: 0,
+                broughtForwardAmt: 0,
+                pageSubtotalQty: runningQty,
+                pageSubtotalAmt: runningAmt,
+                carriedForwardQty: runningQty,
+                carriedForwardAmt: runningAmt,
+                items: pageItems,
+            },
+        ];
     }
 
-    const pageSlice = list.slice(currentIndex, currentIndex + size);
-    const bfQty = runningQty;
-    const bfAmt = runningAmt;
+    // Multi-page bill with Carried Forward & Brought Forward
+    const pages = [];
+    let currentIndex = 0;
+    let runningQty = 0;
+    let runningAmt = 0;
 
-    let pageSubtotalQty = 0;
-    let pageSubtotalAmt = 0;
+    while (currentIndex < totalItems) {
+        const isFirst = pages.length === 0;
+        const rem = totalItems - currentIndex;
 
-    const pageItems = pageSlice.map((it, i) => {
-      const globalIdx = currentIndex + i + 1;
-      const q = Number(it[qtyKey] ?? it.quantity ?? 0);
-      const r = Number(it[rateKey] ?? it.rate ?? it.purchase_price ?? it.price ?? 0);
-      const amt = Number(it.line_total ?? it.total_price ?? (q * r));
-      runningQty += q;
-      runningAmt += amt;
-      pageSubtotalQty += q;
-      pageSubtotalAmt += amt;
-      return {
-        ...it,
-        originalIndex: globalIdx,
-        resolvedQty: q,
-        resolvedRate: r,
-        resolvedAmount: amt,
-      };
+        let size;
+        if (isFirst) {
+            size = firstPageMax;
+            if (rem - size === 1) {
+                size = firstPageMax - 1;
+            }
+        } else {
+            if (rem <= lastPageMax) {
+                size = rem;
+            } else {
+                const potRem = rem - middlePageMax;
+                if (potRem > 0 && potRem < 3) {
+                    size = Math.ceil(rem / 2);
+                } else {
+                    size = middlePageMax;
+                }
+            }
+        }
+
+        const pageSlice = list.slice(currentIndex, currentIndex + size);
+        const bfQty = runningQty;
+        const bfAmt = runningAmt;
+
+        let pageSubtotalQty = 0;
+        let pageSubtotalAmt = 0;
+
+        const pageItems = pageSlice.map((it, i) => {
+            const globalIdx = currentIndex + i + 1;
+            const q = Number(it[qtyKey] ?? it.quantity ?? 0);
+            const r = Number(
+                it[rateKey] ?? it.rate ?? it.purchase_price ?? it.price ?? 0,
+            );
+            const amt = Number(it.line_total ?? it.total_price ?? q * r);
+            runningQty += q;
+            runningAmt += amt;
+            pageSubtotalQty += q;
+            pageSubtotalAmt += amt;
+            return {
+                ...it,
+                originalIndex: globalIdx,
+                resolvedQty: q,
+                resolvedRate: r,
+                resolvedAmount: amt,
+            };
+        });
+
+        currentIndex += pageSlice.length;
+        const isLast = currentIndex >= totalItems;
+
+        pages.push({
+            pageNumber: pages.length + 1,
+            totalPages: 0,
+            isFirstPage: isFirst,
+            isLastPage: isLast,
+            hasBroughtForward: !isFirst,
+            hasCarriedForward: !isLast,
+            broughtForwardQty: bfQty,
+            broughtForwardAmt: bfAmt,
+            pageSubtotalQty,
+            pageSubtotalAmt,
+            carriedForwardQty: runningQty,
+            carriedForwardAmt: runningAmt,
+            items: pageItems,
+        });
+    }
+
+    const totalPages = pages.length;
+    pages.forEach((p) => {
+        p.totalPages = totalPages;
     });
 
-    currentIndex += pageSlice.length;
-    const isLast = currentIndex >= totalItems;
-
-    pages.push({
-      pageNumber: pages.length + 1,
-      totalPages: 0,
-      isFirstPage: isFirst,
-      isLastPage: isLast,
-      hasBroughtForward: !isFirst,
-      hasCarriedForward: !isLast,
-      broughtForwardQty: bfQty,
-      broughtForwardAmt: bfAmt,
-      pageSubtotalQty,
-      pageSubtotalAmt,
-      carriedForwardQty: runningQty,
-      carriedForwardAmt: runningAmt,
-      items: pageItems,
-    });
-  }
-
-  const totalPages = pages.length;
-  pages.forEach((p) => {
-    p.totalPages = totalPages;
-  });
-
-  return pages;
+    return pages;
 }
 
 export function printElement(elementOrId, options = {}) {
-  const {
-    title = 'Document Print',
-    pageMargin = '8mm 10mm',
-    customCss = '',
-    onAfterPrint = null,
-  } = options;
+    const {
+        title = "Document Print",
+        pageMargin = "8mm 10mm",
+        customCss = "",
+        onAfterPrint = null,
+    } = options;
 
-  const printContent = typeof elementOrId === 'string'
-    ? document.getElementById(elementOrId)
-    : elementOrId;
+    const printContent =
+        typeof elementOrId === "string"
+            ? document.getElementById(elementOrId)
+            : elementOrId;
 
-  if (!printContent) {
-    window.print();
-    if (onAfterPrint) onAfterPrint();
-    return;
-  }
-
-  try {
-    let printFrame = document.getElementById('tradebill-universal-print-iframe');
-    if (printFrame) {
-      printFrame.remove();
+    if (!printContent) {
+        window.print();
+        if (onAfterPrint) onAfterPrint();
+        return;
     }
 
-    printFrame = document.createElement('iframe');
-    printFrame.id = 'tradebill-universal-print-iframe';
-    printFrame.style.position = 'fixed';
-    printFrame.style.right = '0';
-    printFrame.style.bottom = '0';
-    printFrame.style.width = '0';
-    printFrame.style.height = '0';
-    printFrame.style.border = '0';
-    printFrame.style.margin = '0';
-    printFrame.style.padding = '0';
-    printFrame.style.overflow = 'hidden';
-    document.body.appendChild(printFrame);
-
-    // Extract all inlined CSS rules from stylesheets to ensure production Tailwind styles are available synchronously
-    let inlinedRules = '';
     try {
-      Array.from(document.styleSheets).forEach((sheet) => {
-        try {
-          if (sheet.cssRules) {
-            Array.from(sheet.cssRules).forEach((rule) => {
-              inlinedRules += rule.cssText + '\n';
-            });
-          }
-        } catch (_) {
-          // Cross-origin stylesheet restriction (Google Fonts, etc.)
+        let printFrame = document.getElementById(
+            "tradebill-universal-print-iframe",
+        );
+        if (printFrame) {
+            printFrame.remove();
         }
-      });
-    } catch (_) {}
 
-    const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map((tag) => tag.outerHTML)
-      .join('\n');
+        printFrame = document.createElement("iframe");
+        printFrame.id = "tradebill-universal-print-iframe";
+        printFrame.style.position = "fixed";
+        printFrame.style.right = "0";
+        printFrame.style.bottom = "0";
+        printFrame.style.width = "0";
+        printFrame.style.height = "0";
+        printFrame.style.border = "0";
+        printFrame.style.margin = "0";
+        printFrame.style.padding = "0";
+        printFrame.style.overflow = "hidden";
+        document.body.appendChild(printFrame);
 
-    const frameDoc = printFrame.contentWindow.document;
-    frameDoc.open();
-    frameDoc.write(`
+        // Extract all inlined CSS rules from stylesheets to ensure production Tailwind styles are available synchronously
+        let inlinedRules = "";
+        try {
+            Array.from(document.styleSheets).forEach((sheet) => {
+                try {
+                    if (sheet.cssRules) {
+                        Array.from(sheet.cssRules).forEach((rule) => {
+                            inlinedRules += rule.cssText + "\n";
+                        });
+                    }
+                } catch (_) {
+                    // Cross-origin stylesheet restriction (Google Fonts, etc.)
+                }
+            });
+        } catch (_) {}
+
+        const styleTags = Array.from(
+            document.querySelectorAll('link[rel="stylesheet"], style'),
+        )
+            .map((tag) => tag.outerHTML)
+            .join("\n");
+
+        const frameDoc = printFrame.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(`
       <!DOCTYPE html>
       <html lang="en">
         <head>
@@ -380,43 +419,61 @@ export function printElement(elementOrId, options = {}) {
         </body>
       </html>
     `);
-    frameDoc.close();
+        frameDoc.close();
 
-    setTimeout(() => {
-      let afterPrintTriggered = false;
-      const triggerAfterPrint = () => {
-        if (afterPrintTriggered) return;
-        afterPrintTriggered = true;
-        if (typeof onAfterPrint === 'function') {
-          setTimeout(onAfterPrint, 250);
-        }
-      };
+        setTimeout(() => {
+            let afterPrintTriggered = false;
+            const triggerAfterPrint = () => {
+                if (afterPrintTriggered) return;
+                afterPrintTriggered = true;
+                if (typeof onAfterPrint === "function") {
+                    setTimeout(onAfterPrint, 250);
+                }
+            };
 
-      try {
-        if (typeof onAfterPrint === 'function') {
-          try {
-            printFrame.contentWindow.onafterprint = triggerAfterPrint;
-            printFrame.contentWindow.addEventListener('afterprint', triggerAfterPrint);
-          } catch (_) {}
-          window.addEventListener('afterprint', triggerAfterPrint, { once: true });
-          window.addEventListener('focus', () => {
-            setTimeout(triggerAfterPrint, 400);
-          }, { once: true });
-        }
+            try {
+                if (typeof onAfterPrint === "function") {
+                    try {
+                        printFrame.contentWindow.onafterprint =
+                            triggerAfterPrint;
+                        printFrame.contentWindow.addEventListener(
+                            "afterprint",
+                            triggerAfterPrint,
+                        );
+                    } catch (_) {}
+                    window.addEventListener("afterprint", triggerAfterPrint, {
+                        once: true,
+                    });
+                    window.addEventListener(
+                        "focus",
+                        () => {
+                            setTimeout(triggerAfterPrint, 400);
+                        },
+                        { once: true },
+                    );
+                }
 
-        printFrame.contentWindow.focus();
-        printFrame.contentWindow.print();
-      } catch (err) {
-        console.warn('Iframe print failed, falling back to window.print():', err);
-        if (typeof onAfterPrint === 'function') {
-          window.addEventListener('afterprint', triggerAfterPrint, { once: true });
-        }
+                printFrame.contentWindow.focus();
+                printFrame.contentWindow.print();
+            } catch (err) {
+                console.warn(
+                    "Iframe print failed, falling back to window.print():",
+                    err,
+                );
+                if (typeof onAfterPrint === "function") {
+                    window.addEventListener("afterprint", triggerAfterPrint, {
+                        once: true,
+                    });
+                }
+                window.print();
+            }
+        }, 250);
+    } catch (e) {
+        console.warn(
+            "Print initialization error, falling back to window.print():",
+            e,
+        );
         window.print();
-      }
-    }, 250);
-  } catch (e) {
-    console.warn('Print initialization error, falling back to window.print():', e);
-    window.print();
-    if (onAfterPrint) onAfterPrint();
-  }
+        if (onAfterPrint) onAfterPrint();
+    }
 }
