@@ -120,10 +120,10 @@ export default function InvoiceReceiptModal({ sale, tenant, customers = [], onCl
 
   const pages = useMemo(() => {
     return paginateInvoiceItems(items, {
-      singlePageMax: 12,
-      firstPageMax: 10,
-      middlePageMax: 14,
-      lastPageMax: 10,
+      singlePageMax: 40,
+      firstPageMax: 40,
+      middlePageMax: 40,
+      lastPageMax: 40,
       qtyKey: 'quantity',
       rateKey: 'unit_price',
     });

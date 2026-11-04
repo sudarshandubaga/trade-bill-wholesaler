@@ -361,8 +361,8 @@ export default function InventoryManager({
             <button
               onClick={() => setActiveType('all')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'all'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               All Movements
@@ -370,8 +370,8 @@ export default function InventoryManager({
             <button
               onClick={() => setActiveType('inward')}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'inward'
-                  ? 'bg-emerald-600 text-white font-black shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-emerald-600 text-white font-black shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               <ArrowDownLeft className="w-3.5 h-3.5" />
@@ -380,8 +380,8 @@ export default function InventoryManager({
             <button
               onClick={() => setActiveType('transfer')}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeType === 'transfer'
-                  ? 'bg-indigo-600 text-white font-black shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-indigo-600 text-white font-black shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               <ArrowRightLeft className="w-3.5 h-3.5" />
@@ -794,10 +794,10 @@ export default function InventoryManager({
         const targetBranchName = viewingMovement.target_branch?.name || 'Destination Branch';
 
         const movementPages = paginateInvoiceItems(movementItems, {
-          singlePageMax: 38,
-          firstPageMax: 38,
-          middlePageMax: 38,
-          lastPageMax: 38,
+          singlePageMax: 45,
+          firstPageMax: 45,
+          middlePageMax: 45,
+          lastPageMax: 45,
           qtyKey: 'quantity',
           rateKey: 'rate',
         });

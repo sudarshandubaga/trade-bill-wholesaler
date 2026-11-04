@@ -29,9 +29,9 @@ export default function StockMovementEntry({
   suppliers = [],
   items = [],
   tenant,
-  onStockUpdated = () => {},
-  onViewReport = () => {},
-  addToast = () => {}
+  onStockUpdated = () => { },
+  onViewReport = () => { },
+  addToast = () => { }
 }) {
   const currency = tenant?.currency || '₹';
   const isStockIn = mode === 'stock_in';
@@ -448,11 +448,10 @@ export default function StockMovementEntry({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/90 p-5 rounded-3xl shadow-xs">
         <div className="flex items-center gap-3">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs border ${
-              isStockIn
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs border ${isStockIn
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
                 : 'bg-sky-50 border-sky-200 text-sky-600'
-            }`}
+              }`}
           >
             {isStockIn ? (
               <ArrowDownLeft className="w-6 h-6 stroke-[2.2]" />
@@ -466,11 +465,10 @@ export default function StockMovementEntry({
                 {isStockIn ? 'Stock In Entry (Inward Receiving)' : 'Stock Transfer Entry (Inter-Store Movement)'}
               </h1>
               <span
-                className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full border ${
-                  isStockIn
+                className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full border ${isStockIn
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     : 'bg-sky-50 text-sky-700 border-sky-200'
-                }`}
+                  }`}
               >
                 {isStockIn ? 'Inward Inventory Entry' : 'Warehouse Transfer'}
               </span>
@@ -792,19 +790,18 @@ export default function StockMovementEntry({
               ref={submitButtonRef}
               type="submit"
               disabled={isSaving || formData.items.length === 0}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-white font-black text-xs shadow-xs cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                isStockIn
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-white font-black text-xs shadow-xs cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 ${isStockIn
                   ? 'bg-emerald-600 hover:bg-emerald-500 focus:ring-emerald-500 ring-1 ring-emerald-400/50'
                   : 'bg-sky-600 hover:bg-sky-500 focus:ring-sky-500 ring-1 ring-sky-400/50'
-              } disabled:opacity-50`}
+                } disabled:opacity-50`}
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>
                 {isSaving
                   ? 'Recording Movement...'
                   : isStockIn
-                  ? 'Record Stock In (Enter)'
-                  : 'Execute Transfer (Enter)'}
+                    ? 'Record Stock In (Enter)'
+                    : 'Execute Transfer (Enter)'}
               </span>
             </button>
           </div>
@@ -888,18 +885,16 @@ export default function StockMovementEntry({
                           ref={(el) => (popupItemRefs.current[idx] = el)}
                           onMouseEnter={() => setPopupHighlightedIndex(idx)}
                           onClick={() => handleSelectProductInPopup(p)}
-                          className={`px-3 py-2 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-colors ${
-                            isHighlighted
+                          className={`px-3 py-2 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-colors ${isHighlighted
                               ? 'bg-amber-500 text-slate-950 font-bold'
                               : 'text-slate-800 hover:bg-slate-100'
-                          }`}
+                            }`}
                         >
                           <div>
                             <div className="font-bold">{p.name}</div>
                             <div
-                              className={`text-[10px] flex items-center gap-1.5 ${
-                                isHighlighted ? 'text-slate-900/80' : 'text-slate-500'
-                              }`}
+                              className={`text-[10px] flex items-center gap-1.5 ${isHighlighted ? 'text-slate-900/80' : 'text-slate-500'
+                                }`}
                             >
                               {itemCode && (
                                 <span className="font-mono font-bold">
@@ -913,9 +908,8 @@ export default function StockMovementEntry({
                               {currency} {displayPrice.toFixed(2)}
                             </div>
                             <div
-                              className={`text-[10px] font-mono ${
-                                isHighlighted ? 'text-slate-900/90' : 'text-emerald-700 font-semibold'
-                              }`}
+                              className={`text-[10px] font-mono ${isHighlighted ? 'text-slate-900/90' : 'text-emerald-700 font-semibold'
+                                }`}
                             >
                               Stock: {currentStock} {p.unit || 'pcs'}
                             </div>
@@ -1071,10 +1065,10 @@ export default function StockMovementEntry({
         const targetBranchName = branchList.find((b) => b.id === createdChallan.target_branch_id)?.name || 'Destination Branch';
 
         const challanPages = paginateInvoiceItems(challanItems, {
-          singlePageMax: 12,
-          firstPageMax: 10,
-          middlePageMax: 14,
-          lastPageMax: 10,
+          singlePageMax: 40,
+          firstPageMax: 40,
+          middlePageMax: 40,
+          lastPageMax: 40,
           qtyKey: 'quantity',
           rateKey: 'rate',
         });

@@ -114,10 +114,10 @@ export function numberToWordsIndian(num) {
  */
 export function paginateInvoiceItems(items = [], options = {}) {
     const {
-        singlePageMax = 38,
-        firstPageMax = 38,
-        middlePageMax = 38,
-        lastPageMax = 38,
+        singlePageMax = 40,
+        firstPageMax = 40,
+        middlePageMax = 40,
+        lastPageMax = 40,
         qtyKey = "quantity",
         rateKey = "unit_price",
     } = options;

@@ -30,8 +30,8 @@ export default function PurchaseManager({
   items = [],
   tenant,
   initialType = 'all', // 'all', 'intra_state', 'inter_state', 'unregistered'
-  onPurchaseUpdated = () => {},
-  addToast = () => {}
+  onPurchaseUpdated = () => { },
+  addToast = () => { }
 }) {
   const currency = tenant?.currency || '₹';
   const [activeType, setActiveType] = useState(initialType);
@@ -213,7 +213,7 @@ export default function PurchaseManager({
 
   return (
     <div className="space-y-6">
-      
+
       {/* Top Banner Card (Light Theme) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200/90 p-5 rounded-3xl shadow-xs">
         <div className="flex items-center gap-3">
@@ -264,41 +264,37 @@ export default function PurchaseManager({
         <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-full sm:w-auto overflow-x-auto shadow-2xs">
           <button
             onClick={() => setActiveType('all')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeType === 'all'
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeType === 'all'
                 ? 'bg-amber-500 text-slate-950 font-black shadow-xs border border-amber-400'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             All Purchases ({purchaseList.length})
           </button>
           <button
             onClick={() => setActiveType('intra_state')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeType === 'intra_state'
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeType === 'intra_state'
                 ? 'bg-emerald-600 text-white font-black shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             Intra State (In State)
           </button>
           <button
             onClick={() => setActiveType('inter_state')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeType === 'inter_state'
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeType === 'inter_state'
                 ? 'bg-sky-600 text-white font-black shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             Inter State (Out of State)
           </button>
           <button
             onClick={() => setActiveType('unregistered')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeType === 'unregistered'
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeType === 'unregistered'
                 ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             Unregistered Suppliers
           </button>
@@ -390,13 +386,12 @@ export default function PurchaseManager({
                     </td>
 
                     <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded ${
-                        p.payment_status === 'Paid'
+                      <span className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded ${p.payment_status === 'Paid'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : p.payment_status === 'Partial'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-red-50 text-red-700 border border-red-200'
-                      }`}>
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
                         {p.payment_status}
                       </span>
                     </td>
@@ -439,8 +434,8 @@ export default function PurchaseManager({
                   {formData.purchase_type === 'intra_state'
                     ? 'Intra State (CGST + SGST)'
                     : formData.purchase_type === 'inter_state'
-                    ? 'Inter State (IGST)'
-                    : 'Unregistered Supplier'}
+                      ? 'Inter State (IGST)'
+                      : 'Unregistered Supplier'}
                 </span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
@@ -738,10 +733,10 @@ export default function PurchaseManager({
         const purchaseDiscount = Math.max(0, purchaseGross - purchaseFinal);
 
         const purchasePages = paginateInvoiceItems(purchaseItems, {
-          singlePageMax: 12,
-          firstPageMax: 10,
-          middlePageMax: 14,
-          lastPageMax: 10,
+          singlePageMax: 40,
+          firstPageMax: 40,
+          middlePageMax: 40,
+          lastPageMax: 40,
           qtyKey: 'quantity',
           rateKey: 'purchase_price',
         });
