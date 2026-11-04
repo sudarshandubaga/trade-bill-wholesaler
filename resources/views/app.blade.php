@@ -67,7 +67,6 @@
             /* Hide all regular app navigation & UI controls */
             header,
             nav,
-            main,
             .no-print {
                 display: none !important;
             }
@@ -85,7 +84,8 @@
                 padding: 0 !important;
             }
 
-            .print-modal-overlay {
+            .print-modal-overlay,
+            .fixed.inset-0:has([id^="printable-"]) {
                 position: static !important;
                 inset: auto !important;
                 background: #ffffff !important;
@@ -97,7 +97,8 @@
                 display: block !important;
             }
 
-            .print-modal-container {
+            .print-modal-container,
+            .fixed.inset-0:has([id^="printable-"]) > div {
                 position: static !important;
                 max-width: 100% !important;
                 width: 100% !important;
@@ -112,9 +113,22 @@
                 display: block !important;
             }
 
-            /* Make printable receipt flow naturally on the A4 page */
-            #printable-receipt {
+            /* Make all printable receipts & slips flow naturally on the A4 page */
+            #printable-receipt,
+            #printable-inventory-movement-slip,
+            #printable-stock-challan-slip,
+            #printable-viewing-note-slip,
+            #printable-credit-note-slip,
+            #printable-purchase-entry-slip,
+            #printable-purchase-bill-slip,
+            #printable-voucher-slip,
+            #printable-barcode-sheet,
+            #printable-customer-ledger-panel,
+            #printable-cashbook-panel,
+            #printable-daybook-panel,
+            #reports-printable-panel {
                 display: block !important;
+                visibility: visible !important;
                 position: static !important;
                 width: 100% !important;
                 max-width: 100% !important;

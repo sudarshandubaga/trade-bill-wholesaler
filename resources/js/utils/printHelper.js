@@ -103,14 +103,31 @@ export function printElement(elementOrId, options = {}) {
     printFrame = document.createElement('iframe');
     printFrame.id = 'tradebill-universal-print-iframe';
     printFrame.style.position = 'fixed';
-    printFrame.style.left = '-9999px';
-    printFrame.style.top = '0';
-    printFrame.style.width = '800px';
-    printFrame.style.height = '1120px';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
     printFrame.style.border = '0';
-    printFrame.style.opacity = '1';
-    printFrame.style.pointerEvents = 'none';
+    printFrame.style.margin = '0';
+    printFrame.style.padding = '0';
+    printFrame.style.overflow = 'hidden';
     document.body.appendChild(printFrame);
+
+    // Extract all inlined CSS rules from stylesheets to ensure production Tailwind styles are available synchronously
+    let inlinedRules = '';
+    try {
+      Array.from(document.styleSheets).forEach((sheet) => {
+        try {
+          if (sheet.cssRules) {
+            Array.from(sheet.cssRules).forEach((rule) => {
+              inlinedRules += rule.cssText + '\n';
+            });
+          }
+        } catch (_) {
+          // Cross-origin stylesheet restriction (Google Fonts, etc.)
+        }
+      });
+    } catch (_) {}
 
     const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
       .map((tag) => tag.outerHTML)
@@ -123,9 +140,12 @@ export function printElement(elementOrId, options = {}) {
       <html lang="en">
         <head>
           <meta charset="utf-8">
+          <base href="${window.location.origin}/">
           <title>${title}</title>
           ${styleTags}
           <style>
+            ${inlinedRules}
+
             @page {
               size: A4 portrait;
               margin: ${pageMargin};
@@ -146,6 +166,30 @@ export function printElement(elementOrId, options = {}) {
             }
             .no-print {
               display: none !important;
+            }
+            .text-center {
+              text-align: center !important;
+            }
+            .font-bold {
+              font-weight: 700 !important;
+            }
+            .font-black {
+              font-weight: 900 !important;
+            }
+            .tracking-widest {
+              letter-spacing: 0.1em !important;
+            }
+            .uppercase {
+              text-transform: uppercase !important;
+            }
+            .text-black {
+              color: #000000 !important;
+            }
+            .text-sm {
+              font-size: 14px !important;
+            }
+            .pb-1 {
+              padding-bottom: 4px !important;
             }
             .print-grid-2 {
               display: grid !important;
@@ -220,7 +264,7 @@ export function printElement(elementOrId, options = {}) {
         }
         window.print();
       }
-    }, 300);
+    }, 250);
   } catch (e) {
     console.warn('Print initialization error, falling back to window.print():', e);
     window.print();

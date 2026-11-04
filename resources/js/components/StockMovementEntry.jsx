@@ -1121,7 +1121,20 @@ export default function StockMovementEntry({
                 className="p-6 sm:p-8 text-black bg-white max-w-full font-sans print:p-0 print:m-0"
               >
                 {/* Header Title Centered above the box */}
-                <div className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black">
+                <div
+                  style={{
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    paddingBottom: '6px',
+                    color: '#000000',
+                    width: '100%',
+                    display: 'block'
+                  }}
+                  className="text-center font-bold text-sm tracking-widest uppercase pb-1 text-black"
+                >
                   {isStockIn ? 'STOCK INWARD RECEIPT (CONSIGNMENT)' : 'STOCK TRANSFER CHALLAN (INTER-BRANCH)'}
                 </div>
 
